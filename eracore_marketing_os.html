@@ -8060,12 +8060,14 @@ async function fetchBingWmt(){
   const siteUrl=encodeURIComponent('https://eracore.com/');
   const end=new Date();const start=new Date();start.setDate(start.getDate()-7);
   const fmt=d=>d.toISOString().slice(0,10);
+  const targetUrl=`https://api.webmaster.tools.bing.com/v3/sites/${siteUrl}/queryperformance?startDate=${fmt(start)}&endDate=${fmt(end)}&granularity=WEEKLY&page=0&count=50`;
+  // Use local proxy to bypass CORS
+  const proxyUrl=`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(targetUrl)}&key=${encodeURIComponent(key)}`;
   try{
-    const res=await fetch(`https://api.webmaster.tools.bing.com/v3/sites/${siteUrl}/queryperformance?startDate=${fmt(start)}&endDate=${fmt(end)}&granularity=WEEKLY&page=0&count=50`,{
-      headers:{'Ocp-Apim-Subscription-Key':key,'Accept':'application/json'}
-    });
-    if(!res.ok)throw new Error('Bing WMT API error '+res.status);
+    const res=await fetch(proxyUrl);
+    if(!res.ok)throw new Error('Bing WMT proxy error '+res.status);
     const data=await res.json();
+    if(data.error)throw new Error(data.error);
     const queries=(data.d||data.value||[]);
     const totalClicks=queries.reduce((s,q)=>s+(q.clicks||q.Clicks||0),0);
     const totalImpr=queries.reduce((s,q)=>s+(q.impressions||q.Impressions||0),0);
@@ -8073,31 +8075,36 @@ async function fetchBingWmt(){
     localStorage.setItem('ec-bing-v1',JSON.stringify(bingData));
     localStorage.setItem('ec-bing-wmt-fetched',Date.now().toString());
     updateSEOTopCounters();renderSEOOverview();
+    const btn=document.getElementById('bing-connect-btn');
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Bing connected</span>';
     toast('Bing data updated');
-  }catch(e){toast('Bing WMT error: '+e.message,'error');}
+  }catch(e){toast('Bing WMT error: '+e.message);}
 }
 
 // ── SEMRUSH — live API ─────────────────────────────────────────────────────
 async function fetchSemrush(){
   const key=getSemrushKey();
   if(!key){toast('Enter SEMrush API key in Settings first');openSettingsToSection('semrush');return;}
+  const proxy=(url)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`;
   try{
-    // Organic positions
-    const posRes=await fetch(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=50&export_columns=Ph,Po,Pp,Pd,Nq,Nr&export_escape=1`);
+    // Organic positions via proxy
+    const posRes=await fetch(proxy(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=50&export_columns=Ph,Po,Pp,Pd,Nq,Nr&export_escape=1`));
     if(!posRes.ok)throw new Error('SEMrush API '+posRes.status);
     const posText=await posRes.text();
     const lines=posText.trim().split('\n').slice(1).filter(Boolean);
     const keywords=lines.map(l=>{const cols=l.split(';');return{keyword:cols[0],position:parseInt(cols[1])||0,prevPos:parseInt(cols[2])||0,volume:parseInt(cols[4])||0};});
-    // Domain overview
-    const ovRes=await fetch(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`);
+    // Domain overview via proxy
+    const ovRes=await fetch(proxy(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`));
     const ovText=await ovRes.text();
     const ovCols=ovText.split('\n')[1]?.split(';')||[];
     const overview={organicKeywords:parseInt(ovCols[3])||0,organicTraffic:parseInt(ovCols[4])||0,domainScore:parseInt(ovCols[7])||0};
     semrushData=[{keywords,overview,fetched:Date.now()}];
     localStorage.setItem('ec-semrush-v1',JSON.stringify(semrushData));
     renderSEOKeywords();renderSEOOverview();
+    const btn=document.getElementById('semrush-connect-btn');
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';
     toast(`SEMrush: ${keywords.length} keywords loaded`);
-  }catch(e){toast('SEMrush error: '+e.message,'error');}
+  }catch(e){toast('SEMrush error: '+e.message);}
 }
 
 // ── GOOGLE ADS — live API ──────────────────────────────────────────────────
