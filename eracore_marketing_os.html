@@ -6994,8 +6994,8 @@ function renderSocialDashInto(weekListId){
   if(origWL&&origWL._backup){origWL.id=origWL._backup;delete origWL._backup;}
 }
 function renderPaidDash(){
-  // Always load latest data regardless of how this function is called
-  loadBingAdsData();loadHubSpotAds();loadPaid();
+  // Load data without triggering re-render
+  loadBingAdsData();loadHubSpotAds();
   const el=document.getElementById('paid-weeks-list');
   if(!el)return;
 
@@ -7522,6 +7522,7 @@ const GSC_CLIENT_ID=localStorage.getItem('ec-gsc-client-id')||'';
 const GSC_CLIENT_SECRET=localStorage.getItem('ec-gsc-client-secret')||'';
 const GA4_PROPERTY=localStorage.getItem('ec-ga4-property')||'495145118';
 const BING_API_KEY=localStorage.getItem('ec-bing-wmt-key')||'';
+function getBingWmtKey(){return localStorage.getItem('ec-bing-wmt-key')||BING_API_KEY||'';}
 // Tokens are never stored in the file — loaded from localStorage only
 const REFRESH_TOKEN=localStorage.getItem('ec-gsc-refresh-token')||'';
 const GA4_REFRESH_TOKEN=localStorage.getItem('ec-ga4-refresh-token')||'';
