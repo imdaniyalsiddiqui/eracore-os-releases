@@ -486,6 +486,7 @@ select.sm:focus{border-color:var(--blue)}
       <button class="btn" onclick="openSEMrushUpload()"><i class="ti ti-upload" style="font-size:11px"></i> CSV</button>
     </div>
   </div>
+  <div id="gsc-oauth-status" style="margin-bottom:1rem"></div>
   <!-- Overview counters -->
   <div class="counters" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
     <div class="counter"><div class="counter-val" style="color:var(--text)" id="seo-total-clicks">—</div><div class="counter-lbl">Total organic clicks (7d)</div></div>
@@ -7545,10 +7546,13 @@ function updateGSCConnectedState(){
 }
 
 async function refreshAccessToken(){
+  // First try stored refresh token from localStorage
+  const storedRT=localStorage.getItem('ec-gsc-refresh-token')||REFRESH_TOKEN;
+  if(!storedRT){return false;}
   try{
     const res=await fetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${REFRESH_TOKEN}&grant_type=refresh_token`
+      body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${storedRT}&grant_type=refresh_token`
     });
     const data=await res.json();
     if(data.access_token){gscToken=data.access_token;localStorage.setItem('ec-gsc-token',gscToken);updateGSCConnectedState();return true;}
@@ -7557,10 +7561,12 @@ async function refreshAccessToken(){
 }
 
 async function refreshGA4Token(){
+  const storedRT=localStorage.getItem('ec-ga4-refresh-token')||GA4_REFRESH_TOKEN;
+  if(!storedRT){return false;}
   try{
     const res=await fetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${GA4_REFRESH_TOKEN}&grant_type=refresh_token`
+      body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${storedRT}&grant_type=refresh_token`
     });
     const data=await res.json();
     if(data.access_token){ga4Token=data.access_token;return true;}
@@ -7570,11 +7576,32 @@ async function refreshGA4Token(){
 
 async function connectGSC(){
   const btn=document.getElementById('gsc-connect-btn');
-  if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Connecting…';
-  const ok=await refreshAccessToken();
-  await refreshGA4Token();
-  if(ok){fetchLiveData();toast('Google connected');}
-  else{if(btn)btn.innerHTML='<i class="ti ti-plug"></i> Connect Google';toast('Connection failed');}
+  if(!GSC_CLIENT_ID||!GSC_CLIENT_SECRET){
+    toast('Save your Google Client ID and Secret in Settings first');
+    return;
+  }
+  // If we have stored refresh tokens, just use them
+  const hasRT=localStorage.getItem('ec-gsc-refresh-token');
+  if(hasRT){
+    if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Connecting…';
+    const ok=await refreshAccessToken();
+    await refreshGA4Token();
+    if(ok){fetchLiveData();toast('Google connected');}
+    else{if(btn)btn.innerHTML='<i class="ti ti-plug"></i> Connect Google';toast('Connection failed — re-authorize below');}
+    return;
+  }
+  // Full OAuth flow — open Google sign-in
+  const scope=encodeURIComponent('https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly');
+  const redirect=encodeURIComponent('urn:ietf:wg:oauth:2.0:oob');
+  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+  window.open(url,'_blank');
+  // Show code input
+  const statusEl=document.getElementById('gsc-oauth-status');
+  if(statusEl)statusEl.innerHTML=`<div style="margin-top:.75rem;font-size:13px;color:var(--text2);line-height:1.5">A Google sign-in page opened. Sign in with the Eracore Google account, approve, then copy the <strong>authorisation code</strong> and paste it below:</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="gsc-auth-code" placeholder="4/0AX…" style="flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+      <button class="btn btn-primary" onclick="exchangeGSCCode()"><i class="ti ti-check"></i> Connect</button>
+    </div>`;
 }
 
 function saveGSCToken(){
@@ -7583,6 +7610,37 @@ function saveGSCToken(){
   gscToken=val;localStorage.setItem('ec-gsc-token',gscToken);
   document.getElementById('gsc-token-overlay').classList.remove('open');
   updateGSCConnectedState();fetchLiveData();toast('Google connected');
+}
+
+async function exchangeGSCCode(){
+  const code=(document.getElementById('gsc-auth-code')?.value||'').trim();
+  if(!code){toast('Paste the authorisation code first');return;}
+  const statusEl=document.getElementById('gsc-oauth-status');
+  if(statusEl){const inp=statusEl.querySelector('input');if(inp)inp.disabled=true;}
+  try{
+    const res=await fetch('https://oauth2.googleapis.com/token',{
+      method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`code=${encodeURIComponent(code)}&client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code`
+    });
+    const data=await res.json();
+    if(data.refresh_token){
+      localStorage.setItem('ec-gsc-refresh-token',data.refresh_token);
+      // GA4 uses same token
+      localStorage.setItem('ec-ga4-refresh-token',data.refresh_token);
+      if(data.access_token){gscToken=data.access_token;ga4Token=data.access_token;localStorage.setItem('ec-gsc-token',gscToken);}
+      updateGSCConnectedState();
+      if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;margin-top:.5rem">✓ Google connected — GSC and GA4 are live.</div>';
+      fetchLiveData();fetchConversionData();
+      toast('Google connected successfully');
+    }else{
+      const msg=data.error_description||data.error||JSON.stringify(data);
+      if(statusEl)statusEl.innerHTML=`<div style="color:var(--red);font-size:13px;margin-top:.5rem">Failed: ${msg}. Try clicking Connect Google again for a fresh code.</div>`;
+      toast('Auth failed: '+msg);
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML=`<div style="color:var(--red);font-size:13px;margin-top:.5rem">Error: ${e.message}</div>`;
+    toast('Exchange failed: '+e.message);
+  }
 }
 let googleStats={clicks:null,impressions:null,sessions:null};
 
