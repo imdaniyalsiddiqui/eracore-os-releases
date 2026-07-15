@@ -7939,20 +7939,20 @@ function renderSEOOverview(){
   // ── Bing 8-week trend ──
   if(bingData.length){
     const b=bingData[0];
-    const recentWeeks=b.weeks.slice(0,8);
-    const maxClicks=Math.max(...recentWeeks.map(w=>w.clicks),1);
+    const recentWeeks=(b.weeks||[]).slice(0,8);
+    const maxClicks=recentWeeks.length?Math.max(...recentWeeks.map(w=>w.clicks),1):1;
     html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
       <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">Bing — last 8 weeks</div>
-      <div style="display:flex;gap:8px;align-items:flex-end;height:80px;margin-bottom:.75rem">
+      ${recentWeeks.length?`<div style="display:flex;gap:8px;align-items:flex-end;height:80px;margin-bottom:.75rem">
         ${recentWeeks.slice().reverse().map(w=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
           <div style="width:100%;background:var(--purple);border-radius:3px 3px 0 0;height:${Math.max(4,(w.clicks/maxClicks)*60)}px" title="${w.clicks} clicks"></div>
           <div style="font-size:9px;color:var(--text3)">${new Date(w.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
         </div>`).join('')}
-      </div>
+      </div>`:'<div style="font-size:12px;color:var(--text3);margin-bottom:.75rem">Weekly trend available after CSV upload</div>'}
       <div style="display:flex;gap:16px;font-size:12px;color:var(--text2)">
-        <span>Last 7d: <strong style="color:var(--purple)">${Math.round(b.totalClicks7)} clicks</strong></span>
-        <span>Impressions: <strong>${Math.round(b.totalImpressions7).toLocaleString()}</strong></span>
-        <span>${b.dailyRows.length} days of history loaded</span>
+        <span>Last 7d: <strong style="color:var(--purple)">${Math.round(b.totalClicks7||0)} clicks</strong></span>
+        <span>Impressions: <strong>${Math.round(b.totalImpressions7||0).toLocaleString()}</strong></span>
+        <span>${(b.dailyRows||b.queries||[]).length} ${b.source==='oauth'?'queries':'days'} loaded</span>
       </div>
     </div>`;
   }
@@ -8162,7 +8162,9 @@ async function fetchBingDataWithToken(token){
     const queries=Array.isArray(data.d)?data.d:[];
     const totalClicks=queries.reduce((s,q)=>s+(q.Clicks||0),0);
     const totalImpr=queries.reduce((s,q)=>s+(q.Impressions||0),0);
-    bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),source:'oauth',fetched:Date.now()}];
+    // Build dailyRows compatible structure from query data
+    const dailyRows=queries.map(q=>({date:q.Date||'',clicks:q.Clicks||0,impressions:q.Impressions||0,query:q.Query||''}));
+    bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),dailyRows,weeks:[],source:'oauth',fetched:Date.now()}];
     localStorage.setItem('ec-bing-v1',JSON.stringify(bingData));
     updateSEOTopCounters();renderSEOOverview();
     const btn=document.getElementById('bing-connect-btn');
@@ -9305,16 +9307,16 @@ function funnelMiniMetric(label,value,color,delta){
 function getBingForRange(){
   if(!bingData.length)return{clicks:0,impressions:0};
   const{days}=getMPDateRange();
-  const rows=bingData[0].dailyRows.slice(-days);
-  return{clicks:rows.reduce((s,r)=>s+r.clicks,0),impressions:rows.reduce((s,r)=>s+r.impressions,0)};
+  const rows=(bingData[0].dailyRows||[]).slice(-days);
+  return{clicks:rows.reduce((s,r)=>s+(r.clicks||0),0),impressions:rows.reduce((s,r)=>s+(r.impressions||0),0)};
 }
 
 function getBingForPreviousRange(){
   if(!bingData.length)return{clicks:0,impressions:0};
   const{days}=getMPDateRange();
-  const all=bingData[0].dailyRows;
+  const all=bingData[0].dailyRows||[];
   const rows=all.slice(Math.max(0,all.length-days*2),all.length-days);
-  return{clicks:rows.reduce((s,r)=>s+r.clicks,0),impressions:rows.reduce((s,r)=>s+r.impressions,0)};
+  return{clicks:rows.reduce((s,r)=>s+(r.clicks||0),0),impressions:rows.reduce((s,r)=>s+(r.impressions||0),0)};
 }
 
 function renderMarketingPerf(){
