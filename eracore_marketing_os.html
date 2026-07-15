@@ -8643,13 +8643,14 @@ async function fetchGoogleAdsLive(){
   if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Fetching…';
   const range=getPaidDateRange();
   try{
-    const body={query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} ORDER BY metrics.cost_micros DESC`};
-    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${cid}/googleAds:search`,{
+    const body=JSON.stringify({query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} ORDER BY metrics.cost_micros DESC`});
+    // Route through main.js proxy to bypass CORS
+    const res=await fetch('http://127.0.0.1:8742/gads-query',{
       method:'POST',
-      headers:{'Authorization':'Bearer '+gscToken,'developer-token':devToken,'Content-Type':'application/json'},
-      body:JSON.stringify(body)
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customerId:cid,devToken,accessToken:gscToken,query:body})
     });
-    if(!res.ok){const err=await res.json();throw new Error((err.error?.message||'API error ')+res.status);}
+    if(!res.ok){const err=await res.json();throw new Error(err.error||'Proxy error '+res.status);}
     const data=await res.json();
     const rows=data.results||[];
     gadsData={
