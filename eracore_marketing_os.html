@@ -7889,7 +7889,7 @@ function renderSEOOverview(){
       <div style="display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Clicks</span><strong>${bClicks!==null?Math.round(bClicks).toLocaleString():'—'}</strong></div>
         <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Impressions</span><strong>${bImpressions!==null?Math.round(bImpressions).toLocaleString():'—'}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">History loaded</span><strong>${bingData.length?bingData[0].dailyRows.length+' days':'—'}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">History loaded</span><strong>${bingData.length?(bingData[0].queries||[]).length+' queries':'—'}</strong></div>
       </div>
       ${bClicks===null?`<button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:.875rem" onclick="fetchBingWmt()"><i class="ti ti-brand-bing"></i> ${getBingWmtKey()?'Refresh Bing data':'Connect Bing'}</button>`:''}
     </div>
