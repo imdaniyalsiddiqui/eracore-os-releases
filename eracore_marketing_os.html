@@ -8058,14 +8058,17 @@ async function fetchBingWmt(){
   const key=getBingWmtKey();
   if(!key){toast('Enter Bing WMT API key in Settings first');openSettingsToSection('bing-wmt');return;}
   const siteUrl=encodeURIComponent('https://eracore.com/');
-  // Use correct Bing WMT API endpoint via local proxy
   const targetUrl=`https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?apikey=${key}&siteUrl=${siteUrl}`;
   const proxyUrl=`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(targetUrl)}`;
   try{
     const res=await fetch(proxyUrl);
     const text=await res.text();
+    console.log('[Bing WMT] status:',res.status,'response:',text.slice(0,300));
     let data;
-    try{data=JSON.parse(text);}catch(e){throw new Error('Bing returned unexpected response — check your API key is valid');}
+    try{data=JSON.parse(text);}catch(e){
+      console.error('[Bing WMT] Not JSON:',text.slice(0,500));
+      throw new Error('Bing returned: '+text.slice(0,120));
+    }
     if(data.error||data.ErrorCode){throw new Error(data.error?.message||'Bing API error: '+JSON.stringify(data));}
     const queries=(data.d||[]);
     const totalClicks=queries.reduce((s,q)=>s+(q.Clicks||0),0);
@@ -8076,7 +8079,7 @@ async function fetchBingWmt(){
     const btn=document.getElementById('bing-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Bing connected</span>';
     toast('Bing data updated — '+totalClicks+' clicks, '+totalImpr+' impressions');
-  }catch(e){toast('Bing WMT: '+e.message);}
+  }catch(e){toast('Bing WMT: '+e.message);console.error('[Bing WMT]',e);}
 }
 
 // ── SEMRUSH — live API ─────────────────────────────────────────────────────
