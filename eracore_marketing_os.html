@@ -8360,7 +8360,7 @@ async function fetchSemrush(){
     const overview={organicKeywords:parseInt(ovCols[3])||0,organicTraffic:parseInt(ovCols[4])||0,domainScore:parseInt(ovCols[7])||0};
     semrushData=[{keywords,overview,fetched:Date.now()}];
     localStorage.setItem('ec-semrush-v1',JSON.stringify(semrushData));
-    renderSEOKeywords();renderSEOOverview();
+    renderKeywordTable();renderSEOOverview();
     const btn=document.getElementById('semrush-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';
     toast(`SEMrush: ${keywords.length} keywords loaded`);
