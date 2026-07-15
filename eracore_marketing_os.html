@@ -8155,10 +8155,11 @@ async function fetchBingDataWithToken(token){
   try{
     const res=await fetch(proxyUrl);
     const text=await res.text();
+    console.log('[Bing data] status:',res.status,'response:',text.slice(0,300));
     let data;
     try{data=JSON.parse(text);}catch(e){throw new Error('Non-JSON: '+text.slice(0,100));}
     if(data.error||data.ErrorCode){throw new Error(JSON.stringify(data));}
-    const queries=data.d||[];
+    const queries=Array.isArray(data.d)?data.d:[];
     const totalClicks=queries.reduce((s,q)=>s+(q.Clicks||0),0);
     const totalImpr=queries.reduce((s,q)=>s+(q.Impressions||0),0);
     bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),source:'oauth',fetched:Date.now()}];
@@ -8168,8 +8169,7 @@ async function fetchBingDataWithToken(token){
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Bing connected</span>';
     toast('Bing connected — '+totalClicks+' clicks, '+totalImpr+' impressions');
   }catch(e){
-    // Token may be expired — clear and retry
-    localStorage.removeItem('ec-bing-oauth-token');
+    console.error('[Bing data] Error:',e.message);
     toast('Bing fetch failed: '+e.message);
   }
 }
