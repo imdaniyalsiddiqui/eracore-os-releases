@@ -8118,6 +8118,8 @@ async function exchangeBingCode(){
       if(data.refresh_token)localStorage.setItem('ec-bing-oauth-refresh',data.refresh_token);
       if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ Bing connected via OAuth</div>';
       await fetchBingDataWithToken(data.access_token);
+    }else if(data.error==='bing_html_response'){
+      throw new Error('Bing returned an HTML page (HTTP '+data.status+'). Open F12 → Console to see the [bing-token] log for details. The auth code may have expired — try Connect Bing again.');
     }else{
       throw new Error(data.error_description||data.error||JSON.stringify(data));
     }
