@@ -449,9 +449,9 @@ select.sm:focus{border-color:var(--blue)}
   <div><div class="pt">Reporting</div><div class="ps">MZ Report · Asana · Team Update</div></div>
   <div style="height:1.25rem"></div>
   <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem;width:fit-content">
-    <button class="btn" id="rh-mzreport" onclick="navTo('mzreport',this)" style="border-radius:0;border:none;font-size:12px"><i class="ti ti-presentation"></i> MZ Report</button>
-    <button class="btn" id="rh-asana" onclick="navTo('asanaview',this)" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-layout-kanban"></i> Asana</button>
-    <button class="btn" id="rh-standup" onclick="navTo('standup',this)" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-speakerphone"></i> Team Update</button>
+    <button class="btn" id="rh2-mzreport" onclick="navTo('mzreport',this)" style="border-radius:0;border:none;font-size:12px"><i class="ti ti-presentation"></i> MZ Report</button>
+    <button class="btn" id="rh2-asana" onclick="navTo('asanaview',this)" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-layout-kanban"></i> Asana</button>
+    <button class="btn" id="rh2-standup" onclick="navTo('standup',this)" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-speakerphone"></i> Team Update</button>
   </div>  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
     <div><div class="pt">Asana</div><div class="ps">Live view of what's actually moving in Kasun's and Javeria's Asana boards — team productivity, separate from the Task command center</div></div>
     <button class="btn btn-primary" onclick="loadAsanaOverview()"><i class="ti ti-refresh"></i> Refresh from Asana</button>
@@ -926,79 +926,6 @@ select.sm:focus{border-color:var(--blue)}
         <button class="btn btn-primary" onclick="saveCallsCount()"><i class="ti ti-check"></i> Save</button>
       </div>
     </div>
-
-    <!-- ── NEW API CREDENTIALS ── -->
-    <div style="margin-top:1.5rem;border-top:2px solid var(--border);padding-top:1.25rem">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem">SEO &amp; Paid API Credentials</div>
-
-      <!-- Google OAuth Client Secret (for GSC + GA4) -->
-      <div id="settings-google-secret" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google OAuth — Client Secret</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Required for GSC + GA4. Paste your OAuth client ID and secret from Google Cloud Console → APIs &amp; Services → Credentials → Eracore Marketing OS. Only needs to be set once — saved locally, never in the file.</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
-          <input type="text" id="gsc-clientid-input" placeholder="Client ID  (…apps.googleusercontent.com)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="gsc-secret-input" placeholder="Client Secret  (GOCSPX-…)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <button class="btn btn-primary" onclick="(function(){const id=document.getElementById('gsc-clientid-input').value.trim();const v=document.getElementById('gsc-secret-input').value.trim();if(!id||!v){toast('Enter both Client ID and Secret');return;}localStorage.setItem('ec-gsc-client-id',id);localStorage.setItem('ec-gsc-client-secret',v);toast('Google OAuth credentials saved');document.getElementById('gsc-secret-status').textContent='✓ Saved';document.getElementById('gsc-secret-status').style.color='var(--green)';})()"><i class="ti ti-check"></i> Save</button>
-        </div>
-        <div id="gsc-secret-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
-      </div>
-
-      <!-- Bing Webmaster Tools -->
-      <div id="settings-bing-wmt" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-bing" style="color:#008272"></i> Bing Webmaster Tools</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Get your API key: bing.com/webmasters → Settings → API Access → Generate API Key</div>
-        <div style="display:flex;gap:8px">
-          <input type="password" id="bing-wmt-key-input" placeholder="Bing WMT API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('bing-wmt-key-input').value.trim();if(!v)return;localStorage.setItem('ec-bing-wmt-key',v);toast('Bing WMT key saved');fetchBingWmt();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
-        </div>
-      </div>
-
-      <!-- SEMrush -->
-      <div id="settings-semrush" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-trending-up" style="color:#FF642D"></i> SEMrush</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Get your API key: semrush.com → Profile → Subscription info → API units → Generate key</div>
-        <div style="display:flex;gap:8px">
-          <input type="password" id="semrush-key-input" placeholder="SEMrush API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('semrush-key-input').value.trim();if(!v)return;localStorage.setItem('ec-semrush-key',v);toast('SEMrush key saved');fetchSemrush();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
-        </div>
-      </div>
-
-      <!-- Google Ads -->
-      <div id="settings-gads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google Ads</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Requires Google (GSC) to already be connected. Get Developer Token: ads.google.com → Tools → API Centre</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input type="password" id="gads-dev-token" placeholder="Developer token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <input type="text" id="gads-cid" placeholder="Customer ID (123-456-7890)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('gads-dev-token').value.trim();const c=document.getElementById('gads-cid').value.trim();if(!t||!c)return toast('Enter both fields');localStorage.setItem('ec-gads-dev-token',t);localStorage.setItem('ec-gads-cid',c);toast('Google Ads credentials saved');fetchGoogleAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
-      </div>
-
-      <!-- Meta Ads -->
-      <div id="settings-meta-ads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-facebook" style="color:#1877F2"></i> Meta Ads (Facebook + Instagram)</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">business.facebook.com → Users → System Users → Generate token (ads_read, ads_management). Ad Account ID from Ads Manager URL.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input type="password" id="meta-token-input" placeholder="System User Access Token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <input type="text" id="meta-account-input" placeholder="Ad Account ID (act_12345)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('meta-token-input').value.trim();const a=document.getElementById('meta-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-meta-token',t);localStorage.setItem('ec-meta-ad-account',a);toast('Meta Ads credentials saved');fetchMetaAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
-      </div>
-
-      <!-- LinkedIn Ads -->
-      <div id="settings-li-ads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
-        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-linkedin" style="color:#0A66C2"></i> LinkedIn Ads</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Requires LinkedIn Marketing Developer Platform access. OAuth token from your app. Ad Account ID from Campaign Manager URL.</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <input type="password" id="li-token-input" placeholder="LinkedIn OAuth access token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-          <input type="text" id="li-account-input" placeholder="Ad Account ID (123456789)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text)">
-        </div>
-        <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -1134,6 +1061,65 @@ select.sm:focus{border-color:var(--blue)}
     </div>
     <div id="gads-status" style="font-size:12px;color:var(--text3);margin-top:.5rem"></div>
   </div>
+
+  <!-- ── GOOGLE OAUTH (GSC + GA4) ── -->
+  <div style="margin-top:1.5rem;border-top:2px solid var(--border);padding-top:1.25rem;max-width:620px">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem">Google OAuth Credentials</div>
+    <div id="settings-google-secret" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google OAuth — Client ID &amp; Secret</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">Required for GSC + GA4. Get from Google Cloud Console → APIs &amp; Services → Credentials → Eracore Marketing OS. Saved locally only — never stored in the file.</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+        <input type="text" id="gsc-clientid-input" placeholder="Client ID (…apps.googleusercontent.com)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="password" id="gsc-secret-input" placeholder="Client Secret (GOCSPX-…)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <button class="btn btn-primary" onclick="(function(){const id=document.getElementById('gsc-clientid-input').value.trim();const v=document.getElementById('gsc-secret-input').value.trim();if(!id||!v){toast('Enter both Client ID and Secret');return;}localStorage.setItem('ec-gsc-client-id',id);localStorage.setItem('ec-gsc-client-secret',v);toast('Google OAuth credentials saved');document.getElementById('gsc-secret-status').textContent='✓ Saved — go to SEO/AIEO and click Connect Google';document.getElementById('gsc-secret-status').style.color='var(--green)';})()"><i class="ti ti-check"></i> Save</button>
+      </div>
+      <div id="gsc-secret-status" style="font-size:11px;margin-top:6px;color:var(--text3)"></div>
+    </div>
+
+    <!-- Bing Webmaster Tools -->
+    <div id="settings-bing-wmt" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-bing" style="color:#008272"></i> Bing Webmaster Tools</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">bing.com/webmasters → Settings → API Access → Generate API Key</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="bing-wmt-key-input" placeholder="Bing WMT API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('bing-wmt-key-input').value.trim();if(!v)return;localStorage.setItem('ec-bing-wmt-key',v);toast('Bing WMT key saved');fetchBingWmt();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+      </div>
+    </div>
+
+    <!-- SEMrush -->
+    <div id="settings-semrush" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-trending-up" style="color:#FF642D"></i> SEMrush</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">semrush.com → Profile → Subscription info → API units → Generate key</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="semrush-key-input" placeholder="SEMrush API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('semrush-key-input').value.trim();if(!v)return;localStorage.setItem('ec-semrush-key',v);toast('SEMrush key saved');fetchSemrush();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+      </div>
+    </div>
+
+    <!-- Meta Ads -->
+    <div id="settings-meta-ads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-facebook" style="color:#1877F2"></i> Meta Ads (Facebook + Instagram)</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">business.facebook.com → Users → System Users → Generate token (ads_read, ads_management). Ad Account ID from Ads Manager URL.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="password" id="meta-token-input" placeholder="System User Access Token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="text" id="meta-account-input" placeholder="Ad Account ID (act_12345)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('meta-token-input').value.trim();const a=document.getElementById('meta-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-meta-token',t);localStorage.setItem('ec-meta-ad-account',a);toast('Meta Ads credentials saved');fetchMetaAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+    </div>
+
+    <!-- LinkedIn Ads -->
+    <div id="settings-li-ads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-brand-linkedin" style="color:#0A66C2"></i> LinkedIn Ads</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">LinkedIn Marketing Developer Platform → OAuth token + Ad Account ID from Campaign Manager URL.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="password" id="li-token-input" placeholder="LinkedIn OAuth access token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="text" id="li-account-input" placeholder="Ad Account ID (123456789)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+    </div>
+  </div>
 </div>
 
 
@@ -1161,7 +1147,7 @@ select.sm:focus{border-color:var(--blue)}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:10px">
     <div><div class="pt" id="mm-title">Marketing Management</div><div class="ps" id="mm-subtitle">All channels</div></div>
     <div style="display:flex;gap:6px">
-      <button class="btn btn-primary" onclick="openTaskOverlay()"><i class="ti ti-plus"></i> New task</button>
+      <button class="btn btn-primary" onclick="openNewTask()"><i class="ti ti-plus"></i> New task</button>
     </div>
   </div>
   <div style="display:flex;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem;width:fit-content">
