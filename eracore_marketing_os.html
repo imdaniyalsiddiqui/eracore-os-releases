@@ -8055,31 +8055,118 @@ function renderSEODash(){
 
 // ── BING WEBMASTER TOOLS — live API ───────────────────────────────────────
 async function fetchBingWmt(){
-  const key=getBingWmtKey();
-  if(!key){toast('Enter Bing WMT API key in Settings first');openSettingsToSection('bing-wmt');return;}
+  // Check if we have a stored OAuth access token
+  const storedToken=localStorage.getItem('ec-bing-oauth-token');
+  const tokenExpiry=parseInt(localStorage.getItem('ec-bing-oauth-expiry')||'0');
+  const refreshToken=localStorage.getItem('ec-bing-oauth-refresh');
+
+  if(storedToken&&tokenExpiry>Date.now()){
+    // Token still valid — fetch data directly
+    await fetchBingDataWithToken(storedToken);
+    return;
+  }
+  if(refreshToken){
+    // Try to refresh
+    const newToken=await refreshBingToken(refreshToken);
+    if(newToken){await fetchBingDataWithToken(newToken);return;}
+  }
+  // No valid token — start OAuth flow
+  startBingOAuth();
+}
+
+function startBingOAuth(){
+  const BING_CLIENT_ID=localStorage.getItem('ec-bing-oauth-client-id')||'';
+  if(!BING_CLIENT_ID){toast('Bing OAuth not configured — contact Daniyal');return;}
+  const redirectUri=encodeURIComponent('https://eracore.com/bing-callback');
+  const url=`https://www.bing.com/webmasters/oauth/authorize?response_type=code&client_id=${BING_CLIENT_ID}&redirect_uri=${redirectUri}&scope=webmaster.read`;
+  window.open(url,'_blank');
+  // Show code input UI
+  const statusEl=document.getElementById('gsc-oauth-status');
+  if(statusEl)statusEl.innerHTML=`<div style="background:var(--blue-l);border:1px solid var(--blue)30;border-radius:var(--r);padding:.875rem 1rem;font-size:13px;color:var(--text);line-height:1.6;margin-top:.5rem">
+    <strong>Step 1:</strong> A Bing sign-in page opened. Sign in with the Microsoft account that owns the Bing Webmaster Tools account.<br>
+    <strong>Step 2:</strong> After approving, your browser will redirect to eracore.com/bing-callback — that page won't load but the URL will contain a code.<br>
+    <strong>Step 3:</strong> Copy the full URL from the address bar and paste it below.<br>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="bing-redirect-url" placeholder="https://eracore.com/bing-callback?code=..." style="flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+      <button class="btn btn-primary" onclick="exchangeBingCode()"><i class="ti ti-check"></i> Connect</button>
+    </div>
+  </div>`;
+}
+
+async function exchangeBingCode(){
+  const BING_CLIENT_ID=localStorage.getItem('ec-bing-oauth-client-id')||'';
+  const BING_CLIENT_SECRET=localStorage.getItem('ec-bing-oauth-client-secret')||'';
+  const redirectUri='https://eracore.com/bing-callback';
+  const urlInput=(document.getElementById('bing-redirect-url')?.value||'').trim();
+  if(!urlInput){toast('Paste the full redirect URL first');return;}
+  let code='';
+  try{const u=new URL(urlInput);code=u.searchParams.get('code')||'';}
+  catch(e){const m=urlInput.match(/[?&]code=([^&]+)/);if(m)code=decodeURIComponent(m[1]);}
+  if(!code){toast('Could not find code in URL');return;}
+  const statusEl=document.getElementById('gsc-oauth-status');
+  try{
+    const body=`code=${encodeURIComponent(code)}&client_id=${BING_CLIENT_ID}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&redirect_uri=${encodeURIComponent(redirectUri)}&grant_type=authorization_code`;
+    const tokenUrl='https://www.bing.com/webmasters/oauth/token';
+    const proxyUrl=`http://127.0.0.1:8742/proxy-post?url=${encodeURIComponent(tokenUrl)}&body=${encodeURIComponent(body)}`;
+    const res=await fetch(proxyUrl);
+    const data=await res.json();
+    if(data.access_token){
+      localStorage.setItem('ec-bing-oauth-token',data.access_token);
+      localStorage.setItem('ec-bing-oauth-expiry',String(Date.now()+(data.expires_in||3599)*1000));
+      if(data.refresh_token)localStorage.setItem('ec-bing-oauth-refresh',data.refresh_token);
+      if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ Bing connected via OAuth</div>';
+      await fetchBingDataWithToken(data.access_token);
+    }else{
+      throw new Error(data.error_description||data.error||JSON.stringify(data));
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML=`<div style="color:var(--red);font-size:13px;padding:.5rem 0">Failed: ${e.message}</div>`;
+    toast('Bing auth failed: '+e.message);
+  }
+}
+
+async function refreshBingToken(refreshToken){
+  const BING_CLIENT_ID=localStorage.getItem('ec-bing-oauth-client-id')||'';
+  const BING_CLIENT_SECRET=localStorage.getItem('ec-bing-oauth-client-secret')||'';
+  try{
+    const body=`client_id=${BING_CLIENT_ID}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
+    const tokenUrl='https://www.bing.com/webmasters/oauth/token';
+    const proxyUrl=`http://127.0.0.1:8742/proxy-post?url=${encodeURIComponent(tokenUrl)}&body=${encodeURIComponent(body)}`;
+    const res=await fetch(proxyUrl);
+    const data=await res.json();
+    if(data.access_token){
+      localStorage.setItem('ec-bing-oauth-token',data.access_token);
+      localStorage.setItem('ec-bing-oauth-expiry',String(Date.now()+(data.expires_in||3599)*1000));
+      return data.access_token;
+    }
+  }catch(e){console.log('Bing token refresh failed',e);}
+  return null;
+}
+
+async function fetchBingDataWithToken(token){
   const siteUrl=encodeURIComponent('https://eracore.com/');
-  const targetUrl=`https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?apikey=${key}&siteUrl=${siteUrl}`;
-  const proxyUrl=`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(targetUrl)}`;
+  const targetUrl=`https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?siteUrl=${siteUrl}`;
+  const proxyUrl=`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent('Bearer '+token)}`;
   try{
     const res=await fetch(proxyUrl);
     const text=await res.text();
-    console.log('[Bing WMT] status:',res.status,'response:',text.slice(0,300));
     let data;
-    try{data=JSON.parse(text);}catch(e){
-      console.error('[Bing WMT] Not JSON:',text.slice(0,500));
-      throw new Error('Bing returned: '+text.slice(0,120));
-    }
-    if(data.error||data.ErrorCode){throw new Error(data.error?.message||'Bing API error: '+JSON.stringify(data));}
-    const queries=(data.d||[]);
+    try{data=JSON.parse(text);}catch(e){throw new Error('Non-JSON: '+text.slice(0,100));}
+    if(data.error||data.ErrorCode){throw new Error(JSON.stringify(data));}
+    const queries=data.d||[];
     const totalClicks=queries.reduce((s,q)=>s+(q.Clicks||0),0);
     const totalImpr=queries.reduce((s,q)=>s+(q.Impressions||0),0);
-    bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),source:'api',fetched:Date.now()}];
+    bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),source:'oauth',fetched:Date.now()}];
     localStorage.setItem('ec-bing-v1',JSON.stringify(bingData));
     updateSEOTopCounters();renderSEOOverview();
     const btn=document.getElementById('bing-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Bing connected</span>';
-    toast('Bing data updated — '+totalClicks+' clicks, '+totalImpr+' impressions');
-  }catch(e){toast('Bing WMT: '+e.message);console.error('[Bing WMT]',e);}
+    toast('Bing connected — '+totalClicks+' clicks, '+totalImpr+' impressions');
+  }catch(e){
+    // Token may be expired — clear and retry
+    localStorage.removeItem('ec-bing-oauth-token');
+    toast('Bing fetch failed: '+e.message);
+  }
 }
 
 // ── SEMRUSH — live API ─────────────────────────────────────────────────────
@@ -9379,6 +9466,10 @@ function renderSEOFunnel(){
     localStorage.setItem('ec-ga4-property','495145118');
   if(!localStorage.getItem('ec-bing-wmt-key') && !localStorage.getItem('ec-bing-webmaster'))
     localStorage.setItem('ec-bing-wmt-key','e353135658b74187a426aba658627262');
+  if(!localStorage.getItem('ec-bing-oauth-client-id'))
+    localStorage.setItem('ec-bing-oauth-client-id','5a54bbd5cc654fdd885f9917dd12d96e');
+  if(!localStorage.getItem('ec-bing-oauth-client-secret'))
+    localStorage.setItem('ec-bing-oauth-client-secret','OBY-9OXsNU0HeIY6Q9agPSUayJ3jO8OlRO_rOQjRktjMSA_-UYiuftMJKl7LzIJGLMxWsyita9VgkY5WjDNgXw');
 })();
 loadData();
 </script>
