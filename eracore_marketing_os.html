@@ -8071,10 +8071,10 @@ function renderSEOOverview(){
   // ── SEMrush ──
   const latest=semrushData[0];const latestAIEO=aieoWeeks[0];
   if(latest){
-    const ranking=latest.keywords.filter(k=>k.position!==null);
+    const ranking=latest.keywords.filter(k=>k.position!==null&&k.position!==undefined);
     const top3=ranking.filter(k=>k.position<=3).length;const top10=ranking.filter(k=>k.position<=10).length;
-    const top20=ranking.filter(k=>k.position<=20).length;const aiOv=ranking.filter(k=>k.type.includes('ai overview')).length;
-    const improved=latest.keywords.filter(k=>k.diff!==null&&k.diff>0).length;const dropped=latest.keywords.filter(k=>k.diff!==null&&k.diff<0).length;
+    const top20=ranking.filter(k=>k.position<=20).length;const aiOv=ranking.filter(k=>(k.type||'').toLowerCase().includes('ai overview')).length;
+    const improved=latest.keywords.filter(k=>k.diff!==null&&k.diff!==undefined&&k.diff>0).length;const dropped=latest.keywords.filter(k=>k.diff!==null&&k.diff!==undefined&&k.diff<0).length;
     const top10el=document.getElementById('seo-top10');if(top10el)top10el.textContent=top10;
     html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
       <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">SEMrush — ${latest.date}</div>
@@ -8351,20 +8351,26 @@ async function fetchSemrush(){
     const posRes=await fetch(proxy(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=50&export_columns=Ph,Po,Pp,Pd,Nq,Nr&export_escape=1`));
     if(!posRes.ok)throw new Error('SEMrush API '+posRes.status);
     const posText=await posRes.text();
-    const lines=posText.trim().split('\n').slice(1).filter(Boolean);
-    const keywords=lines.map(l=>{const cols=l.split(';');return{keyword:cols[0],position:parseInt(cols[1])||0,prevPos:parseInt(cols[2])||0,volume:parseInt(cols[4])||0};});
+    const lines=posText.trim().split('\n').slice(1).filter(l=>l&&l.trim());
+    const keywords=lines.map(l=>{
+      const cols=l.split(';');
+      if(!cols||cols.length<2)return null;
+      const pos=cols[1]?parseInt(cols[1]):null;
+      const diff=cols[3]?parseInt(cols[3]):null;
+      return{keyword:(cols[0]||'').replace(/^"|"$/g,''),position:isNaN(pos)?null:pos,prevPos:cols[2]?parseInt(cols[2])||null:null,diff:isNaN(diff)?null:diff,volume:cols[4]?parseInt(cols[4])||0:0};
+    }).filter(k=>k&&k.keyword&&k.keyword.length>0);
     // Domain overview via proxy
     const ovRes=await fetch(proxy(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`));
     const ovText=await ovRes.text();
-    const ovCols=ovText.split('\n')[1]?.split(';')||[];
+    const ovCols=(ovText.split('\n')[1]||'').split(';');
     const overview={organicKeywords:parseInt(ovCols[3])||0,organicTraffic:parseInt(ovCols[4])||0,domainScore:parseInt(ovCols[7])||0};
-    semrushData=[{keywords,overview,fetched:Date.now()}];
+    semrushData=[{keywords,overview,date:new Date().toISOString().slice(0,10),fetched:Date.now()}];
     localStorage.setItem('ec-semrush-v1',JSON.stringify(semrushData));
-    renderKeywordTable();renderSEOOverview();
+    renderSEMrushTab();renderSEOOverview();
     const btn=document.getElementById('semrush-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';
     toast(`SEMrush: ${keywords.length} keywords loaded`);
-  }catch(e){toast('SEMrush error: '+e.message);}
+  }catch(e){toast('SEMrush error: '+e.message);console.error('[SEMrush]',e);}
 }
 
 // ── GOOGLE ADS — live API ──────────────────────────────────────────────────
