@@ -8105,10 +8105,12 @@ async function exchangeBingCode(){
   if(!code){toast('Could not find code in URL');return;}
   const statusEl=document.getElementById('gsc-oauth-status');
   try{
-    const body=`code=${encodeURIComponent(code)}&client_id=${BING_CLIENT_ID}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&redirect_uri=${encodeURIComponent(redirectUri)}&grant_type=authorization_code`;
-    const tokenUrl='https://www.bing.com/webmasters/oauth/token';
-    const proxyUrl=`http://127.0.0.1:8742/proxy-post?url=${encodeURIComponent(tokenUrl)}&body=${encodeURIComponent(body)}`;
-    const res=await fetch(proxyUrl);
+    // Use dedicated /bing-token endpoint in main.js — handles POST natively in Node
+    const res=await fetch('http://127.0.0.1:8742/bing-token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`code=${encodeURIComponent(code)}&client_id=${encodeURIComponent(BING_CLIENT_ID)}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&redirect_uri=${encodeURIComponent(redirectUri)}&grant_type=authorization_code`
+    });
     const data=await res.json();
     if(data.access_token){
       localStorage.setItem('ec-bing-oauth-token',data.access_token);
@@ -8129,10 +8131,11 @@ async function refreshBingToken(refreshToken){
   const BING_CLIENT_ID=localStorage.getItem('ec-bing-oauth-client-id')||'';
   const BING_CLIENT_SECRET=localStorage.getItem('ec-bing-oauth-client-secret')||'';
   try{
-    const body=`client_id=${BING_CLIENT_ID}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`;
-    const tokenUrl='https://www.bing.com/webmasters/oauth/token';
-    const proxyUrl=`http://127.0.0.1:8742/proxy-post?url=${encodeURIComponent(tokenUrl)}&body=${encodeURIComponent(body)}`;
-    const res=await fetch(proxyUrl);
+    const res=await fetch('http://127.0.0.1:8742/bing-token',{
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`client_id=${encodeURIComponent(BING_CLIENT_ID)}&client_secret=${encodeURIComponent(BING_CLIENT_SECRET)}&refresh_token=${encodeURIComponent(refreshToken)}&grant_type=refresh_token`
+    });
     const data=await res.json();
     if(data.access_token){
       localStorage.setItem('ec-bing-oauth-token',data.access_token);
