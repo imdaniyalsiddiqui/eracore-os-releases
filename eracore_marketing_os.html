@@ -496,12 +496,17 @@ select.sm:focus{border-color:var(--blue)}
   </div>
   <div class="itabs">
     <button class="itab active" onclick="switchSEOTab('overview',this)">Overview</button>
+    <button class="itab" onclick="switchSEOTab('gsc',this)">Google</button>
+    <button class="itab" onclick="switchSEOTab('bing',this)">Bing</button>
+    <button class="itab" onclick="switchSEOTab('semrush',this)">SEMrush</button>
     <button class="itab" onclick="switchSEOTab('funnel',this)">Funnel</button>
-    <button class="itab" onclick="switchSEOTab('keywords',this)">Keywords</button>
     <button class="itab" onclick="switchSEOTab('aieo',this)">AIEO</button>
     <button class="itab" onclick="switchSEOTab('deliverables',this)">Deliverables</button>
   </div>
   <div id="seo-overview" class="itab-pane active"></div>
+  <div id="seo-gsc" class="itab-pane"></div>
+  <div id="seo-bing" class="itab-pane"></div>
+  <div id="seo-semrush" class="itab-pane"></div>
   <div id="seo-funnel" class="itab-pane"></div>
   <div id="seo-keywords" class="itab-pane"></div>
   <div id="seo-aieo" class="itab-pane"></div>
@@ -7523,6 +7528,7 @@ const GSC_CLIENT_SECRET=localStorage.getItem('ec-gsc-client-secret')||'';
 const GA4_PROPERTY=localStorage.getItem('ec-ga4-property')||'495145118';
 const BING_API_KEY=localStorage.getItem('ec-bing-wmt-key')||'';
 function getBingWmtKey(){return localStorage.getItem('ec-bing-wmt-key')||BING_API_KEY||'';}
+function getSemrushKey(){return localStorage.getItem('ec-semrush-key')||'';}
 // Tokens are never stored in the file — loaded from localStorage only
 const REFRESH_TOKEN=localStorage.getItem('ec-gsc-refresh-token')||'';
 const GA4_REFRESH_TOKEN=localStorage.getItem('ec-ga4-refresh-token')||'';
@@ -7533,7 +7539,7 @@ function loadSEO(){
   try{const d=localStorage.getItem('ec-aieo-v1');if(d)aieoWeeks=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('ec-deliv-v1');if(d)deliverables=JSON.parse(d);}catch(e){}
   try{gscToken=localStorage.getItem('ec-gsc-token');}catch(e){}
-  try{const d=localStorage.getItem('ec-google-stats');if(d)googleStats=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-google-stats');if(d){const parsed=JSON.parse(d);googleStats={clicks:null,impressions:null,sessions:null,pages:[],countries:[],queries:[],...parsed};}}catch(e){}
   if(gscToken)updateGSCConnectedState();
 }
 function saveSEO(){
@@ -7693,27 +7699,47 @@ async function exchangeGSCCode(){
     toast('Exchange failed: '+e.message);
   }
 }
-let googleStats={clicks:null,impressions:null,sessions:null};
+let googleStats={clicks:null,impressions:null,sessions:null,pages:[],countries:[],queries:[]};
 
 async function fetchLiveData(){
   if(!gscToken){const ok=await refreshAccessToken();if(!ok)return;}
   if(!ga4Token)await refreshGA4Token();
   const endDate=new Date().toISOString().slice(0,10);
   const startDate=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+  const gscBase=`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent('https://eracore.com/')}/searchAnalytics/query`;
+  const gscHeaders={Authorization:`Bearer ${gscToken}`,'Content-Type':'application/json'};
+  // Fetch overall totals
   try{
-    const gscRes=await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent('https://eracore.com/')}/searchAnalytics/query`,{
-      method:'POST',headers:{Authorization:`Bearer ${gscToken}`,'Content-Type':'application/json'},
-      body:JSON.stringify({startDate,endDate,dimensions:['country'],dimensionFilterGroups:[{groupType:'and',filters:[{dimension:'country',operator:'equals',expression:'usa'}]}],rowLimit:1})
-    });
-    if(gscRes.status===401){const ok=await refreshAccessToken();if(ok)return fetchLiveData();return;}
-    const gscData=await gscRes.json();
-    if(gscData.rows&&gscData.rows.length){
-      googleStats.clicks=Math.round(gscData.rows[0].clicks);
-      googleStats.impressions=Math.round(gscData.rows[0].impressions);
-    } else {
-      googleStats.clicks=0;googleStats.impressions=0;
-    }
-  }catch(e){console.log('GSC error',e);}
+    const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
+      body:JSON.stringify({startDate,endDate,rowLimit:1})});
+    if(res.status===401){const ok=await refreshAccessToken();if(ok)return fetchLiveData();return;}
+    const d=await res.json();
+    const totals=(d.rows||[]).reduce((s,r)=>({clicks:s.clicks+r.clicks,impressions:s.impressions+r.impressions}),{clicks:0,impressions:0});
+    googleStats.clicks=Math.round(totals.clicks);
+    googleStats.impressions=Math.round(totals.impressions);
+  }catch(e){console.log('GSC totals error',e);}
+  // Fetch top pages
+  try{
+    const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
+      body:JSON.stringify({startDate,endDate,dimensions:['page'],rowLimit:20,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
+    const d=await res.json();
+    googleStats.pages=(d.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));
+  }catch(e){console.log('GSC pages error',e);}
+  // Fetch top countries
+  try{
+    const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
+      body:JSON.stringify({startDate,endDate,dimensions:['country'],rowLimit:20,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
+    const d=await res.json();
+    googleStats.countries=(d.rows||[]).map(r=>({country:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions)}));
+  }catch(e){console.log('GSC countries error',e);}
+  // Fetch top queries
+  try{
+    const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
+      body:JSON.stringify({startDate,endDate,dimensions:['query'],rowLimit:30,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
+    const d=await res.json();
+    googleStats.queries=(d.rows||[]).map(r=>({query:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));
+  }catch(e){console.log('GSC queries error',e);}
+  // GA4 sessions
   try{
     if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('No GA4 token');}
     let ga4Res=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
@@ -7729,10 +7755,7 @@ async function fetchLiveData(){
     }
     if(ga4Res.ok){
       const ga4Data=await ga4Res.json();
-      const organicSessions=(ga4Data.rows||[]).reduce((s,r)=>s+parseInt(r.metricValues[0].value),0);
-      googleStats.sessions=organicSessions;
-    } else {
-      console.log('GA4 response not ok',ga4Res.status,await ga4Res.text());
+      googleStats.sessions=(ga4Data.rows||[]).reduce((s,r)=>s+parseInt(r.metricValues[0].value),0);
     }
   }catch(e){console.log('GA4 error',e);}
   updateSEOTopCounters();
@@ -7751,15 +7774,157 @@ function updateSEOTopCounters(){
 }
 function switchSEOTab(tab,el){
   document.querySelectorAll('#page-seodash .itab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['overview','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
+  ['overview','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
   const active=document.getElementById('seo-'+tab);if(active)active.classList.add('active');
-  if(tab==='keywords')renderKeywordTable();
+  if(tab==='overview')renderSEOOverview();
+  else if(tab==='gsc')renderGSCTab();
+  else if(tab==='bing')renderBingTab();
+  else if(tab==='semrush')renderSEMrushTab();
+  else if(tab==='keywords')renderKeywordTable();
   else if(tab==='aieo')renderAIEO();
   else if(tab==='deliverables')renderDeliverables();
   else if(tab==='funnel'){loadCalls();renderSEOFunnel();}
-  else renderSEOOverview();
 }
-function openSEMrushUpload(){document.getElementById('sr-date').value=new Date().toISOString().slice(0,10);document.getElementById('sr-filename').textContent='';document.getElementById('sr-save-btn').disabled=true;document.getElementById('semrush-overlay').classList.add('open');}
+function renderGSCTab(){
+  const el=document.getElementById('seo-gsc');if(!el)return;
+  const g=googleStats;
+  const hasData=g.clicks!==null||g.impressions!==null;
+  if(!hasData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-google" style="font-size:2rem;display:block;margin-bottom:.75rem"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">Google not connected</div>
+      <div style="font-size:13px;margin-bottom:1rem">Connect Google to see GSC and GA4 data</div>
+      <button class="btn btn-primary" onclick="connectGSC()"><i class="ti ti-plug"></i> Connect Google</button>
+    </div>`;return;
+  }
+  const ctr=g.clicks&&g.impressions?(g.clicks/g.impressions*100).toFixed(2)+'%':'—';
+  const gscPages=(g.pages||[]);const gscCountries=(g.countries||[]);const gscQueries=(g.queries||[]);
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Clicks (7d)',g.clicks?.toLocaleString()||'—','var(--blue)','ti-cursor-text'],['Impressions (7d)',g.impressions?.toLocaleString()||'—','var(--text)','ti-eye'],['CTR',ctr,'var(--green)','ti-percentage'],['GA4 Sessions',g.sessions?.toLocaleString()||'—','var(--purple)','ti-users']].map(([lbl,val,col,icon])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:5px"><i class="ti ${icon}" style="font-size:13px"></i>${lbl}</div>
+      <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;gap:6px"><i class="ti ti-file-text" style="font-size:13px;color:var(--blue)"></i>Top Pages</div>
+      ${gscPages.length?gscPages.slice(0,10).map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">${(p.page||p.keys?.[0]||'').replace('https://eracore.com','')}</span>
+        <span style="font-weight:600;color:var(--blue);flex-shrink:0">${(p.clicks||0).toLocaleString()} clicks</span>
+      </div>`).join(''):`<div style="color:var(--text3);font-size:13px">No page data — will populate as GSC data grows</div>`}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;gap:6px"><i class="ti ti-world" style="font-size:13px;color:var(--green)"></i>Top Countries</div>
+      ${gscCountries.length?gscCountries.slice(0,10).map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span style="color:var(--text2)">${c.country||c.keys?.[0]||'Unknown'}</span>
+        <div style="display:flex;gap:12px;font-weight:600"><span style="color:var(--blue)">${(c.clicks||0).toLocaleString()} clicks</span><span style="color:var(--text3)">${(c.impressions||0).toLocaleString()} impr</span></div>
+      </div>`).join(''):`<div style="color:var(--text3);font-size:13px">Connect Google Search Console to see country data</div>`}
+    </div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;gap:6px"><i class="ti ti-search" style="font-size:13px;color:var(--amber)"></i>Top Queries</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+      ${gscQueries.length?gscQueries.slice(0,20).map(q=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--surface2);border-radius:var(--r);font-size:12px">
+        <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${q.query||q.keys?.[0]||''}</span>
+        <div style="display:flex;gap:8px;flex-shrink:0"><span style="color:var(--blue);font-weight:600">${q.clicks||0}</span><span style="color:var(--text3)">pos ${q.position?Number(q.position).toFixed(1):q.keys?.[0]||'—'}</span></div>
+      </div>`).join(''):`<div style="color:var(--text3);font-size:13px;grid-column:1/-1">Query data will appear here after Google connection</div>`}
+    </div>
+  </div>`;
+}
+
+function renderBingTab(){
+  const el=document.getElementById('seo-bing');if(!el)return;
+  const hasData=bingData.length>0;
+  if(!hasData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">Bing not connected</div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchBingWmt()"><i class="ti ti-plug"></i> Connect Bing</button>
+    </div>`;return;
+  }
+  const b=bingData[0];
+  const queries=b.queries||[];
+  const totalClicks=b.totalClicks7||0;
+  const totalImpr=b.totalImpressions7||0;
+  const ctr=totalImpr?(totalClicks/totalImpr*100).toFixed(2)+'%':'—';
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Clicks (7d)',Math.round(totalClicks).toLocaleString(),'var(--purple)','ti-cursor-text'],['Impressions (7d)',Math.round(totalImpr).toLocaleString(),'var(--text)','ti-eye'],['CTR',ctr,'var(--green)','ti-percentage']].map(([lbl,val,col,icon])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;display:flex;align-items:center;gap:5px"><i class="ti ${icon}" style="font-size:13px"></i>${lbl}</div>
+      <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
+    </div>`).join('')}
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;gap:6px"><i class="ti ti-search" style="font-size:13px;color:var(--purple)"></i>Top Queries from Bing</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+      ${queries.length?queries.slice(0,30).map(q=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem .75rem;background:var(--surface2);border-radius:var(--r);font-size:12px">
+        <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">${q.Query||q.query||''}</span>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <span style="color:var(--purple);font-weight:600">${q.Clicks||q.clicks||0} clicks</span>
+          <span style="color:var(--text3)">${q.Impressions||q.impressions||0} impr</span>
+        </div>
+      </div>`).join(''):`<div style="color:var(--text3);font-size:13px;grid-column:1/-1">No query data yet</div>`}
+    </div>
+  </div>`;
+}
+
+function renderSEMrushTab(){
+  const el=document.getElementById('seo-semrush');if(!el)return;
+  const latest=semrushData[0];
+  if(!latest){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-trending-up" style="font-size:2rem;display:block;margin-bottom:.75rem"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">SEMrush not connected</div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchSemrush()"><i class="ti ti-plug"></i> Connect SEMrush</button>
+    </div>`;return;
+  }
+  const kws=latest.keywords||[];const ov=latest.overview||{};
+  const top3=kws.filter(k=>k.position&&k.position<=3).length;
+  const top10=kws.filter(k=>k.position&&k.position<=10).length;
+  const top20=kws.filter(k=>k.position&&k.position<=20).length;
+  const top100=kws.filter(k=>k.position&&k.position<=100).length;
+  const avgPos=kws.length?Math.round(kws.filter(k=>k.position).reduce((s,k)=>s+k.position,0)/kws.filter(k=>k.position).length):0;
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Top 3',top3,'var(--green)'],['Top 10',top10,'var(--blue)'],['Top 20',top20,'var(--amber)'],['Top 100',top100,'var(--text)']].map(([lbl,val,col])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${lbl}</div>
+      <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Avg Position',avgPos||'—','var(--text)'],['Total Keywords',kws.length,'var(--blue)'],['Organic Traffic Est.',ov.organicTraffic?.toLocaleString()||'—','var(--green)']].map(([lbl,val,col])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${lbl}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${col}">${val}</div>
+    </div>`).join('')}
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between">
+      <span><i class="ti ti-list" style="font-size:13px;color:var(--blue)"></i> All Keywords (${kws.length})</span>
+      <span style="font-size:11px;color:var(--text3)">Last updated: ${latest.date||'—'}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
+      <span>Keyword</span><span style="text-align:right;padding-right:1.5rem">Position</span><span style="text-align:right;padding-right:1.5rem">Volume</span><span style="text-align:right">Change</span>
+    </div>
+    <div style="max-height:400px;overflow-y:auto">
+      ${kws.slice(0,100).map(k=>{
+        const pos=k.position;
+        const col=pos<=3?'var(--green)':pos<=10?'var(--blue)':pos<=20?'var(--amber)':'var(--text2)';
+        const diff=k.diff;const diffStr=diff===null?'—':diff>0?`<span style="color:var(--green)">▲${diff}</span>`:diff<0?`<span style="color:var(--red)">▼${Math.abs(diff)}</span>`:'—';
+        return`<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;font-size:12px;padding:.45rem .5rem;border-bottom:1px solid var(--border);align-items:center">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.keyword}</span>
+          <span style="text-align:right;padding-right:1.5rem;font-weight:700;color:${col}">${pos||'—'}</span>
+          <span style="text-align:right;padding-right:1.5rem;color:var(--text2)">${k.volume?.toLocaleString()||'—'}</span>
+          <span style="text-align:right">${diffStr}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
 let parsedSEMrush=null;
 function handleSEMrushFile(input){
   const file=input.files[0];if(!file)return;
