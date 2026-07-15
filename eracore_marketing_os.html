@@ -787,24 +787,45 @@ select.sm:focus{border-color:var(--blue)}
 <!-- PAID PERFORMANCE -->
 <div id="page-paiddash" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
-    <div><div class="pt">Paid performance</div><div class="ps">Acquisition funnel · weekly by platform — Sauleh logs, Daniyal reviews</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" onclick="fetchGoogleAds()" id="gads-btn"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
-      <button class="btn" onclick="fetchMetaAds()" id="meta-btn"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta Ads</span></button>
-      <button class="btn" onclick="fetchLinkedInAds()" id="li-btn"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn Ads</span></button>
-      <button class="btn" style="border-style:dashed" onclick="fetchPaidGA4Data()"><i class="ti ti-brand-google"></i> Fetch GA4</button>
-      <button class="btn" style="border-style:dashed" onclick="openBingAdsUpload()"><i class="ti ti-brand-bing"></i> Bing Ads CSV</button>
-      <button class="btn" style="border-style:dashed" onclick="openHubSpotAdsUpload()"><i class="ti ti-upload"></i> HubSpot CSV</button>
+    <div><div class="pt">Paid Marketing</div><div class="ps">Google Ads · Meta · LinkedIn · Microsoft — blended KPIs + per-platform breakdown</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
+      <button class="btn" id="meta-btn" onclick="startMetaOAuth()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
+      <button class="btn" id="li-btn" onclick="startLinkedInOAuth()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
+      <button class="btn" style="border-style:dashed" onclick="openBingAdsUpload()"><i class="ti ti-brand-bing"></i> Microsoft CSV</button>
       <button class="btn btn-primary" onclick="openPaidEntry()"><i class="ti ti-plus"></i> Log this week</button>
     </div>
   </div>
-  <!-- hidden KPI ids kept for backward compat with renderPaidDash top-counter update -->
+  <!-- Blended KPI counters -->
+  <div class="counters" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
+    <div class="counter"><div class="counter-val" id="paid-total-spend">—</div><div class="counter-lbl">Total spend (7d)</div></div>
+    <div class="counter"><div class="counter-val" id="paid-total-clicks">—</div><div class="counter-lbl">Total clicks</div></div>
+    <div class="counter"><div class="counter-val" id="paid-total-impressions">—</div><div class="counter-lbl">Impressions</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--green)" id="paid-total-conversions">—</div><div class="counter-lbl">Conversions</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--amber)" id="paid-avg-cpl">—</div><div class="counter-lbl">Avg. CPL</div></div>
+  </div>
+  <!-- Tabs -->
+  <div class="itabs">
+    <button class="itab active" onclick="switchPaidTab('overview',this)">Overview</button>
+    <button class="itab" onclick="switchPaidTab('google',this)">Google Ads</button>
+    <button class="itab" onclick="switchPaidTab('meta',this)">Meta</button>
+    <button class="itab" onclick="switchPaidTab('linkedin',this)">LinkedIn</button>
+    <button class="itab" onclick="switchPaidTab('microsoft',this)">Microsoft</button>
+    <button class="itab" onclick="switchPaidTab('weekly',this)">Weekly log</button>
+  </div>
+  <div id="paid-tab-overview" class="itab-pane active"></div>
+  <div id="paid-tab-google" class="itab-pane"></div>
+  <div id="paid-tab-meta" class="itab-pane"></div>
+  <div id="paid-tab-linkedin" class="itab-pane"></div>
+  <div id="paid-tab-microsoft" class="itab-pane"></div>
+  <div id="paid-tab-weekly" class="itab-pane"></div>
+  <!-- hidden KPI ids kept for backward compat -->
   <span id="kpi-google" style="display:none"></span>
   <span id="kpi-li" style="display:none"></span>
   <span id="kpi-ms" style="display:none"></span>
   <span id="kpi-meta" style="display:none"></span>
-  <div id="paid-weeks-list-legacy"></div>
-  <div id="hubspot-ads-block" style="margin-top:1.5rem"></div>
+  <div id="paid-weeks-list-legacy" style="display:none"></div>
+  <div id="hubspot-ads-block" style="display:none"></div>
 
   <!-- HubSpot Ads CSV upload overlay -->
   <div class="overlay" id="hsads-overlay" onclick="if(event.target===this)this.classList.remove('open')">
@@ -5700,6 +5721,8 @@ function initSettings(){const key=getApiKey();if(key){document.getElementById('a
 // ── GOOGLE ADS API ────────────────────────────────────────────────────────
 let gAdsToken=null,gAdsCustomerId=null,gAdsDevToken=null;
 function getGAdsCreds(){try{return JSON.parse(localStorage.getItem('ec-gads-creds')||'null');}catch(e){return null;}}
+function getGadsToken(){const c=getGAdsCreds();return c?.devToken||'';}
+function getGadsCid(){const c=getGAdsCreds();return c?.customerId||'';}
 async function saveToFile(){
   const statusEl=document.getElementById('import-status');
   try{
@@ -6999,8 +7022,13 @@ function renderSocialDashInto(weekListId){
   if(origWL&&origWL._backup){origWL.id=origWL._backup;delete origWL._backup;}
 }
 function renderPaidDash(){
-  // Load data without triggering re-render
-  loadBingAdsData();loadHubSpotAds();
+  // Load data and update blended KPIs
+  loadBingAdsData();loadHubSpotAds();loadPaidAdsData();
+  updatePaidBlendedKPIs();
+  // Render the active tab
+  const activeTab=document.querySelector('#page-paiddash .itab.active');
+  const activeTabName=activeTab?.onclick?.toString().match(/switchPaidTab\('(\w+)'/)?.[1]||'overview';
+  if(activeTabName==='overview'||!activeTab)renderPaidOverview();
   const el=document.getElementById('paid-weeks-list');
   if(!el)return;
 
@@ -8374,25 +8402,242 @@ async function fetchSemrush(){
 }
 
 // ── GOOGLE ADS — live API ──────────────────────────────────────────────────
-async function fetchGoogleAds(){
-  const devToken=getGadsToken();const cid=getGadsCid().replace(/-/g,'');
-  if(!devToken||!cid){toast('Set Google Ads credentials in Settings first');openSettingsToSection('gads');return;}
-  if(!gscToken){toast('Connect Google (GSC/GA4) first to use same OAuth');return;}
+// ── PAID ADS — tab system + blended KPIs ──────────────────────────────────
+let gadsData=null,metaAdsData=null,liAdsData=null,msAdsData=null;
+
+function switchPaidTab(tab,el){
+  document.querySelectorAll('#page-paiddash .itab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['overview','google','meta','linkedin','microsoft','weekly'].forEach(t=>{
+    const p=document.getElementById('paid-tab-'+t);if(p)p.classList.remove('active');
+  });
+  const pane=document.getElementById('paid-tab-'+tab);if(pane)pane.classList.add('active');
+  if(tab==='overview')renderPaidOverview();
+  else if(tab==='google')renderPaidGoogleTab();
+  else if(tab==='meta')renderPaidMetaTab();
+  else if(tab==='linkedin')renderPaidLinkedInTab();
+  else if(tab==='microsoft')renderPaidMicrosoftTab();
+  else if(tab==='weekly')renderPaidWeeklyTab();
+}
+
+function loadPaidAdsData(){
+  try{const d=localStorage.getItem('ec-gads-data');if(d)gadsData=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-meta-live');if(d)metaAdsData=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-li-live');if(d)liAdsData=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-msads-data');if(d)msAdsData=JSON.parse(d);}catch(e){}
+}
+
+function updatePaidBlendedKPIs(){
+  loadPaidAdsData();
+  const totalSpend=(gadsData?.spend||0)+(metaAdsData?.spend||0)+(liAdsData?.spend||0)+(msAdsData?.spend||0);
+  const totalClicks=(gadsData?.clicks||0)+(metaAdsData?.clicks||0)+(liAdsData?.clicks||0)+(msAdsData?.clicks||0);
+  const totalImpr=(gadsData?.impressions||0)+(metaAdsData?.impressions||0)+(liAdsData?.impressions||0)+(msAdsData?.impressions||0);
+  const totalConv=(gadsData?.conversions||0)+(metaAdsData?.leads||0)+(liAdsData?.leads||0)+(msAdsData?.conversions||0);
+  const avgCPL=totalConv>0?(totalSpend/totalConv).toFixed(0):'—';
+  const fmt=(n,prefix='')=>n>0?prefix+n.toLocaleString():'—';
+  const el=id=>document.getElementById(id);
+  if(el('paid-total-spend'))el('paid-total-spend').textContent=totalSpend>0?'$'+Math.round(totalSpend).toLocaleString():'—';
+  if(el('paid-total-clicks'))el('paid-total-clicks').textContent=fmt(totalClicks);
+  if(el('paid-total-impressions'))el('paid-total-impressions').textContent=totalImpr>0?(totalImpr/1000).toFixed(1)+'K':'—';
+  if(el('paid-total-conversions'))el('paid-total-conversions').textContent=fmt(totalConv);
+  if(el('paid-avg-cpl'))el('paid-avg-cpl').textContent=avgCPL!=='—'?'$'+avgCPL:'—';
+  // Update connect button states
+  if(gadsData&&el('gads-btn-lbl'))el('gads-btn-lbl').textContent='Google Ads ✓';
+  if(metaAdsData&&el('meta-btn-lbl'))el('meta-btn-lbl').textContent='Meta ✓';
+  if(liAdsData&&el('li-btn-lbl'))el('li-btn-lbl').textContent='LinkedIn ✓';
+}
+
+function renderPaidOverview(){
+  const el=document.getElementById('paid-tab-overview');if(!el)return;
+  loadPaidAdsData();
+  const platforms=[
+    {name:'Google Ads',icon:'ti-brand-google',color:'var(--blue)',data:gadsData,spend:gadsData?.spend,clicks:gadsData?.clicks,impressions:gadsData?.impressions,conv:gadsData?.conversions},
+    {name:'Meta',icon:'ti-brand-facebook',color:'#1877F2',data:metaAdsData,spend:metaAdsData?.spend,clicks:metaAdsData?.clicks,impressions:metaAdsData?.impressions,conv:metaAdsData?.leads},
+    {name:'LinkedIn',icon:'ti-brand-linkedin',color:'#0A66C2',data:liAdsData,spend:liAdsData?.spend,clicks:liAdsData?.clicks,impressions:liAdsData?.impressions,conv:liAdsData?.leads},
+    {name:'Microsoft',icon:'ti-brand-bing',color:'var(--purple)',data:msAdsData,spend:msAdsData?.spend,clicks:msAdsData?.clicks,impressions:msAdsData?.impressions,conv:msAdsData?.conversions},
+  ];
+  const totalSpend=platforms.reduce((s,p)=>s+(p.spend||0),0);
+  const connected=platforms.filter(p=>p.data);
+  if(!connected.length){
+    el.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-chart-bar" style="font-size:2.5rem;display:block;margin-bottom:1rem"></i>
+      <div style="font-weight:600;font-size:15px;margin-bottom:.5rem">No ad platforms connected</div>
+      <div style="font-size:13px">Connect Google Ads, Meta, or LinkedIn above to see blended performance</div>
+    </div>`;return;
+  }
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+    ${platforms.map(p=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;opacity:${p.data?1:0.4}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:.875rem">
+        <i class="ti ${p.icon}" style="color:${p.color};font-size:15px"></i>
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">${p.name}</span>
+        ${p.data?'<span style="margin-left:auto;font-size:10px;color:var(--green);font-weight:600">LIVE</span>':'<span style="margin-left:auto;font-size:10px;color:var(--text3)">NOT CONNECTED</span>'}
+      </div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--text)">${p.spend?'$'+Math.round(p.spend).toLocaleString():'—'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem">spend (7d)</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Clicks</span><span style="font-weight:600">${p.clicks?.toLocaleString()||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Impressions</span><span style="font-weight:600">${p.impressions?(p.impressions/1000).toFixed(1)+'K':'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Conversions</span><span style="font-weight:600;color:var(--green)">${p.conv?.toLocaleString()||'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">CPL</span><span style="font-weight:600;color:var(--amber)">${p.conv&&p.spend?'$'+Math.round(p.spend/p.conv):'—'}</span></div>
+      </div>
+      ${totalSpend>0&&p.spend?`<div style="margin-top:.75rem"><div style="background:var(--surface2);border-radius:3px;height:4px;overflow:hidden"><div style="background:${p.color};height:100%;width:${Math.round(p.spend/totalSpend*100)}%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${Math.round(p.spend/totalSpend*100)}% of spend</div></div>`:''}
+    </div>`).join('')}
+  </div>
+  ${connected.length>1?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:1rem">Spend distribution</div>
+    <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px">
+      ${platforms.filter(p=>p.data&&p.spend).map(p=>`<div style="background:${p.color};flex:${p.spend}" title="${p.name}: $${Math.round(p.spend)}"></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:16px;margin-top:.625rem;flex-wrap:wrap">
+      ${platforms.filter(p=>p.data).map(p=>`<div style="display:flex;align-items:center;gap:5px;font-size:12px"><div style="width:8px;height:8px;border-radius:50%;background:${p.color}"></div>${p.name} ${totalSpend>0&&p.spend?Math.round((p.spend||0)/totalSpend*100)+'%':'—'}</div>`).join('')}
+    </div>
+  </div>`:''}`;
+}
+
+function renderPaidGoogleTab(){
+  const el=document.getElementById('paid-tab-google');if(!el)return;
+  loadPaidAdsData();
+  if(!gadsData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-google" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--blue)"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">Google Ads not connected</div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchGoogleAdsLive()"><i class="ti ti-plug"></i> Connect Google Ads</button>
+    </div>`;return;
+  }
+  const campaigns=gadsData.campaigns||[];
+  const ctr=gadsData.clicks&&gadsData.impressions?(gadsData.clicks/gadsData.impressions*100).toFixed(2)+'%':'—';
+  const cpl=gadsData.conversions&&gadsData.spend?'$'+Math.round(gadsData.spend/gadsData.conversions):'—';
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Spend','$'+Math.round(gadsData.spend||0).toLocaleString(),'var(--blue)'],['Clicks',(gadsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((gadsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CTR',ctr,'var(--green)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
+    </div>`).join('')}
+  </div>
+  ${campaigns.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns (last 7d)</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
+      <span>Campaign</span><span style="text-align:right;padding-right:1rem">Spend</span><span style="text-align:right;padding-right:1rem">Clicks</span><span style="text-align:right;padding-right:1rem">Impr</span><span style="text-align:right">Conv</span>
+    </div>
+    ${campaigns.map(c=>`<div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:12px;padding:.5rem .5rem;border-bottom:1px solid var(--border);align-items:center">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.5rem">${c.name}</span>
+      <span style="text-align:right;padding-right:1rem;font-weight:600;color:var(--blue)">$${Math.round(c.spend)}</span>
+      <span style="text-align:right;padding-right:1rem">${(c.clicks||0).toLocaleString()}</span>
+      <span style="text-align:right;padding-right:1rem;color:var(--text2)">${c.impressions?(c.impressions/1000).toFixed(1)+'K':'0'}</span>
+      <span style="text-align:right;color:var(--green)">${c.conversions||0}</span>
+    </div>`).join('')}
+  </div>`:'<div style="color:var(--text3);font-size:13px">No campaign data returned — campaigns may be paused or have no spend in the last 7 days</div>'}`;
+}
+
+function renderPaidMetaTab(){
+  const el=document.getElementById('paid-tab-meta');if(!el)return;
+  loadPaidAdsData();
+  if(!metaAdsData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-facebook" style="font-size:2rem;display:block;margin-bottom:.75rem" style="color:#1877F2"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">Meta Ads not connected</div>
+      <div style="font-size:13px;margin-bottom:1rem">You'll need a Meta System User Access Token and Ad Account ID from business.facebook.com</div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="startMetaOAuth()"><i class="ti ti-plug"></i> Connect Meta</button>
+    </div>`;return;
+  }
+  const ctr=metaAdsData.ctr?metaAdsData.ctr.toFixed(2)+'%':'—';
+  const cpl=metaAdsData.leads&&metaAdsData.spend?'$'+Math.round(metaAdsData.spend/metaAdsData.leads):'—';
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Spend','$'+Math.round(metaAdsData.spend||0).toLocaleString(),'#1877F2'],['Clicks',(metaAdsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((metaAdsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CTR',ctr,'var(--green)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderPaidLinkedInTab(){
+  const el=document.getElementById('paid-tab-linkedin');if(!el)return;
+  loadPaidAdsData();
+  if(!liAdsData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-linkedin" style="font-size:2rem;display:block;margin-bottom:.75rem;color:#0A66C2"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">LinkedIn Ads not connected</div>
+      <div style="font-size:13px;margin-bottom:1rem">You'll need a LinkedIn OAuth token and Campaign Manager Account ID</div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="startLinkedInOAuth()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
+    </div>`;return;
+  }
+  const cpl=liAdsData.leads&&liAdsData.spend?'$'+Math.round(liAdsData.spend/liAdsData.leads):'—';
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Spend','$'+Math.round(liAdsData.spend||0).toLocaleString(),'#0A66C2'],['Clicks',(liAdsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((liAdsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderPaidMicrosoftTab(){
+  const el=document.getElementById('paid-tab-microsoft');if(!el)return;
+  el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+    <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--purple)"></i>
+    <div style="font-weight:600;margin-bottom:.5rem">Microsoft Ads</div>
+    <div style="font-size:13px;margin-bottom:1rem">Download a Campaign Performance report from Microsoft Advertising and upload it here</div>
+    <button class="btn btn-primary" onclick="openBingAdsUpload()"><i class="ti ti-upload"></i> Upload CSV</button>
+  </div>`;
+}
+
+function renderPaidWeeklyTab(){
+  const el=document.getElementById('paid-tab-weekly');if(!el)return;
+  // Render existing manual weekly log
+  const tmp=document.createElement('div');
+  renderPaidDashInto('paid-weeks-list-tmp','hs-block-tmp');
+  el.innerHTML=`<div style="margin-top:.5rem"><button class="btn btn-primary" onclick="openPaidEntry()" style="margin-bottom:1rem"><i class="ti ti-plus"></i> Log this week</button><div id="paid-weeks-list"></div></div>`;
+  renderPaidDash();
+}
+
+async function fetchGoogleAdsLive(){
+  const devToken=getGadsToken();
+  const cid=getGadsCid().replace(/-/g,'');
+  if(!gscToken){toast('Connect Google first (SEO/AIEO page)');return;}
+  if(!devToken||!cid){toast('Google Ads credentials not set — check Settings');return;}
+  const btn=document.getElementById('gads-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Fetching…';
   try{
-    const body={query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING LAST_7_DAYS`};
+    const body={query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING LAST_7_DAYS ORDER BY metrics.cost_micros DESC`};
     const res=await fetch(`https://googleads.googleapis.com/v17/customers/${cid}/googleAds:search`,{
       method:'POST',
       headers:{'Authorization':'Bearer '+gscToken,'developer-token':devToken,'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(!res.ok)throw new Error('Google Ads API '+res.status);
+    if(!res.ok){const err=await res.json();throw new Error((err.error?.message||'API error ')+res.status);}
     const data=await res.json();
-    const rows=(data.results||[]);
-    const gadsData={spend:rows.reduce((s,r)=>s+(r.metrics?.costMicros||0)/1e6,0),clicks:rows.reduce((s,r)=>s+(r.metrics?.clicks||0),0),impressions:rows.reduce((s,r)=>s+(r.metrics?.impressions||0),0),conversions:rows.reduce((s,r)=>s+(r.metrics?.conversions||0),0),campaigns:rows.map(r=>({name:r.campaign?.name||'',spend:(r.metrics?.costMicros||0)/1e6,clicks:r.metrics?.clicks||0,impressions:r.metrics?.impressions||0,conversions:r.metrics?.conversions||0})),fetched:Date.now()};
+    const rows=data.results||[];
+    gadsData={
+      spend:rows.reduce((s,r)=>s+(r.metrics?.costMicros||0)/1e6,0),
+      clicks:rows.reduce((s,r)=>s+(r.metrics?.clicks||0),0),
+      impressions:rows.reduce((s,r)=>s+(r.metrics?.impressions||0),0),
+      conversions:rows.reduce((s,r)=>s+(r.metrics?.conversions||0),0),
+      campaigns:rows.map(r=>({name:r.campaign?.name||'',spend:(r.metrics?.costMicros||0)/1e6,clicks:r.metrics?.clicks||0,impressions:r.metrics?.impressions||0,conversions:r.metrics?.conversions||0})),
+      fetched:Date.now()
+    };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
-    renderPaidDash();toast('Google Ads updated');
-  }catch(e){toast('Google Ads error: '+e.message,'error');}
+    updatePaidBlendedKPIs();
+    renderPaidOverview();
+    renderPaidGoogleTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
+    toast('Google Ads: $'+Math.round(gadsData.spend)+' spend, '+gadsData.clicks+' clicks');
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-google"></i> <span>Connect Google Ads</span>';
+    toast('Google Ads error: '+e.message);
+    console.error('[Google Ads]',e);
+  }
 }
+
+function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
+function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
+
+async function fetchGoogleAds(){return fetchGoogleAdsLive();}
 
 // ── META ADS — live API ────────────────────────────────────────────────────
 async function fetchMetaAds(){
@@ -9648,6 +9893,8 @@ function renderSEOFunnel(){
     localStorage.setItem('ec-bing-oauth-client-id','5a54bbd5cc654fdd885f9917dd12d96e');
   if(!localStorage.getItem('ec-bing-oauth-client-secret'))
     localStorage.setItem('ec-bing-oauth-client-secret','OBY-9OXsNU0HeIY6Q9agPSUayJ3jO8OlRO_rOQjRktjMSA_-UYiuftMJKl7LzIJGLMxWsyita9VgkY5WjDNgXw');
+  if(!localStorage.getItem('ec-gads-creds'))
+    localStorage.setItem('ec-gads-creds',JSON.stringify({devToken:'b8GV9ZVEJywiqTrH0vXLhw',customerId:'6282124988'}));
 })();
 loadData();
 </script>
