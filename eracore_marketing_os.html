@@ -788,7 +788,18 @@ select.sm:focus{border-color:var(--blue)}
 <div id="page-paiddash" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
     <div><div class="pt">Paid Marketing</div><div class="ps">Google Ads · Meta · LinkedIn · Microsoft — blended KPIs + per-platform breakdown</div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="paid-date-range" onchange="onPaidDateRangeChange()" style="height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer">
+        <option value="last_7_days" selected>Last 7 days</option>
+        <option value="today">Today</option>
+        <option value="this_week">This week</option>
+        <option value="last_week">Last week</option>
+        <option value="this_month">This month</option>
+        <option value="last_month">Last month</option>
+        <option value="this_quarter">This quarter</option>
+        <option value="last_30_days">Last 30 days</option>
+        <option value="this_year">This year</option>
+      </select>
       <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
       <button class="btn" id="meta-btn" onclick="startMetaOAuth()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
       <button class="btn" id="li-btn" onclick="startLinkedInOAuth()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
@@ -4801,24 +4812,13 @@ function switchPerfTab(tab, el){
     return;
   }
   if(tab==='paid'){
-    const pane=document.getElementById('mpv-paid');
-    if(!pane)return;
-    // Always ensure the toolbar exists
-    if(!pane.querySelector('#mpaid-toolbar')){
-      const toolbar=document.createElement('div');
-      toolbar.id='mpaid-toolbar';
-      toolbar.style.cssText='display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap';
-      toolbar.innerHTML=`<button class="btn" onclick="fetchPaidGA4Data()"><i class="ti ti-brand-google"></i> Fetch GA4</button>
-        <button class="btn" onclick="openBingAdsUpload()"><i class="ti ti-brand-bing"></i> Microsoft Ads CSV</button>
-        <button class="btn" onclick="openHubSpotAdsUpload()"><i class="ti ti-upload"></i> HubSpot Ads CSV</button>
-        <button class="btn btn-primary" onclick="openPaidEntry()"><i class="ti ti-plus"></i> Log this week</button>`;
-      pane.insertBefore(toolbar, pane.firstChild);
-    }
-    if(!pane.querySelector('#mpaid-weeks-list')){
-      const wl=document.createElement('div');wl.id='mpaid-weeks-list';pane.appendChild(wl);
-      const hs=document.createElement('div');hs.id='mpaid-hs-block';pane.appendChild(hs);
-    }
-    renderPaidDashInto('mpaid-weeks-list','mpaid-hs-block');
+    // Navigate directly to page-paiddash — full platform tabs live there
+    Object.values(PAGE_MAP).forEach(pid=>{const p=document.getElementById(pid);if(p)p.classList.remove('active');});
+    document.getElementById('page-paiddash')?.classList.add('active');
+    document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('nav-marketingperf')?.classList.add('active');
+    loadPaidAdsData();updatePaidBlendedKPIs();renderPaidOverview();
+    return;
   }
   if(tab==='social'){
     const pane=document.getElementById('mpv-social');
@@ -8402,6 +8402,44 @@ async function fetchSemrush(){
 }
 
 // ── GOOGLE ADS — live API ──────────────────────────────────────────────────
+// ── PAID ADS — date range helpers ─────────────────────────────────────────
+function getPaidDateRange(){
+  const val=document.getElementById('paid-date-range')?.value||'last_7_days';
+  const now=new Date();
+  const fmt=d=>d.toISOString().slice(0,10);
+  const startOfWeek=d=>{const r=new Date(d);r.setDate(r.getDate()-r.getDay()+1);return r;};
+  const startOfMonth=d=>new Date(d.getFullYear(),d.getMonth(),1);
+  const startOfQuarter=d=>new Date(d.getFullYear(),Math.floor(d.getMonth()/3)*3,1);
+  const startOfYear=d=>new Date(d.getFullYear(),0,1);
+  switch(val){
+    case 'today': return{start:fmt(now),end:fmt(now),gads:'TODAY',meta:'today'};
+    case 'this_week':{const s=startOfWeek(now);return{start:fmt(s),end:fmt(now),gads:'THIS_WEEK_SUN_TODAY',meta:'this_week'};}
+    case 'last_week':{const s=startOfWeek(now);s.setDate(s.getDate()-7);const e=new Date(s);e.setDate(e.getDate()+6);return{start:fmt(s),end:fmt(e),gads:'LAST_WEEK_SUN_SAT',meta:'last_week'};}
+    case 'this_month': return{start:fmt(startOfMonth(now)),end:fmt(now),gads:'THIS_MONTH',meta:'this_month'};
+    case 'last_month':{const s=new Date(now.getFullYear(),now.getMonth()-1,1);const e=new Date(now.getFullYear(),now.getMonth(),0);return{start:fmt(s),end:fmt(e),gads:'LAST_MONTH',meta:'last_month'};}
+    case 'this_quarter': return{start:fmt(startOfQuarter(now)),end:fmt(now),gads:'THIS_QUARTER',meta:'this_quarter'};
+    case 'last_30_days':{const s=new Date(now);s.setDate(s.getDate()-30);return{start:fmt(s),end:fmt(now),gads:'LAST_30_DAYS',meta:'last_30_days'};}
+    case 'this_year': return{start:fmt(startOfYear(now)),end:fmt(now),gads:'THIS_YEAR',meta:'this_year'};
+    default:{const s=new Date(now);s.setDate(s.getDate()-7);return{start:fmt(s),end:fmt(now),gads:'LAST_7_DAYS',meta:'last_7_days'};}
+  }
+}
+
+function getPaidDateLabel(){
+  const val=document.getElementById('paid-date-range')?.value||'last_7_days';
+  const labels={last_7_days:'Last 7 days',today:'Today',this_week:'This week',last_week:'Last week',this_month:'This month',last_month:'Last month',this_quarter:'This quarter',last_30_days:'Last 30 days',this_year:'This year'};
+  return labels[val]||'Last 7 days';
+}
+
+function onPaidDateRangeChange(){
+  // Re-fetch all connected platforms with new date range
+  updatePaidBlendedKPIs();
+  renderPaidOverview();
+  // Re-fetch live data if connected
+  if(gadsData)fetchGoogleAdsLive();
+  if(metaAdsData)fetchMetaAdsLive();
+  if(liAdsData)fetchLinkedInAdsLive();
+}
+
 // ── PAID ADS — tab system + blended KPIs ──────────────────────────────────
 let gadsData=null,metaAdsData=null,liAdsData=null,msAdsData=null;
 
@@ -8603,8 +8641,9 @@ async function fetchGoogleAdsLive(){
   if(!devToken||!cid){toast('Google Ads credentials not set — check Settings');return;}
   const btn=document.getElementById('gads-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Fetching…';
+  const range=getPaidDateRange();
   try{
-    const body={query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING LAST_7_DAYS ORDER BY metrics.cost_micros DESC`};
+    const body={query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} ORDER BY metrics.cost_micros DESC`};
     const res=await fetch(`https://googleads.googleapis.com/v17/customers/${cid}/googleAds:search`,{
       method:'POST',
       headers:{'Authorization':'Bearer '+gscToken,'developer-token':devToken,'Content-Type':'application/json'},
@@ -8619,7 +8658,7 @@ async function fetchGoogleAdsLive(){
       impressions:rows.reduce((s,r)=>s+(r.metrics?.impressions||0),0),
       conversions:rows.reduce((s,r)=>s+(r.metrics?.conversions||0),0),
       campaigns:rows.map(r=>({name:r.campaign?.name||'',spend:(r.metrics?.costMicros||0)/1e6,clicks:r.metrics?.clicks||0,impressions:r.metrics?.impressions||0,conversions:r.metrics?.conversions||0})),
-      fetched:Date.now()
+      dateRange:range.gads,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
     updatePaidBlendedKPIs();
@@ -8636,7 +8675,8 @@ async function fetchGoogleAdsLive(){
 
 function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
 function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
-
+async function fetchMetaAdsLive(){if(metaAdsData)return fetchMetaAds();}
+async function fetchLinkedInAdsLive(){if(liAdsData)return fetchLinkedInAds();}
 async function fetchGoogleAds(){return fetchGoogleAdsLive();}
 
 // ── META ADS — live API ────────────────────────────────────────────────────
