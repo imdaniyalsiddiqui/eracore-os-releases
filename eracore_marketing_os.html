@@ -1130,10 +1130,15 @@ select.sm:focus{border-color:var(--blue)}
     <div id="settings-semrush" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
       <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-trending-up" style="color:#FF642D"></i> SEMrush</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">semrush.com → Profile → Subscription info → API units → Generate key</div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <input type="password" id="semrush-key-input" placeholder="SEMrush API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
-        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('semrush-key-input').value.trim();if(!v)return;localStorage.setItem('ec-semrush-key',v);toast('SEMrush key saved');fetchSemrush();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
       </div>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <input type="text" id="semrush-project-id-input" placeholder="Project ID (e.g. 25410527)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="text" id="semrush-campaign-id-input" placeholder="Campaign ID (e.g. 3135085)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">IDs from Position Tracking URL: /tracking/landscape/<b>PROJECT_ID</b>/<b>CAMPAIGN_ID</b>/</div>
+      <button class="btn btn-primary" onclick="(function(){const k=document.getElementById('semrush-key-input').value.trim();const p=document.getElementById('semrush-project-id-input').value.trim();const c=document.getElementById('semrush-campaign-id-input').value.trim();if(!k)return toast('Enter API key');localStorage.setItem('ec-semrush-key',k);if(p)localStorage.setItem('ec-semrush-project-id',p);if(c)localStorage.setItem('ec-semrush-campaign-id',c);toast('SEMrush settings saved');fetchSemrush();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
 
     <!-- Meta Ads -->
@@ -5898,6 +5903,16 @@ function initSettings(){
     if(secretSaved&&idSaved){secretStatus.textContent='✓ Client ID and secret saved';secretStatus.style.color='var(--green)';}
     else{secretStatus.textContent='Not set — paste your Client ID and GOCSPX-… secret above to enable Google';secretStatus.style.color='var(--amber)';}
   }
+  // Pre-populate SEMrush fields
+  const srKey=localStorage.getItem('ec-semrush-key');
+  const srPid=localStorage.getItem('ec-semrush-project-id');
+  const srCid=localStorage.getItem('ec-semrush-campaign-id');
+  const srKeyEl=document.getElementById('semrush-key-input');
+  const srPidEl=document.getElementById('semrush-project-id-input');
+  const srCidEl=document.getElementById('semrush-campaign-id-input');
+  if(srKeyEl&&srKey)srKeyEl.value=srKey;
+  if(srPidEl&&srPid)srPidEl.value=srPid;
+  if(srCidEl&&srCid)srCidEl.value=srCid;
 }
 function exportAllData(){
   const dump={};
@@ -7906,43 +7921,75 @@ function renderSEMrushTab(){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-trending-up" style="font-size:2rem;display:block;margin-bottom:.75rem"></i>
       <div style="font-weight:600;margin-bottom:.5rem">SEMrush not connected</div>
+      <div style="font-size:12px;margin-bottom:1rem">Connect via API key + Project/Campaign ID in Settings, or upload a CSV export.</div>
       <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchSemrush()"><i class="ti ti-plug"></i> Connect SEMrush</button>
     </div>`;return;
   }
   const kws=latest.keywords||[];const ov=latest.overview||{};
-  const top3=kws.filter(k=>k.position&&k.position<=3).length;
-  const top10=kws.filter(k=>k.position&&k.position<=10).length;
-  const top20=kws.filter(k=>k.position&&k.position<=20).length;
-  const top100=kws.filter(k=>k.position&&k.position<=100).length;
-  const avgPos=kws.length?Math.round(kws.filter(k=>k.position).reduce((s,k)=>s+k.position,0)/kws.filter(k=>k.position).length):0;
+  const positioned=kws.filter(k=>k.position&&k.position>0);
+  const top3=positioned.filter(k=>k.position<=3).length;
+  const top10=positioned.filter(k=>k.position<=10).length;
+  const top20=positioned.filter(k=>k.position<=20).length;
+  const top100=positioned.filter(k=>k.position<=100).length;
+  const avgPos=positioned.length?Math.round(positioned.reduce((s,k)=>s+k.position,0)/positioned.length):null;
+  const improved=ov.improved??kws.filter(k=>k.diff!==null&&k.diff>0).length;
+  const declined=ov.declined??kws.filter(k=>k.diff!==null&&k.diff<0).length;
+  const visibility=ov.visibility!=null?`${parseFloat(ov.visibility).toFixed(2)}%`:'—';
+  const estTraffic=(ov.estimatedTraffic??ov.organicTraffic)?.toLocaleString()||'—';
+  const usingPT=!!(localStorage.getItem('ec-semrush-project-id')&&localStorage.getItem('ec-semrush-campaign-id'));
   el.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
+  ${usingPT?'':'<div style="background:var(--amber-bg,#fffbeb);border:1px solid var(--amber,#f59e0b);border-radius:var(--r);padding:.6rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--amber-dark,#92400e)"><i class="ti ti-info-circle"></i> Showing domain_organic data (general index). Add your <b>Project ID</b> &amp; <b>Campaign ID</b> in Settings to load Position Tracking data.</div>'}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem">
     ${[['Top 3',top3,'var(--green)'],['Top 10',top10,'var(--blue)'],['Top 20',top20,'var(--amber)'],['Top 100',top100,'var(--text)']].map(([lbl,val,col])=>`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
       <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${lbl}</div>
       <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
     </div>`).join('')}
   </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
-    ${[['Avg Position',avgPos||'—','var(--text)'],['Total Keywords',kws.length,'var(--blue)'],['Organic Traffic Est.',ov.organicTraffic?.toLocaleString()||'—','var(--green)']].map(([lbl,val,col])=>`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1rem">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${lbl}</div>
-      <div style="font-size:1.5rem;font-weight:700;color:${col}">${val}</div>
-    </div>`).join('')}
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Avg Position</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--text)">${avgPos||'—'}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Total Keywords</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--blue)">${kws.length}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Organic Traffic Est.</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--green)">${estTraffic}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Visibility</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--blue)">${visibility}</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.25rem">Improved</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--green)">${improved}<span style="font-size:12px;color:var(--text3);font-weight:400"> kws ↑</span></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.25rem">Declined</div>
+      <div style="font-size:1.5rem;font-weight:700;color:var(--red)">${declined}<span style="font-size:12px;color:var(--text3);font-weight:400"> kws ↓</span></div>
+    </div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
     <div style="font-size:13px;font-weight:600;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between">
       <span><i class="ti ti-list" style="font-size:13px;color:var(--blue)"></i> All Keywords (${kws.length})</span>
-      <span style="font-size:11px;color:var(--text3)">Last updated: ${latest.date||'—'}</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text3)">Last updated: ${latest.date||'—'}</span>
+        <button class="btn" style="font-size:11px;padding:3px 8px" onclick="fetchSemrush()"><i class="ti ti-refresh" style="font-size:11px"></i> Refresh</button>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
       <span>Keyword</span><span style="text-align:right;padding-right:1.5rem">Position</span><span style="text-align:right;padding-right:1.5rem">Volume</span><span style="text-align:right">Change</span>
     </div>
     <div style="max-height:400px;overflow-y:auto">
-      ${kws.slice(0,100).map(k=>{
+      ${kws.slice(0,500).map(k=>{
         const pos=k.position;
-        const col=pos<=3?'var(--green)':pos<=10?'var(--blue)':pos<=20?'var(--amber)':'var(--text2)';
-        const diff=k.diff;const diffStr=diff===null?'—':diff>0?`<span style="color:var(--green)">▲${diff}</span>`:diff<0?`<span style="color:var(--red)">▼${Math.abs(diff)}</span>`:'—';
+        const col=pos&&pos<=3?'var(--green)':pos&&pos<=10?'var(--blue)':pos&&pos<=20?'var(--amber)':'var(--text2)';
+        const diff=k.diff;const diffStr=diff===null?'—':diff>0?`<span style="color:var(--green)">▲${diff}</span>`:diff<0?`<span style="color:var(--red)">▼${Math.abs(diff)}</span>`:'<span style="color:var(--text3)">—</span>';
         return`<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;font-size:12px;padding:.45rem .5rem;border-bottom:1px solid var(--border);align-items:center">
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k.keyword}</span>
           <span style="text-align:right;padding-right:1.5rem;font-weight:700;color:${col}">${pos||'—'}</span>
@@ -7959,12 +8006,55 @@ function handleSEMrushFile(input){
   document.getElementById('sr-filename').textContent=file.name;
   const reader=new FileReader();
   reader.onload=e=>{
-    const lines=e.target.result.split('\n').filter(l=>l.trim()&&!l.startsWith('-')&&!l.startsWith('ID')&&!l.startsWith('Report')&&!l.startsWith('Period'));
-    const rows=lines.slice(1).map(line=>{
-      const cols=line.split(',');
-      return{keyword:cols[0],position:cols[1]==='-'||!cols[1]?null:parseInt(cols[1]),type:cols[3]||'',landing:cols[4]||'',diff:cols[5]==='-'||!cols[5]?null:parseInt(cols[5]),tags:cols[7]||'',volume:cols[10]==='n/a'||!cols[10]?null:parseInt(cols[10])};
-    }).filter(r=>r.keyword&&r.keyword.length>1);
-    parsedSEMrush=rows;document.getElementById('sr-save-btn').disabled=false;toast(`${rows.length} keywords parsed`);
+    // Handle BOM and normalize line endings
+    const raw=e.target.result.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+    // Skip SEMrush report metadata lines (Report Date, Period, etc.)
+    const allLines=raw.split('\n');
+    // Find the header row (contains 'Keyword' or 'Ph' as first column)
+    let headerIdx=allLines.findIndex(l=>/^"?keyword"?|^"?ph"?/i.test(l.split(',')[0].trim()));
+    if(headerIdx===-1)headerIdx=0;
+    const headerLine=allLines[headerIdx];
+    const headers=headerLine.split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+    // Build column index map from actual headers
+    const col={};
+    headers.forEach((h,i)=>{
+      if(/^keyword|^ph$/.test(h))col.keyword=i;
+      else if(/^position$|^po$/.test(h))col.position=i;
+      else if(/^previous position|^previous pos|^pp$/.test(h))col.prevPos=i;
+      else if(/^difference|^diff|^pd$/.test(h))col.diff=i;
+      else if(/^search volume|^volume|^nq$/.test(h))col.volume=i;
+      else if(/^url|^landing/.test(h))col.landing=i;
+    });
+    // Helper: clean a CSV field (strip quotes, handle empty/dash)
+    const clean=v=>(v||'').trim().replace(/^"|"$/g,'');
+    const toInt=v=>{const s=clean(v);return(s&&s!=='-'&&s!=='n/a')?parseInt(s)||null:null;};
+    const dataLines=allLines.slice(headerIdx+1).filter(l=>l.trim()&&!l.startsWith('-'));
+    // Parse with proper CSV quote handling
+    const parseCSVLine=line=>{
+      const result=[];let cur='';let inQ=false;
+      for(let i=0;i<line.length;i++){
+        const ch=line[i];
+        if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+        else if(ch===','&&!inQ){result.push(cur);cur='';}
+        else cur+=ch;
+      }
+      result.push(cur);return result;
+    };
+    const rows=dataLines.map(line=>{
+      const cols=parseCSVLine(line);
+      const kw=clean(cols[col.keyword??0]);
+      if(!kw||kw.length<2)return null;
+      const pos=toInt(cols[col.position??1]);
+      const prevPos=toInt(cols[col.prevPos??2]);
+      // Compute diff: positive = improved (went up), negative = declined
+      let diff=col.diff!=null?toInt(cols[col.diff]):null;
+      if(diff===null&&pos!==null&&prevPos!==null)diff=prevPos-pos;
+      return{keyword:kw,position:pos,prevPos,diff,volume:toInt(cols[col.volume??4])||0,landing:clean(cols[col.landing??''])||''};
+    }).filter(r=>r!==null);
+    parsedSEMrush=rows;
+    const withPos=rows.filter(r=>r.position!==null).length;
+    document.getElementById('sr-save-btn').disabled=false;
+    toast(`${rows.length} keywords parsed — ${withPos} with active positions`);
   };reader.readAsText(file);
 }
 function saveSEMrushData(){
@@ -8373,32 +8463,93 @@ async function fetchBingDataWithToken(token){
 async function fetchSemrush(){
   const key=getSemrushKey();
   if(!key){toast('Enter SEMrush API key in Settings first');openSettingsToSection('semrush');return;}
+  const projectId=localStorage.getItem('ec-semrush-project-id')||'';
+  const campaignId=localStorage.getItem('ec-semrush-campaign-id')||'';
   const proxy=(url)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`;
+  const btn=document.getElementById('semrush-connect-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Loading SEMrush…</span>';
   try{
-    // Organic positions via proxy
-    const posRes=await fetch(proxy(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=50&export_columns=Ph,Po,Pp,Pd,Nq,Nr&export_escape=1`));
-    if(!posRes.ok)throw new Error('SEMrush API '+posRes.status);
-    const posText=await posRes.text();
-    const lines=posText.trim().split('\n').slice(1).filter(l=>l&&l.trim());
-    const keywords=lines.map(l=>{
-      const cols=l.split(';');
-      if(!cols||cols.length<2)return null;
-      const pos=cols[1]?parseInt(cols[1]):null;
-      const diff=cols[3]?parseInt(cols[3]):null;
-      return{keyword:(cols[0]||'').replace(/^"|"$/g,''),position:isNaN(pos)?null:pos,prevPos:cols[2]?parseInt(cols[2])||null:null,diff:isNaN(diff)?null:diff,volume:cols[4]?parseInt(cols[4])||0:0};
-    }).filter(k=>k&&k.keyword&&k.keyword.length>0);
-    // Domain overview via proxy
-    const ovRes=await fetch(proxy(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`));
-    const ovText=await ovRes.text();
-    const ovCols=(ovText.split('\n')[1]||'').split(';');
-    const overview={organicKeywords:parseInt(ovCols[3])||0,organicTraffic:parseInt(ovCols[4])||0,domainScore:parseInt(ovCols[7])||0};
+    let keywords=[], overview={};
+
+    if(projectId&&campaignId){
+      // ── Position Tracking API (your tracked keyword set) ──────────────────
+      // Fetch up to 500 tracked keywords with positions
+      const ptUrl=`https://api.semrush.com/management/v1/projects/${projectId}/tracking/positions?key=${key}&campaign_id=${campaignId}&display_limit=500&export_columns=Ph,Po,Pp,Pd,Nq&export_escape=1`;
+      const ptRes=await fetch(proxy(ptUrl));
+      if(ptRes.ok){
+        const ptText=await ptRes.text();
+        const ptLines=ptText.trim().split('\n');
+        // Check if it's valid (first line is header with known cols)
+        if(ptLines.length>1&&(ptLines[0].includes('Keyword')||ptLines[0].includes('Ph'))){
+          const dataLines=ptLines.slice(1).filter(l=>l.trim());
+          keywords=dataLines.map(l=>{
+            const cols=l.split(';');
+            const rawPos=cols[1]?cols[1].trim():'';
+            const pos=(rawPos&&rawPos!=='-'&&rawPos!=='0')?parseInt(rawPos):null;
+            const rawPrev=cols[2]?cols[2].trim():'';
+            const prevPos=(rawPrev&&rawPrev!=='-')?parseInt(rawPrev):null;
+            const diff=(pos!==null&&prevPos!==null)?prevPos-pos:null;
+            const vol=cols[4]?parseInt(cols[4])||0:0;
+            return{keyword:(cols[0]||'').replace(/^"|"$/g,'').trim(),position:isNaN(pos)?null:pos,prevPos:isNaN(prevPos)?null:prevPos,diff:isNaN(diff)?null:diff,volume:vol};
+          }).filter(k=>k&&k.keyword&&k.keyword.length>0);
+        }
+      }
+      // Landscape / visibility summary
+      const lsUrl=`https://api.semrush.com/management/v1/projects/${projectId}/tracking/landscape?key=${key}&campaign_id=${campaignId}`;
+      const lsRes=await fetch(proxy(lsUrl));
+      if(lsRes.ok){
+        try{
+          const lsJson=await lsRes.json();
+          const snap=lsJson?.data?.snapshot||lsJson?.snapshot||lsJson||{};
+          overview.visibility=snap.visibility_index??snap.visibility??null;
+          overview.estimatedTraffic=snap.estimated_traffic??snap.traffic??null;
+          overview.avgPosition=snap.avg_position??snap.average_position??null;
+          overview.improved=snap.keywords_improved??snap.improved??null;
+          overview.declined=snap.keywords_declined??snap.declined??null;
+        }catch(e2){console.warn('[SEMrush landscape]',e2);}
+      }
+    }
+
+    // If Position Tracking gave no keywords, fall back to domain_organic
+    if(!keywords.length){
+      const posRes=await fetch(proxy(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=500&export_columns=Ph,Po,Pp,Pd,Nq,Nr&export_escape=1`));
+      if(!posRes.ok)throw new Error('SEMrush API '+posRes.status);
+      const posText=await posRes.text();
+      const lines=posText.trim().split('\n').slice(1).filter(l=>l&&l.trim());
+      keywords=lines.map(l=>{
+        const cols=l.split(';');
+        if(!cols||cols.length<2)return null;
+        const rawPos=cols[1]?cols[1].trim():'';
+        const pos=(rawPos&&rawPos!=='-')?parseInt(rawPos):null;
+        const rawDiff=cols[3]?cols[3].trim():'';
+        const diff=(rawDiff&&rawDiff!=='-')?parseInt(rawDiff):null;
+        return{keyword:(cols[0]||'').replace(/^"|"$/g,'').trim(),position:isNaN(pos)?null:pos,prevPos:cols[2]?parseInt(cols[2])||null:null,diff:isNaN(diff)?null:diff,volume:cols[4]?parseInt(cols[4])||0:0};
+      }).filter(k=>k&&k.keyword&&k.keyword.length>0);
+      console.warn('[SEMrush] Fell back to domain_organic — add Project/Campaign ID in Settings for Position Tracking data.');
+    }
+
+    // Domain overview (traffic estimate)
+    if(!overview.organicTraffic){
+      const ovRes=await fetch(proxy(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`));
+      if(ovRes.ok){
+        const ovText=await ovRes.text();
+        const ovCols=(ovText.split('\n')[1]||'').split(';');
+        overview.organicKeywords=parseInt(ovCols[3])||0;
+        overview.organicTraffic=parseInt(ovCols[4])||0;
+        overview.domainScore=parseInt(ovCols[7])||0;
+      }
+    }
+
     semrushData=[{keywords,overview,date:new Date().toISOString().slice(0,10),fetched:Date.now()}];
     localStorage.setItem('ec-semrush-v1',JSON.stringify(semrushData));
     renderSEMrushTab();renderSEOOverview();
-    const btn=document.getElementById('semrush-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';
-    toast(`SEMrush: ${keywords.length} keywords loaded`);
-  }catch(e){toast('SEMrush error: '+e.message);console.error('[SEMrush]',e);}
+    const src=projectId&&campaignId?'Position Tracking':'domain_organic';
+    toast(`SEMrush (${src}): ${keywords.length} keywords loaded`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-trending-up"></i> <span>Connect SEMrush</span>';
+    toast('SEMrush error: '+e.message);console.error('[SEMrush]',e);
+  }
 }
 
 // ── GOOGLE ADS — live API ──────────────────────────────────────────────────
