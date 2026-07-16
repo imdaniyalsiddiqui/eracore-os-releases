@@ -477,7 +477,7 @@ select.sm:focus{border-color:var(--blue)}
     <button class="btn" onclick="navTo('marketingperf');setTimeout(()=>switchPerfTab('social',document.getElementById('mptab-social')),80)" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-brand-linkedin"></i> Social</button>
   </div>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">SEO / AIEO</div><div class="ps">Live data from GSC · GA4 · Bing · SEMrush weekly upload · HubSpot AIEO</div></div>
+    <div><div class="pt">SEO / AIEO</div><div class="ps">Live data from GSC · GA4 · Bing · SEMrush Position Tracking · SEMrush AI Visibility</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn" id="gsc-connect-btn" onclick="connectGSC()"><i class="ti ti-plug"></i> Connect Google</button>
       <button class="btn" id="bing-connect-btn" onclick="fetchBingWmt()"><i class="ti ti-brand-bing"></i> <span id="bing-btn-label">Connect Bing</span></button>
@@ -551,32 +551,50 @@ select.sm:focus{border-color:var(--blue)}
     </div>
   </div>
 
-  <!-- AIEO log overlay -->
+  <!-- AIEO log overlay — mirrors SEMrush AI Visibility UI -->
   <div class="overlay" id="aieo-overlay" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
-      <div class="modal-title">Log AIEO week <button class="btn-icon btn" onclick="document.getElementById('aieo-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:1rem">Copy from your HubSpot AEO weekly email.</div>
-      <div class="field"><label>Week</label><input type="text" id="aieo-week" placeholder="e.g. 2026-06-17 – 2026-06-24"></div>
-      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;margin-top:.25rem">Brand Visibility Score</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.875rem">
-        <div class="field"><label>Overall (%)</label><input type="number" step="0.01" id="aieo-overall" placeholder="32.5"></div>
-        <div class="field"><label>Overall change (%)</label><input type="number" step="0.01" id="aieo-overall-chg" placeholder="-4.17"></div>
-        <div class="field"><label>ChatGPT (%)</label><input type="number" step="0.01" id="aieo-chatgpt" placeholder="15.0"></div>
-        <div class="field"><label>ChatGPT change</label><input type="number" step="0.01" id="aieo-chatgpt-chg" placeholder="-15.0"></div>
-        <div class="field"><label>Gemini (%)</label><input type="number" step="0.01" id="aieo-gemini" placeholder="33.75"></div>
-        <div class="field"><label>Gemini change</label><input type="number" step="0.01" id="aieo-gemini-chg" placeholder="-6.25"></div>
-        <div class="field"><label>Perplexity (%)</label><input type="number" step="0.01" id="aieo-perplexity" placeholder="48.75"></div>
-        <div class="field"><label>Perplexity change</label><input type="number" step="0.01" id="aieo-perplexity-chg" placeholder="8.75"></div>
-        <div class="field"><label>Share of Voice (%)</label><input type="number" step="0.01" id="aieo-sov" placeholder="55.95"></div>
-        <div class="field"><label>SoV change</label><input type="number" step="0.01" id="aieo-sov-chg" placeholder="10.11"></div>
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:580px;max-height:90vh;overflow-y:auto">
+      <div class="modal-title">Log AI Visibility snapshot <button class="btn-icon btn" onclick="document.getElementById('aieo-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:1rem;background:var(--surface2);padding:.6rem .75rem;border-radius:var(--r);line-height:1.5">
+        Copy from <b>SEMrush → AI → Visibility Overview → eracore.com</b>. Takes 30 seconds.
       </div>
-      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem">Biggest wins (up to 3)</div>
-      ${[1,2,3].map(i=>`<div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:6px"><div class="field" style="margin:0"><label>Change %</label><input type="number" step="0.01" id="aieo-win${i}-chg" placeholder="25.0"></div><div class="field" style="margin:0"><label>Prompt</label><input type="text" id="aieo-win${i}-prompt" placeholder="Which electrical BIM service…"></div></div>`).join('')}
-      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;margin-top:.5rem">Biggest drops (up to 3)</div>
-      ${[1,2,3].map(i=>`<div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:6px"><div class="field" style="margin:0"><label>Change %</label><input type="number" step="0.01" id="aieo-drop${i}-chg" placeholder="-58.34"></div><div class="field" style="margin:0"><label>Prompt</label><input type="text" id="aieo-drop${i}-prompt" placeholder="What are top electrical BIM…"></div></div>`).join('')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
+        <div class="field"><label>Date</label><input type="date" id="aieo-week" style="width:100%"></div>
+        <div class="field"><label>AI Visibility Score (/100)</label><input type="number" step="1" id="aieo-score" placeholder="16"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem">Main Metrics</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+        <div class="field"><label>Mentions</label><input type="number" step="1" id="aieo-mentions" placeholder="6"></div>
+        <div class="field"><label>Citations</label><input type="number" step="1" id="aieo-citations" placeholder="52"></div>
+        <div class="field"><label>Cited Pages</label><input type="number" step="1" id="aieo-cited-pages" placeholder="31"></div>
+        <div class="field"><label>Mentions chg %</label><input type="number" step="0.1" id="aieo-mentions-chg" placeholder="200"></div>
+        <div class="field"><label>Citations chg %</label><input type="number" step="0.1" id="aieo-citations-chg" placeholder="-17.5"></div>
+        <div class="field"><label>Cited Pages chg %</label><input type="number" step="0.1" id="aieo-cited-pages-chg" placeholder="6.9"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem">Distribution by LLM (mentions)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem">
+        <div class="field"><label>ChatGPT</label><input type="number" step="1" id="aieo-chatgpt-mentions" placeholder="0"></div>
+        <div class="field"><label>AI Overview</label><input type="number" step="1" id="aieo-aio-mentions" placeholder="3"></div>
+        <div class="field"><label>AI Mode</label><input type="number" step="1" id="aieo-aimode-mentions" placeholder="0"></div>
+        <div class="field"><label>Gemini</label><input type="number" step="1" id="aieo-gemini-mentions" placeholder="3"></div>
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem">Mentions by Country (top 3)</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1rem">
+        ${[1,2,3].map(i=>`<div class="field"><label>Country ${i}</label><input type="text" id="aieo-country${i}" placeholder="${['US','ES','IN'][i-1]}"></div><div class="field"><label>Share %</label><input type="number" step="0.1" id="aieo-country${i}-pct" placeholder="${['75','12.5','12.5'][i-1]}"></div>`).join('')}
+      </div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem">Top performing topics (up to 3)</div>
+      ${[1,2,3].map(i=>`<div style="display:flex;gap:8px;margin-bottom:6px"><div class="field" style="margin:0;flex:1"><label>Topic</label><input type="text" id="aieo-win${i}-prompt" placeholder="e.g. MEP BIM coordination services"></div><div class="field" style="margin:0;width:90px"><label>Mentions</label><input type="number" step="1" id="aieo-win${i}-chg" placeholder="2"></div></div>`).join('')}
+
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.6rem;margin-top:.5rem">Opportunity topics (up to 3)</div>
+      ${[1,2,3].map(i=>`<div style="display:flex;gap:8px;margin-bottom:6px"><div class="field" style="margin:0;flex:1"><label>Topic</label><input type="text" id="aieo-drop${i}-prompt" placeholder="e.g. plumbing BIM modeling"></div><div class="field" style="margin:0;width:90px"><label>Competitors</label><input type="number" step="1" id="aieo-drop${i}-chg" placeholder="3"></div></div>`).join('')}
+
       <div class="modal-actions">
         <button class="btn" onclick="document.getElementById('aieo-overlay').classList.remove('open')">Cancel</button>
-        <button class="btn btn-primary" onclick="saveAIEOWeek()"><i class="ti ti-check"></i> Save</button>
+        <button class="btn btn-primary" onclick="saveAIEOWeek()"><i class="ti ti-check"></i> Save snapshot</button>
       </div>
     </div>
   </div>
@@ -8169,7 +8187,7 @@ function renderSEOOverview(){
   if(latestAIEO){
     const chgSpan=v=>`<span style="font-size:11px;color:${v>=0?'var(--green)':'var(--red)'}">${v>=0?'+':''}${v}%</span>`;
     html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem"><div style="font-size:14px;font-weight:600">AIEO — ${latestAIEO.week}</div><button class="btn btn-sm" onclick="document.getElementById('aieo-overlay').classList.add('open')"><i class="ti ti-plus"></i> Log week</button></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem"><div style="font-size:14px;font-weight:600">AIEO — ${latestAIEO.week}</div><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log week</button></div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem">
         ${[['Overall',latestAIEO.overall,latestAIEO.overallChg],['ChatGPT',latestAIEO.chatgpt,latestAIEO.chatgptChg],['Gemini',latestAIEO.gemini,latestAIEO.geminiChg],['Perplexity',latestAIEO.perplexity,latestAIEO.perplexityChg],['Share of Voice',latestAIEO.sov,latestAIEO.sovChg]].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem;text-align:center"><div style="font-size:18px;font-weight:700">${v}%</div><div style="font-size:11px;color:var(--text2)">${l}</div>${chgSpan(c)}</div>`).join('')}
       </div>
@@ -8178,7 +8196,7 @@ function renderSEOOverview(){
         ${latestAIEO.drops?.filter(d=>d.prompt).length?`<div><div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:.375rem">↓ Drops</div>${latestAIEO.drops.filter(d=>d.prompt).map(d=>`<div style="font-size:12px;color:var(--text2);padding:2px 0"><span style="color:var(--red);font-weight:600">${d.chg}%</span> ${d.prompt}</div>`).join('')}</div>`:''}
       </div></div>`;
   } else {
-    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="document.getElementById('aieo-overlay').classList.add('open')"><i class="ti ti-plus"></i> Log week</button></div>`;
+    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log week</button></div>`;
   }
 
   // ── Bing 8-week trend ──
@@ -8235,27 +8253,180 @@ function renderKeywordTable(){
     }).join('')}</tbody>
   </table></div>`;
 }
+function openAIEOLog(){
+  // Set today's date as default
+  const dateEl=document.getElementById('aieo-week');
+  if(dateEl&&!dateEl.value)dateEl.value=new Date().toISOString().slice(0,10);
+  document.getElementById('aieo-overlay').classList.add('open');
+}
 function renderAIEO(){
   const el=document.getElementById('seo-aieo');if(!el)return;
-  if(!aieoWeeks.length){el.innerHTML=`<div style="text-align:center;padding:2rem"><i class="ti ti-robot" style="font-size:32px;color:var(--text3);display:block;margin-bottom:.5rem"></i><div style="font-size:13px;color:var(--text2);margin-bottom:1rem">No AIEO data yet. Log your first HubSpot AEO weekly report.</div><button class="btn btn-primary" onclick="document.getElementById('aieo-overlay').classList.add('open')"><i class="ti ti-plus"></i> Log first week</button></div>`;return;}
-  el.innerHTML=`<div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-primary" onclick="document.getElementById('aieo-overlay').classList.add('open')"><i class="ti ti-plus"></i> Log week</button></div>`+
-  aieoWeeks.map(w=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:10px">
-    <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">${w.week}</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:.875rem">
-      ${[['Overall',w.overall,w.overallChg],['ChatGPT',w.chatgpt,w.chatgptChg],['Gemini',w.gemini,w.geminiChg],['Perplexity',w.perplexity,w.perplexityChg],['SoV',w.sov,w.sovChg]].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.5rem;text-align:center"><div style="font-size:16px;font-weight:700">${v}%</div><div style="font-size:11px;color:var(--text2)">${l}</div><div style="font-size:11px;color:${c>=0?'var(--green)':'var(--red)'}">${c>=0?'+':''}${c}%</div></div>`).join('')}
+  const latest=aieoWeeks[0];
+  if(!aieoWeeks.length){
+    el.innerHTML=`<div style="text-align:center;padding:3rem 2rem">
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem"><i class="ti ti-brain" style="font-size:24px;color:var(--text3)"></i></div>
+      <div style="font-weight:600;margin-bottom:.5rem">No AI Visibility data yet</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;max-width:320px;margin-left:auto;margin-right:auto">Go to SEMrush → AI → Visibility Overview, enter eracore.com, then log the snapshot here.</div>
+      <button class="btn btn-primary" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log first snapshot</button>
+    </div>`;return;
+  }
+
+  // ── KPI tiles from latest snapshot ──────────────────────────────────────
+  const w=latest;
+  const scoreColor=w.score>=50?'var(--green)':w.score>=25?'var(--amber)':'var(--red)';
+  const chgBadge=(v,suffix='')=>v==null?'':v>0?`<span style="color:var(--green);font-size:11px"> ▲${v}${suffix}</span>`:`<span style="color:var(--red);font-size:11px"> ▼${Math.abs(v)}${suffix}</span>`;
+  const llms=[
+    {name:'ChatGPT',val:w.chatgptMentions??0,color:'#10a37f'},
+    {name:'AI Overview',val:w.aioMentions??0,color:'#4285F4'},
+    {name:'AI Mode',val:w.aimodeMentions??0,color:'#1a73e8'},
+    {name:'Gemini',val:w.geminiMentions??0,color:'#9B59B6'},
+  ];
+  const totalLLM=llms.reduce((s,l)=>s+(l.val||0),0)||1;
+  const countries=(w.countries||[]).filter(c=>c.name);
+
+  el.innerHTML=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+    <div>
+      <div style="font-size:13px;font-weight:600">AI Visibility — eracore.com</div>
+      <div style="font-size:11px;color:var(--text3)">Source: SEMrush AI Visibility · ${w.week||'—'}</div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      ${w.wins?.filter(x=>x.prompt).length?`<div><div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:.375rem">↑ Wins</div>${w.wins.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;color:var(--text2);padding:2px 0"><span style="color:var(--green);font-weight:600">+${x.chg}%</span> ${x.prompt}</div>`).join('')}</div>`:''}
-      ${w.drops?.filter(x=>x.prompt).length?`<div><div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:.375rem">↓ Drops</div>${w.drops.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;color:var(--text2);padding:2px 0"><span style="color:var(--red);font-weight:600">${x.chg}%</span> ${x.prompt}</div>`).join('')}</div>`:''}
-    </div></div>`).join('');
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="openAIEOLog()"><i class="ti ti-plus" style="font-size:11px"></i> Log snapshot</button>
+    </div>
+  </div>
+
+  <!-- Score + Main Metrics -->
+  <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;margin-bottom:1rem;align-items:stretch">
+    <!-- AI Visibility Score gauge -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">AI Visibility Score</div>
+      <div style="position:relative;width:100px;height:60px;overflow:hidden;margin-bottom:.5rem">
+        <svg viewBox="0 0 100 55" style="width:100%;height:auto">
+          <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="var(--border)" stroke-width="10" stroke-linecap="round"/>
+          <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="${scoreColor}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(w.score||0)*1.257} 999" opacity="0.85"/>
+        </svg>
+        <div style="position:absolute;bottom:0;left:0;right:0;text-align:center">
+          <div style="font-size:1.75rem;font-weight:800;color:${scoreColor};line-height:1">${w.score||0}</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">/100</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:${scoreColor};font-weight:600">${(w.score||0)>=50?'Good':(w.score||0)>=25?'Medium':'Low'}</div>
+    </div>
+    <!-- Mentions / Citations / Cited Pages -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${[
+        ['Mentions',w.mentions,w.mentionsChg,'%','var(--blue)'],
+        ['Citations',w.citations,w.citationsChg,'%','var(--green)'],
+        ['Cited Pages',w.citedPages,w.citedPagesChg,'%','var(--amber)']
+      ].map(([lbl,val,chg,suffix,col])=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;display:flex;flex-direction:column;justify-content:space-between">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:.25rem">${lbl}</div>
+        <div style="font-size:1.75rem;font-weight:700;color:${col}">${val??'—'}</div>
+        <div style="font-size:11px;margin-top:.25rem">${chg!=null?`<span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg}%</span>`:'—'}</div>
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Distribution by LLM + Country -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+    <!-- LLM breakdown -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">Distribution by LLM</div>
+      ${llms.map(l=>{
+        const pct=Math.round((l.val/totalLLM)*100);
+        return`<div style="margin-bottom:.625rem">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="color:var(--text2)">${l.name}</span>
+            <span style="font-weight:600;color:${l.color}">${l.val} <span style="color:var(--text3);font-weight:400">(${pct}%)</span></span>
+          </div>
+          <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${l.color};border-radius:3px;transition:width .4s"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <!-- Country breakdown -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">Mentions by Country</div>
+      ${countries.length?`<table style="width:100%;font-size:12px;border-collapse:collapse">
+        <tr style="color:var(--text3);font-size:11px"><td style="padding:2px 0">Country</td><td style="text-align:right">Share</td><td style="text-align:right;padding-left:12px">Mentions</td></tr>
+        ${countries.map(c=>`<tr style="border-top:1px solid var(--border)">
+          <td style="padding:5px 0">${c.name}</td>
+          <td style="text-align:right;color:var(--text2)">${c.pct}%</td>
+          <td style="text-align:right;font-weight:600;padding-left:12px;color:var(--blue)">${Math.round((w.mentions||0)*c.pct/100)||'—'}</td>
+        </tr>`).join('')}
+      </table>`:'<div style="font-size:12px;color:var(--text3);text-align:center;padding-top:1rem">No country data logged</div>'}
+    </div>
+  </div>
+
+  <!-- Performing Topics + Opportunities -->
+  ${(w.wins?.some(x=>x.prompt)||w.drops?.some(x=>x.prompt))?`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+    ${w.wins?.some(x=>x.prompt)?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:.75rem"><i class="ti ti-sparkles" style="font-size:12px"></i> Performing Topics</div>
+      ${w.wins.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;padding:.375rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--text)">${x.prompt}</span>
+        <span style="color:var(--green);font-weight:600;white-space:nowrap;padding-left:8px">${x.chg} mentions</span>
+      </div>`).join('')}
+    </div>`:'' }
+    ${w.drops?.some(x=>x.prompt)?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:.75rem"><i class="ti ti-target" style="font-size:12px"></i> Topic Opportunities</div>
+      ${w.drops.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;padding:.375rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <span style="color:var(--text)">${x.prompt}</span>
+        <span style="color:var(--amber);font-weight:600;white-space:nowrap;padding-left:8px">${x.chg} competitors</span>
+      </div>`).join('')}
+    </div>`:'' }
+  </div>`:'' }
+
+  <!-- History -->
+  ${aieoWeeks.length>1?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">History</div>
+    <div style="display:grid;grid-template-columns:auto repeat(4,1fr);gap:0;font-size:11px;color:var(--text3);padding:.3rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
+      <span>Date</span><span style="text-align:right">Score</span><span style="text-align:right">Mentions</span><span style="text-align:right">Citations</span><span style="text-align:right">Cited Pages</span>
+    </div>
+    ${aieoWeeks.map(snap=>`<div style="display:grid;grid-template-columns:auto repeat(4,1fr);gap:0;font-size:12px;padding:.45rem .5rem;border-bottom:1px solid var(--border)">
+      <span style="color:var(--text2)">${snap.week||'—'}</span>
+      <span style="text-align:right;font-weight:700;color:var(--blue)">${snap.score??'—'}</span>
+      <span style="text-align:right">${snap.mentions??'—'}</span>
+      <span style="text-align:right">${snap.citations??'—'}</span>
+      <span style="text-align:right">${snap.citedPages??'—'}</span>
+    </div>`).join('')}
+  </div>`:''}
+  `;
 }
+
 function saveAIEOWeek(){
-  const gN2=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?0:v;};
+  const gN=id=>{const v=parseFloat(document.getElementById(id)?.value);return isNaN(v)?null:v;};
+  const gI=id=>{const v=parseInt(document.getElementById(id)?.value);return isNaN(v)?null:v;};
   const gS=id=>document.getElementById(id)?.value.trim()||'';
-  aieoWeeks.unshift({id:uid(),week:gS('aieo-week'),overall:gN2('aieo-overall'),overallChg:gN2('aieo-overall-chg'),chatgpt:gN2('aieo-chatgpt'),chatgptChg:gN2('aieo-chatgpt-chg'),gemini:gN2('aieo-gemini'),geminiChg:gN2('aieo-gemini-chg'),perplexity:gN2('aieo-perplexity'),perplexityChg:gN2('aieo-perplexity-chg'),sov:gN2('aieo-sov'),sovChg:gN2('aieo-sov-chg'),
-    wins:[1,2,3].map(i=>({chg:gN2(`aieo-win${i}-chg`),prompt:gS(`aieo-win${i}-prompt`)})),
-    drops:[1,2,3].map(i=>({chg:gN2(`aieo-drop${i}-chg`),prompt:gS(`aieo-drop${i}-prompt`)})),created:Date.now()});
-  saveSEO();document.getElementById('aieo-overlay').classList.remove('open');renderAIEO();renderSEOOverview();toast('AIEO week saved');
+  const countries=[1,2,3].map(i=>({name:gS(`aieo-country${i}`),pct:gN(`aieo-country${i}-pct`)})).filter(c=>c.name);
+  const snap={
+    id:uid(),
+    week:gS('aieo-week'),
+    score:gI('aieo-score'),
+    mentions:gI('aieo-mentions'),
+    mentionsChg:gN('aieo-mentions-chg'),
+    citations:gI('aieo-citations'),
+    citationsChg:gN('aieo-citations-chg'),
+    citedPages:gI('aieo-cited-pages'),
+    citedPagesChg:gN('aieo-cited-pages-chg'),
+    chatgptMentions:gI('aieo-chatgpt-mentions'),
+    aioMentions:gI('aieo-aio-mentions'),
+    aimodeMentions:gI('aieo-aimode-mentions'),
+    geminiMentions:gI('aieo-gemini-mentions'),
+    countries,
+    wins:[1,2,3].map(i=>({prompt:gS(`aieo-win${i}-prompt`),chg:gI(`aieo-win${i}-chg`)})).filter(x=>x.prompt),
+    drops:[1,2,3].map(i=>({prompt:gS(`aieo-drop${i}-prompt`),chg:gI(`aieo-drop${i}-chg`)})).filter(x=>x.prompt),
+    created:Date.now()
+  };
+  // Remove same-date entry if re-logging
+  aieoWeeks=aieoWeeks.filter(w=>w.week!==snap.week);
+  aieoWeeks.unshift(snap);
+  aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));
+  saveSEO();
+  document.getElementById('aieo-overlay').classList.remove('open');
+  renderAIEO();renderSEOOverview();
+  toast(`AI Visibility snapshot saved · Score: ${snap.score??'—'}/100 · Mentions: ${snap.mentions??'—'}`);
 }
 function renderDeliverables(){
   const el=document.getElementById('seo-deliverables');if(!el)return;
