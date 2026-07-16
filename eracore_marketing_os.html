@@ -8440,7 +8440,9 @@ async function fetchSemrush(){
       // Returns all tracked keywords with current positions, prev positions, diff
       // Costs: 100 API units per keyword
       const ptBase=`https://api.semrush.com/reports/v1/projects/${campaignId}/tracking/`;
-      const ptUrl=`${ptBase}?key=${key}&action=report&type=tracking_position_organic&display_limit=500`;
+      // url param required (domain mask), competitors[] required (can be empty string)
+      const domainUrl=encodeURIComponent('*.eracore.com/*');
+      const ptUrl=`${ptBase}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&display_limit=500`;
       const ptRes=await fetch(proxy(ptUrl));
       console.log('[SEMrush PT] HTTP status:', ptRes.status);
       if(ptRes.ok){
@@ -8451,11 +8453,18 @@ async function fetchSemrush(){
         // Be = beginning position
         // Diff = position change (positive = improved)
         const data=ptJson.data||{};
-        const domainMask=Object.keys(Object.values(data)[0]?.Fi||{})[0]||'*.eracore.com/*';
+        const firstItem=Object.values(data)[0]||{};
+        // Auto-detect the domain mask key from the first item's Fi (final position) object
+        const domainMask=Object.keys(firstItem.Fi||{})[0]||'*.eracore.com/*';
+        console.log('[SEMrush PT] domainMask detected:', domainMask, '| sample item:', JSON.stringify(firstItem).slice(0,200));
         keywords=Object.values(data).map(item=>{
-          const pos=item.Fi?.[domainMask]??item.Fi?.[Object.keys(item.Fi||{})[0]]??null;
-          const prevPos=item.Be?.[domainMask]??item.Be?.[Object.keys(item.Be||{})[0]]??null;
-          const diff=item.Diff?.[domainMask]??item.Diff?.[Object.keys(item.Diff||{})[0]]??null;
+          // Try detected mask first, then first key, then any key
+          const fiKeys=Object.keys(item.Fi||{});
+          const pos=item.Fi?.[domainMask]??item.Fi?.[fiKeys[0]]??null;
+          const beKeys=Object.keys(item.Be||{});
+          const prevPos=item.Be?.[domainMask]??item.Be?.[beKeys[0]]??null;
+          const diffKeys=Object.keys(item.Diff||{});
+          const diff=item.Diff?.[domainMask]??item.Diff?.[diffKeys[0]]??null;
           const posNum=(pos!==null&&pos!=='-'&&pos!==undefined)?parseInt(pos):null;
           const prevNum=(prevPos!==null&&prevPos!=='-'&&prevPos!==undefined)?parseInt(prevPos):null;
           const diffNum=(diff!==null&&diff!=='-'&&diff!==undefined)?parseInt(diff):null;
@@ -8471,7 +8480,7 @@ async function fetchSemrush(){
         console.log(`[SEMrush PT] ${keywords.length} keywords, ${keywords.filter(k=>k.position).length} ranked`);
 
         // ── Overview Report: visibility, top3/10/20, improved/declined ──────
-        const ovUrl=`${ptBase}?key=${key}&action=report&type=tracking_overview_organic`;
+        const ovUrl=`${ptBase}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`;
         const ovRes=await fetch(proxy(ovUrl));
         if(ovRes.ok){
           const ovJson=await ovRes.json();
@@ -8510,6 +8519,7 @@ async function fetchSemrush(){
       if(doRes.ok){
         const doText=await doRes.text();
         console.log('[SEMrush domain_organic] first 200:', doText.slice(0,200));
+        console.log('[SEMrush domain_organic] line count:', doLines.length);
         const doLines=doText.trim().split('\n').slice(1).filter(l=>l.trim());
         keywords=doLines.map(l=>{
           const c=l.split(';');
@@ -8517,6 +8527,7 @@ async function fetchSemrush(){
           const diff=parseInt((c[3]||'').trim())||null;
           return{keyword:(c[0]||'').replace(/^"|"$/g,'').trim(),position:pos&&pos>0?pos:null,prevPos:parseInt((c[2]||'').trim())||null,diff:diff||null,volume:parseInt((c[4]||'').trim())||0};
         }).filter(k=>k.keyword);
+        console.log('[SEMrush domain_organic] parsed:', keywords.length, 'kws, ranked:', keywords.filter(k=>k.position).length);
       }
       // domain_ranks for traffic estimate
       try{
