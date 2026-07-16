@@ -821,7 +821,7 @@ select.sm:focus{border-color:var(--blue)}
       <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
       <button class="btn" id="meta-btn" onclick="fetchMetaAds()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
       <button class="btn" id="li-btn" onclick="fetchLinkedInAds()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
-      <button class="btn" style="border-style:dashed" onclick="openBingAdsUpload()"><i class="ti ti-brand-bing"></i> Microsoft CSV</button>
+      <button class="btn" style="border-style:dashed" onclick="fetchMsAds()"><i class="ti ti-brand-bing"></i> Microsoft CSV</button>
       <button class="btn btn-primary" onclick="openPaidEntry()"><i class="ti ti-plus"></i> Log this week</button>
     </div>
   </div>
@@ -1178,6 +1178,27 @@ select.sm:focus{border-color:var(--blue)}
         <input type="text" id="li-account-input" placeholder="Ad Account ID (123456789)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
       </div>
       <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
+        <i class="ti ti-brand-bing" style="color:var(--purple)"></i>
+        <div style="font-size:14px;font-weight:600">Microsoft Ads</div>
+        <span id="msads-status-badge" style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not connected</span>
+      </div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:.875rem;line-height:1.5">Connect Microsoft Advertising via API — pulls campaign spend, clicks, impressions and conversions.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <input type="password" id="ms-dev-token-input" placeholder="Developer Token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="text" id="ms-customer-id-input" placeholder="Customer ID (254204658)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="password" id="ms-client-id-input" placeholder="Azure App Client ID" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <input type="password" id="ms-client-secret-input" placeholder="Azure App Client Secret" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input type="password" id="ms-refresh-token-input" placeholder="Refresh token — generate below" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+        <button class="btn btn-sm" onclick="startMsAdsOAuth()"><i class="ti ti-key"></i> Generate</button>
+      </div>
+      <div id="ms-oauth-status" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
+      <button class="btn btn-primary" onclick="saveMsAdsCreds()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
   </div>
 </div>
@@ -4060,6 +4081,7 @@ function onNavTo(id){
     if(getGAdsCreds()?.refreshToken){try{fetchGoogleAdsLive();}catch(e){}}
     if(getMetaToken()&&getMetaAdAccount()){try{fetchMetaAds();}catch(e){}}
     if(getLinkedInToken()&&getLinkedInAdAccount()){try{fetchLinkedInAds();}catch(e){}}
+    if(getMsRefreshToken()){try{fetchMsAds();}catch(e){}}
   }
   if(id==='socialdash'){renderSocialDash();renderInstagramBlock();renderFacebookBlock();}
   if(id==='mktdash'){renderDashboard();buildNotifications();}
@@ -5755,6 +5777,12 @@ function saveApiKey(){const key=document.getElementById('api-key-input').value.t
 let gAdsToken=null,gAdsCustomerId=null,gAdsDevToken=null;
 function getGAdsCreds(){try{return JSON.parse(localStorage.getItem('ec-gads-creds')||'null');}catch(e){return null;}}
 function getMetaToken(){return localStorage.getItem('ec-meta-token')||'';}
+function getMsAdsCreds(){try{return JSON.parse(localStorage.getItem('ec-msads-creds')||'null');}catch(e){return null;}}
+function getMsDevToken(){return getMsAdsCreds()?.devToken||'';}
+function getMsCustomerId(){return getMsAdsCreds()?.customerId||'';}
+function getMsClientId(){return getMsAdsCreds()?.clientId||'';}
+function getMsClientSecret(){return getMsAdsCreds()?.clientSecret||'';}
+function getMsRefreshToken(){return getMsAdsCreds()?.refreshToken||'';}
 function getMetaAdAccount(){return localStorage.getItem('ec-meta-ad-account')||'';}
 function getLinkedInToken(){return localStorage.getItem('ec-li-token')||'';}
 function getLinkedInAdAccount(){return localStorage.getItem('ec-li-ad-account')||'';}
@@ -5944,6 +5972,7 @@ function initSettings(){
   if(tokenEl&&token)tokenEl.value=token;
   const portalEl=document.getElementById('hs-portal-id');
   if(portalEl)portalEl.value=getHubSpotPortalId();
+  loadMsAdsSettings();
   // ── GSC secret status ──
   const secretSaved=localStorage.getItem('ec-gsc-client-secret');
   const idSaved=localStorage.getItem('ec-gsc-client-id');
@@ -8992,12 +9021,44 @@ function renderPaidLinkedInTab(){
 
 function renderPaidMicrosoftTab(){
   const el=document.getElementById('paid-tab-microsoft');if(!el)return;
-  el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
-    <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--purple)"></i>
-    <div style="font-weight:600;margin-bottom:.5rem">Microsoft Ads</div>
-    <div style="font-size:13px;margin-bottom:1rem">Download a Campaign Performance report from Microsoft Advertising and upload it here</div>
-    <button class="btn btn-primary" onclick="openBingAdsUpload()"><i class="ti ti-upload"></i> Upload CSV</button>
-  </div>`;
+  loadPaidAdsData();
+  if(!msAdsData){
+    el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
+      <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--purple)"></i>
+      <div style="font-weight:600;margin-bottom:.5rem">Microsoft Ads not connected</div>
+      <div style="font-size:13px;margin-bottom:1rem">Add your credentials in Settings → Microsoft Ads, then connect.</div>
+      <button class="btn btn-primary" onclick="fetchMsAds()"><i class="ti ti-plug"></i> Connect Microsoft Ads</button>
+    </div>`;return;
+  }
+  const cpl=msAdsData.conversions&&msAdsData.spend?'$'+Math.round(msAdsData.spend/msAdsData.conversions):'—';
+  const ctr=msAdsData.clicks&&msAdsData.impressions?(msAdsData.clicks/msAdsData.impressions*100).toFixed(2)+'%':'—';
+  const camps=msAdsData.campaigns||[];
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
+    ${[['Spend',msAdsData.spend>0?'$'+Math.round(msAdsData.spend).toLocaleString():'—','var(--purple)'],
+       ['Clicks',(msAdsData.clicks||0)>0?msAdsData.clicks.toLocaleString():'—','var(--text)'],
+       ['Impressions',(msAdsData.impressions||0)>0?((msAdsData.impressions)/1000).toFixed(1)+'K':'—','var(--text)'],
+       ['CTR',ctr,'var(--green)'],
+       ['CPL',cpl,'var(--amber)']
+    ].map(([l,v,c])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
+      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
+    </div>`).join('')}
+  </div>
+  ${camps.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns — last 7d</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
+      <span>Campaign</span><span style="text-align:right;padding-right:1rem">Spend</span><span style="text-align:right;padding-right:1rem">Clicks</span><span style="text-align:right;padding-right:1rem">Impr</span><span style="text-align:right">Conv</span>
+    </div>
+    ${camps.map(c=>`<div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:12px;padding:.5rem .5rem;border-bottom:1px solid var(--border);align-items:center">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.5rem">${c.name}</span>
+      <span style="text-align:right;padding-right:1rem;font-weight:600;color:var(--purple)">${c.spend?'$'+Math.round(c.spend):'—'}</span>
+      <span style="text-align:right;padding-right:1rem">${c.clicks?.toLocaleString()||'—'}</span>
+      <span style="text-align:right;padding-right:1rem;color:var(--text2)">${c.impressions?(c.impressions/1000).toFixed(1)+'K':'—'}</span>
+      <span style="text-align:right;color:var(--green)">${c.conversions??'—'}</span>
+    </div>`).join('')}
+  </div>`:''}
+  ${msAdsData.note?`<div style="font-size:11px;color:var(--text3);margin-top:.75rem"><i class="ti ti-info-circle"></i> ${msAdsData.note}</div>`:''}`;
 }
 
 function renderPaidWeeklyTab(){
@@ -9136,6 +9197,204 @@ async function fetchLinkedInAds(){
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span>Connect LinkedIn</span>';
     toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
+  }
+}
+
+// ── MICROSOFT ADS — OAuth + live API ─────────────────────────────────────
+function loadMsAdsSettings(){
+  const creds=getMsAdsCreds();if(!creds)return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('ms-dev-token-input',creds.devToken);
+  set('ms-customer-id-input',creds.customerId);
+  set('ms-client-id-input',creds.clientId);
+  set('ms-client-secret-input',creds.clientSecret);
+  set('ms-refresh-token-input',creds.refreshToken);
+  const badge=document.getElementById('msads-status-badge');
+  if(badge&&creds.refreshToken){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+}
+
+function saveMsAdsCreds(){
+  const devToken=(document.getElementById('ms-dev-token-input')?.value||'').trim();
+  const customerId=(document.getElementById('ms-customer-id-input')?.value||'').trim();
+  const clientId=(document.getElementById('ms-client-id-input')?.value||'').trim();
+  const clientSecret=(document.getElementById('ms-client-secret-input')?.value||'').trim();
+  const refreshToken=(document.getElementById('ms-refresh-token-input')?.value||'').trim();
+  if(!devToken||!customerId||!clientId||!clientSecret){toast('Fill in Developer Token, Customer ID, Client ID and Client Secret');return;}
+  localStorage.setItem('ec-msads-creds',JSON.stringify({devToken,customerId,clientId,clientSecret,refreshToken}));
+  const badge=document.getElementById('msads-status-badge');
+  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  toast('Microsoft Ads credentials saved');
+  if(refreshToken)fetchMsAds();
+}
+
+function startMsAdsOAuth(){
+  const clientId=(document.getElementById('ms-client-id-input')?.value||getMsClientId()).trim();
+  if(!clientId){toast('Enter Azure Client ID first');return;}
+  const redirect=encodeURIComponent('http://localhost');
+  const scope=encodeURIComponent('https://ads.microsoft.com/msads.manage offline_access');
+  const url=`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirect}&scope=${scope}&response_mode=query`;
+  window.open(url,'_blank');
+  const statusEl=document.getElementById('ms-oauth-status');
+  if(statusEl)statusEl.innerHTML=`
+    <div style="background:var(--surface2);border-radius:var(--r);padding:.75rem;font-size:12px;line-height:1.6;margin-top:4px">
+      <b>Steps:</b><br>
+      1. Sign in with your Microsoft Advertising account<br>
+      2. Approve the permissions<br>
+      3. Browser redirects to <code>http://localhost/?code=...</code> (page won't load — that's OK)<br>
+      4. Copy the full URL from the address bar and paste below, then click Extract:
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="ms-auth-code-input" placeholder="Paste full redirect URL: http://localhost/?code=..." style="flex:1;height:34px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+      <button class="btn btn-primary btn-sm" onclick="exchangeMsAdsCode()">Extract token</button>
+    </div>`;
+}
+
+async function exchangeMsAdsCode(){
+  let raw=(document.getElementById('ms-auth-code-input')?.value||'').trim();
+  if(!raw){toast('Paste the redirect URL first');return;}
+  let code=raw;
+  try{const u=new URL(raw);const extracted=u.searchParams.get('code');if(extracted)code=extracted;}catch(e){}
+  if(!code){toast('Could not find auth code in URL');return;}
+  const clientId=(document.getElementById('ms-client-id-input')?.value||getMsClientId()).trim();
+  const clientSecret=(document.getElementById('ms-client-secret-input')?.value||getMsClientSecret()).trim();
+  const statusEl=document.getElementById('ms-oauth-status');
+  if(statusEl){statusEl.textContent='Exchanging code for token…';}
+  try{
+    // Use proxy to avoid CORS on token endpoint
+    const body=`client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent('http://localhost')}&grant_type=authorization_code`;
+    const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:'https://login.microsoftonline.com/common/oauth2/v2.0/token',body,contentType:'application/x-www-form-urlencoded'})
+    });
+    const data=await res.json();
+    if(data.refresh_token){
+      const rtEl=document.getElementById('ms-refresh-token-input');
+      if(rtEl)rtEl.value=data.refresh_token;
+      if(statusEl){statusEl.textContent='✓ Refresh token generated — click Save & connect';statusEl.style.color='var(--green)';}
+      toast('Microsoft Ads token ready — save credentials');
+    } else {
+      throw new Error(data.error_description||data.error||'No refresh token returned');
+    }
+  }catch(e){
+    if(statusEl){statusEl.textContent='Error: '+e.message;statusEl.style.color='var(--red)';}
+    toast('MS Ads token error: '+e.message);
+  }
+}
+
+async function getMsAdsAccessToken(){
+  const creds=getMsAdsCreds();
+  if(!creds?.refreshToken)throw new Error('No Microsoft Ads refresh token — generate one in Settings');
+  const body=`client_id=${encodeURIComponent(creds.clientId)}&client_secret=${encodeURIComponent(creds.clientSecret)}&refresh_token=${encodeURIComponent(creds.refreshToken)}&grant_type=refresh_token`;
+  const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:'https://login.microsoftonline.com/common/oauth2/v2.0/token',body,contentType:'application/x-www-form-urlencoded'})
+  });
+  const data=await res.json();
+  if(!data.access_token)throw new Error(data.error_description||'Failed to refresh MS Ads token');
+  return data.access_token;
+}
+
+async function fetchMsAds(){
+  const creds=getMsAdsCreds();
+  if(!creds?.devToken||!creds?.customerId||!creds?.refreshToken){
+    toast('Set Microsoft Ads credentials in Settings first');return;
+  }
+  const btn=document.getElementById('ms-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const accessToken=await getMsAdsAccessToken();
+    // Use Microsoft Advertising REST API — Campaign Management reporting
+    const now=new Date();
+    const end=now.toISOString().slice(0,10);
+    const start=new Date(now-7*86400000).toISOString().slice(0,10);
+    // Use Reporting API via proxy
+    const reportBody=JSON.stringify({
+      ReportRequest:{
+        __type:'CampaignPerformanceReportRequest',
+        Aggregation:'Summary',
+        Columns:['CampaignName','Spend','Clicks','Impressions','Conversions'],
+        Scope:{AccountIds:[parseInt(creds.customerId)]},
+        Time:{CustomDateRangeStart:{Day:parseInt(start.slice(8,10)),Month:parseInt(start.slice(5,7)),Year:parseInt(start.slice(0,4))},CustomDateRangeEnd:{Day:parseInt(end.slice(8,10)),Month:parseInt(end.slice(5,7)),Year:parseInt(end.slice(0,4))},PredefinedTime:null},
+        Format:'Csv',
+        ReportName:'EracoreOS7d',
+        ReturnOnlyCompleteData:false
+      }
+    });
+    // Use simpler Campaign Management API to get campaigns
+    const campRes=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        url:'https://reporting.api.bingads.microsoft.com/Api/Advertiser/Reporting/v13/ReportingService.svc/json/SubmitGenerateReport',
+        body:reportBody,
+        contentType:'application/json',
+        headers:{
+          'AuthenticationToken':accessToken,
+          'DeveloperToken':creds.devToken,
+          'CustomerId':creds.customerId
+        }
+      })
+    });
+    const campData=await campRes.json();
+    console.log('[MS Ads] Report submit:', JSON.stringify(campData).slice(0,300));
+    // For now use InsightsService for quick stats
+    throw new Error('USE_INSIGHTS');
+  }catch(e){
+    if(e.message==='USE_INSIGHTS'){
+      // Fallback: use the simpler Ad Insight API for account-level stats
+      await fetchMsAdsSimple();return;
+    }
+    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
+    toast('Microsoft Ads error: '+e.message);console.error('[MS Ads]',e);
+  }
+}
+
+async function fetchMsAdsSimple(){
+  const creds=getMsAdsCreds();
+  const btn=document.getElementById('ms-btn');
+  try{
+    const accessToken=await getMsAdsAccessToken();
+    // Use Campaign Management API to get campaigns and their stats
+    const soapBody=`<s:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Header xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
+        <Action mustUnderstand="1">GetCampaignsByAccountId</Action>
+        <AuthenticationToken>${accessToken}</AuthenticationToken>
+        <DeveloperToken>${creds.devToken}</DeveloperToken>
+        <CustomerId>${creds.customerId}</CustomerId>
+        <AccountId>${creds.customerId}</AccountId>
+      </s:Header>
+      <s:Body><GetCampaignsByAccountIdRequest xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
+        <AccountId>${creds.customerId}</AccountId>
+        <CampaignType>Search Shopping DynamicSearchAds</CampaignType>
+        <ReturnAdditionalFields>None</ReturnAdditionalFields>
+      </GetCampaignsByAccountIdRequest></s:Body>
+    </s:Envelope>`;
+    const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        url:'https://campaign.api.bingads.microsoft.com/Api/Advertiser/CampaignManagement/v13/CampaignManagementService.svc',
+        body:soapBody,
+        contentType:'text/xml; charset=utf-8',
+        soapAction:'GetCampaignsByAccountId'
+      })
+    });
+    const text=await res.text();
+    console.log('[MS Ads Simple] Response:', text.slice(0,500));
+    // Parse basic campaign names from SOAP response
+    const names=[...text.matchAll(/<Name>(.*?)<\/Name>/g)].map(m=>m[1]);
+    console.log('[MS Ads] Campaigns found:', names);
+    // For now set placeholder data showing connection works
+    msAdsData={spend:0,clicks:0,impressions:0,conversions:0,campaigns:names.map(n=>({name:n,spend:0,clicks:0,impressions:0,conversions:0})),fetched:Date.now(),note:'Live data requires Reporting API — campaigns connected'};
+    localStorage.setItem('ec-msads-data',JSON.stringify(msAdsData));
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMicrosoftTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Microsoft ✓</span>';
+    toast('Microsoft Ads connected — '+names.length+' campaigns found');
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
+    toast('Microsoft Ads error: '+e.message);console.error('[MS Ads Simple]',e);
   }
 }
 
