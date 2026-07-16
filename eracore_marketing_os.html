@@ -1094,7 +1094,7 @@ select.sm:focus{border-color:var(--blue)}
       <div style="font-size:14px;font-weight:600">Google Ads API</div>
       <span id="gads-status-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not connected</span>
     </div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Pulls campaign spend, clicks, impressions and conversions directly from Google Ads. Requires: (1) Google Ads API enabled in GCP ✓, (2) Developer token from Google Ads → <a href="https://ads.google.com/aw/apicenter" target="_blank" style="color:var(--blue)">ads.google.com/aw/apicenter</a>, (3) Customer ID, (4) a new OAuth token with adwords scope — generate below.</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Requires: (1) Google Ads API enabled in GCP ✓, (2) Developer token from <a href="https://ads.google.com/aw/apicenter" target="_blank" style="color:var(--blue)">ads.google.com/aw/apicenter</a>, (3) Customer ID, (4) In <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--blue)">GCP Credentials</a> → your OAuth client → add <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">http://localhost</code> to Authorised redirect URIs, (5) generate refresh token below.</div>
     <div class="g2" style="margin-bottom:.75rem">
       <div class="field" style="margin:0"><label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Developer token</label>
         <input type="password" id="gads-dev-token" placeholder="paste from Ads → API Centre" style="width:100%;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
@@ -5999,30 +5999,49 @@ function saveGAdsCredentials(){
   toast('Google Ads credentials saved');
 }
 function startGAdsOAuth(){
-  // Opens Google OAuth consent for adwords scope using same client as GSC/GA4
+  // Uses http://localhost redirect (OOB was deprecated by Google in 2022)
+  // IMPORTANT: add http://localhost to Authorised redirect URIs in Google Cloud Console
   const scope=encodeURIComponent('https://www.googleapis.com/auth/adwords');
-  const redirect=encodeURIComponent('urn:ietf:wg:oauth:2.0:oob');
+  const redirect=encodeURIComponent('http://localhost');
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
   window.open(url,'_blank');
   const statusEl=document.getElementById('gads-oauth-status');
-  if(statusEl)statusEl.innerHTML='A Google sign-in page opened. Sign in with the account that manages Google Ads, approve, then copy the <strong>authorisation code</strong> shown and paste it below:'+
-    `<div style="display:flex;gap:8px;margin-top:6px"><input type="text" id="gads-auth-code" placeholder="4/0AX..." style="flex:1;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none"><button class="btn btn-sm" onclick="exchangeGAdsCode()">Exchange for token</button></div>`;
+  if(statusEl)statusEl.innerHTML=`
+    <div style="background:var(--surface2);border-radius:var(--r);padding:.75rem;font-size:12px;line-height:1.6;margin-top:6px">
+      <b>Steps:</b><br>
+      1. Sign in with the Google Ads account (imdaniyalsiddiqui@gmail.com)<br>
+      2. Google will redirect to <code>http://localhost/?code=4/0A…</code> (page won't load — that's OK)<br>
+      3. Copy the full URL from the browser address bar<br>
+      4. Paste it below and click Extract:
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="gads-auth-code" placeholder="Paste the full redirect URL: http://localhost/?code=4/0A..." style="flex:1;height:34px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+      <button class="btn btn-primary btn-sm" onclick="exchangeGAdsCode()">Extract token</button>
+    </div>`;
 }
 async function exchangeGAdsCode(){
-  const code=(document.getElementById('gads-auth-code')?.value||'').trim();
-  if(!code){toast('Paste the authorisation code first');return;}
+  let raw=(document.getElementById('gads-auth-code')?.value||'').trim();
+  if(!raw){toast('Paste the redirect URL or auth code first');return;}
+  // Extract code from full URL if user pasted the whole redirect URL
+  let code=raw;
+  try{
+    const u=new URL(raw);
+    const extracted=u.searchParams.get('code');
+    if(extracted)code=extracted;
+  }catch(e){/* raw is just the code itself, not a URL — fine */}
+  if(!code){toast('Could not find auth code — paste the full redirect URL');return;}
   const statusEl=document.getElementById('gads-oauth-status');
-  if(statusEl)statusEl.textContent='Exchanging code…';
+  if(statusEl){statusEl.textContent='Exchanging code…';statusEl.style.color='var(--text2)';}
   try{
     const res=await fetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`code=${encodeURIComponent(code)}&client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&redirect_uri=urn:ietf:wg:oauth:2.0:oob&grant_type=authorization_code`
+      body:`code=${encodeURIComponent(code)}&client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&redirect_uri=${encodeURIComponent('http://localhost')}&grant_type=authorization_code`
     });
     const data=await res.json();
     if(data.refresh_token){
       const rtEl=document.getElementById('gads-refresh-token');if(rtEl)rtEl.value=data.refresh_token;
-      if(statusEl){statusEl.textContent='✓ Refresh token generated — click "Save & connect"';statusEl.style.color='var(--green)';}
-      toast('Adwords refresh token ready');
+      if(statusEl){statusEl.textContent='✓ Refresh token generated — click "Save & connect" above';statusEl.style.color='var(--green)';}
+      toast('Adwords refresh token ready — save credentials');
     }else{
       if(statusEl){statusEl.textContent='Error: '+(data.error_description||data.error||JSON.stringify(data));statusEl.style.color='var(--red)';}
     }
