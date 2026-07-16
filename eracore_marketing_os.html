@@ -5754,6 +5754,10 @@ function saveApiKey(){const key=document.getElementById('api-key-input').value.t
 // ── GOOGLE ADS API ────────────────────────────────────────────────────────
 let gAdsToken=null,gAdsCustomerId=null,gAdsDevToken=null;
 function getGAdsCreds(){try{return JSON.parse(localStorage.getItem('ec-gads-creds')||'null');}catch(e){return null;}}
+function getMetaToken(){return localStorage.getItem('ec-meta-token')||'';}
+function getMetaAdAccount(){return localStorage.getItem('ec-meta-ad-account')||'';}
+function getLinkedInToken(){return localStorage.getItem('ec-li-token')||'';}
+function getLinkedInAdAccount(){return localStorage.getItem('ec-li-ad-account')||'';}
 function getGadsToken(){const c=getGAdsCreds();return c?.devToken||'';}
 function getGadsCid(){const c=getGAdsCreds();return c?.customerId||'';}
 async function saveToFile(){
@@ -8837,7 +8841,32 @@ function renderPaidOverview(){
       <div style="font-size:13px">Connect Google Ads, Meta, or LinkedIn above to see blended performance</div>
     </div>`;return;
   }
+  const totalClicks=platforms.reduce((s,p)=>s+(p.clicks||0),0);
+  const totalImpr=platforms.reduce((s,p)=>s+(p.impressions||0),0);
+  const totalConv=platforms.reduce((s,p)=>s+(p.conv||0),0);
+  const blendedCPL=totalConv>0?'$'+Math.round(totalSpend/totalConv):'—';
+  const blendedCTR=totalImpr>0?(totalClicks/totalImpr*100).toFixed(2)+'%':'—';
   el.innerHTML=`
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1.25rem">
+    <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.05em">Blended — All platforms · Last 7d</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+      ${[['Total Spend',totalSpend>0?'$'+Math.round(totalSpend).toLocaleString():'—','var(--text)'],
+         ['Total Clicks',totalClicks>0?totalClicks.toLocaleString():'—','var(--text)'],
+         ['Impressions',totalImpr>0?(totalImpr/1000).toFixed(1)+'K':'—','var(--text)'],
+         ['Blended CTR',blendedCTR,'var(--green)'],
+         ['Avg CPL',blendedCPL,'var(--amber)']
+      ].map(([l,v,c])=>`<div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem">${l}</div>
+        <div style="font-size:1.375rem;font-weight:700;color:${c}">${v}</div>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px;margin-top:1rem">
+      ${platforms.filter(p=>p.data&&p.spend).map(p=>`<div style="background:${p.color};flex:${p.spend}" title="${p.name}: $${Math.round(p.spend)}"></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:16px;margin-top:.5rem;flex-wrap:wrap">
+      ${platforms.filter(p=>p.data).map(p=>`<div style="display:flex;align-items:center;gap:5px;font-size:12px"><div style="width:8px;height:8px;border-radius:50%;background:${p.color}"></div><span style="color:var(--text2)">${p.name}</span><span style="font-weight:600">${p.spend?'$'+Math.round(p.spend):'—'}</span>${totalSpend>0&&p.spend?`<span style="color:var(--text3)">(${Math.round(p.spend/totalSpend*100)}%)</span>`:''}</div>`).join('')}
+    </div>
+  </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
     ${platforms.map(p=>`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;opacity:${p.data?1:0.4}">
@@ -8857,15 +8886,7 @@ function renderPaidOverview(){
       ${totalSpend>0&&p.spend?`<div style="margin-top:.75rem"><div style="background:var(--surface2);border-radius:3px;height:4px;overflow:hidden"><div style="background:${p.color};height:100%;width:${Math.round(p.spend/totalSpend*100)}%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${Math.round(p.spend/totalSpend*100)}% of spend</div></div>`:''}
     </div>`).join('')}
   </div>
-  ${connected.length>1?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
-    <div style="font-size:13px;font-weight:600;margin-bottom:1rem">Spend distribution</div>
-    <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px">
-      ${platforms.filter(p=>p.data&&p.spend).map(p=>`<div style="background:${p.color};flex:${p.spend}" title="${p.name}: $${Math.round(p.spend)}"></div>`).join('')}
-    </div>
-    <div style="display:flex;gap:16px;margin-top:.625rem;flex-wrap:wrap">
-      ${platforms.filter(p=>p.data).map(p=>`<div style="display:flex;align-items:center;gap:5px;font-size:12px"><div style="width:8px;height:8px;border-radius:50%;background:${p.color}"></div>${p.name} ${totalSpend>0&&p.spend?Math.round((p.spend||0)/totalSpend*100)+'%':'—'}</div>`).join('')}
-    </div>
-  </div>`:''}`;
+  `;
 }
 
 function renderPaidGoogleTab(){
@@ -8917,6 +8938,7 @@ function renderPaidMetaTab(){
   }
   const ctr=metaAdsData.ctr?metaAdsData.ctr.toFixed(2)+'%':'—';
   const cpl=metaAdsData.leads&&metaAdsData.spend?'$'+Math.round(metaAdsData.spend/metaAdsData.leads):'—';
+  const camps=metaAdsData.campaigns||[];
   el.innerHTML=`
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
     ${[['Spend','$'+Math.round(metaAdsData.spend||0).toLocaleString(),'#1877F2'],['Clicks',(metaAdsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((metaAdsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CTR',ctr,'var(--green)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
@@ -8924,7 +8946,26 @@ function renderPaidMetaTab(){
       <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
       <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
     </div>`).join('')}
-  </div>`;
+  </div>
+  ${camps.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns — last 7d</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
+      <span>Campaign</span>
+      <span style="text-align:right;padding-right:1rem">Spend</span>
+      <span style="text-align:right;padding-right:1rem">Clicks</span>
+      <span style="text-align:right;padding-right:1rem">Impr</span>
+      <span style="text-align:right;padding-right:1rem">CTR</span>
+      <span style="text-align:right">Leads</span>
+    </div>
+    ${camps.map(c=>`<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:0;font-size:12px;padding:.5rem .5rem;border-bottom:1px solid var(--border);align-items:center">
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.5rem;max-width:300px" title="${c.name}">${c.name}</span>
+      <span style="text-align:right;padding-right:1rem;font-weight:600;color:#1877F2">$${Math.round(c.spend)}</span>
+      <span style="text-align:right;padding-right:1rem">${(c.clicks||0).toLocaleString()}</span>
+      <span style="text-align:right;padding-right:1rem;color:var(--text2)">${c.impressions?(c.impressions/1000).toFixed(1)+'K':'0'}</span>
+      <span style="text-align:right;padding-right:1rem;color:var(--green)">${c.ctr?c.ctr.toFixed(2)+'%':'—'}</span>
+      <span style="text-align:right;color:var(--amber)">${c.leads||0}</span>
+    </div>`).join('')}
+  </div>`:'<div style="color:var(--text3);font-size:13px;margin-top:.5rem">No campaign breakdown available — click Connect Meta to refresh</div>'}`;
 }
 
 function renderPaidLinkedInTab(){
@@ -8989,7 +9030,8 @@ async function fetchGoogleAdsLive(){
     });
     const text=await res.text();
     let data;
-    try{data=JSON.parse(text);}catch(e){throw new Error('Proxy returned HTML instead of JSON — run app with npx electron . (not the built exe)');}
+    console.log('[GAds] Raw response:', text.slice(0,500));
+    try{data=JSON.parse(text);}catch(e){throw new Error('Server response ('+res.status+'): '+text.slice(0,200));}
     if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
     if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const rows=data.results||[];
@@ -9031,16 +9073,35 @@ async function fetchMetaAds(){
   const btn=document.getElementById('meta-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
-    const proxy=(url)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`;
     const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
-    const url=`https://graph.facebook.com/v19.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=last_7_days&level=account`;
-    const res=await fetch(proxy(url));
-    if(!res.ok)throw new Error('Meta API '+res.status);
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    // Account-level summary
+    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=last_7d&level=account`;
+    const res=await fetch(url);
+    const text=await res.text();
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('Meta returned non-JSON: '+text.slice(0,100));}
+    if(!res.ok||data.error)throw new Error(data.error?.message||data.error?.type||'Meta API '+res.status);
     const d=data.data?.[0]||{};
     const leads=(d.actions||[]).find(a=>a.action_type==='lead')?.value||0;
-    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),fetched:Date.now()};
+    // Campaign-level breakdown
+    let campaigns=[];
+    try{
+      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=last_7d&level=campaign&sort=spend_descending`;
+      const campRes=await fetch(campUrl);
+      if(campRes.ok){
+        const campData=await campRes.json();
+        campaigns=(campData.data||[]).map(c=>({
+          name:c.campaign_name||'',
+          spend:parseFloat(c.spend||0),
+          impressions:parseInt(c.impressions||0),
+          clicks:parseInt(c.clicks||0),
+          leads:parseInt((c.actions||[]).find(a=>a.action_type==='lead')?.value||0),
+          ctr:parseFloat(c.ctr||0),
+          cpc:parseFloat(c.cpc||0)
+        }));
+      }
+    }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
+    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,fetched:Date.now()};
     localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
