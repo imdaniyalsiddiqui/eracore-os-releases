@@ -7838,7 +7838,7 @@ function switchSEOTab(tab,el){
   else if(tab==='bing')renderBingTab();
   else if(tab==='semrush')renderSEMrushTab();
   else if(tab==='keywords')renderKeywordTable();
-  else if(tab==='aieo')renderAIEO();
+  else if(tab==='aieo'){renderAIEO();if(!aieoWeeks.length||!aieoWeeks[0].fetchedFromApi)fetchAIEOData();}
   else if(tab==='deliverables')renderDeliverables();
   else if(tab==='funnel'){loadCalls();renderSEOFunnel();}
 }
@@ -8254,142 +8254,165 @@ function renderKeywordTable(){
   </table></div>`;
 }
 function openAIEOLog(){
-  // Set today's date as default
   const dateEl=document.getElementById('aieo-week');
   if(dateEl&&!dateEl.value)dateEl.value=new Date().toISOString().slice(0,10);
   document.getElementById('aieo-overlay').classList.add('open');
 }
+
+// ── AIEO: fetch AI visibility data from SEMrush Position Tracking API ───────
+// Uses serp_feature_filter to find keywords in AI Overview (aio) and Bing Ask AI (aai)
+async function fetchAIEOData(){
+  const key=getSemrushKey();
+  const campaignId=localStorage.getItem('ec-semrush-campaign-id')||'';
+  if(!key||!campaignId){
+    toast('Connect SEMrush with Campaign ID first (Settings → SEMrush)');
+    openSettingsToSection('semrush');return;
+  }
+  const proxy=(url)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`;
+  const base=`https://api.semrush.com/reports/v1/projects/${campaignId}/tracking/`;
+  const domainUrl=encodeURIComponent('*.eracore.com/*');
+  toast('Fetching AI visibility data…');
+  try{
+    // 1. All tracked keywords (to know total)
+    const totalRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`));
+    const totalJson=totalRes.ok?await totalRes.json():{};
+    const totalKws=totalJson.total||0;
+
+    // 2. Keywords appearing in AI Overview (Google)
+    const aioRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aio&display_limit=500`));
+    let aioKws=[], aioTotal=0;
+    if(aioRes.ok){
+      const aioJson=await aioRes.json();
+      console.log('[AIEO] AIO response:', JSON.stringify(aioJson).slice(0,300));
+      aioTotal=aioJson.total||0;
+      aioKws=Object.values(aioJson.data||{}).map(item=>({keyword:item.Ph||'',volume:parseInt(item.Nq)||0})).filter(k=>k.keyword);
+    }
+
+    // 3. Keywords appearing in Bing Ask AI
+    const aaiRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aai&display_limit=200`));
+    let aaiTotal=0;
+    if(aaiRes.ok){
+      const aaiJson=await aaiRes.json();
+      console.log('[AIEO] AAI response:', JSON.stringify(aaiJson).slice(0,200));
+      aaiTotal=aaiJson.total||0;
+    }
+
+    // 4. AI Mode keywords (aim)
+    const aimRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aim&display_limit=200`));
+    let aimTotal=0;
+    if(aimRes.ok){const aimJson=await aimRes.json();aimTotal=aimJson.total||0;}
+
+    // Build snapshot from live API data
+    const today=new Date().toISOString().slice(0,10);
+    const snap={
+      id:uid(),week:today,
+      fetchedFromApi:true,
+      totalTracked:totalKws,
+      aioKeywords:aioTotal,      // keywords in Google AI Overview
+      aaiKeywords:aaiTotal,      // keywords in Bing Ask AI  
+      aimKeywords:aimTotal,      // keywords in Google AI Mode
+      aioKeywordList:aioKws,     // actual keyword objects
+      // These come from manual log (Semrush One data, no API)
+      score:null,mentions:null,citations:null,citedPages:null,
+      created:Date.now()
+    };
+    // Merge with existing manual data if same date
+    const existing=aieoWeeks.find(w=>w.week===today);
+    if(existing){Object.assign(existing,{...snap,score:existing.score,mentions:existing.mentions,citations:existing.citations,citedPages:existing.citedPages});}
+    else{aieoWeeks=aieoWeeks.filter(w=>w.week!==today);aieoWeeks.unshift(snap);aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));}
+    saveSEO();renderAIEO();renderSEOOverview();
+    toast(`AI Visibility: ${aioTotal} keywords in AI Overview · ${aaiTotal} in Ask AI · ${aimTotal} in AI Mode`);
+  }catch(e){toast('AIEO fetch error: '+e.message);console.error('[AIEO]',e);}
+}
+
 function renderAIEO(){
   const el=document.getElementById('seo-aieo');if(!el)return;
   const latest=aieoWeeks[0];
-  if(!aieoWeeks.length){
+  const hasApiData=latest?.fetchedFromApi||latest?.aioKeywords!=null;
+
+  if(!latest){
     el.innerHTML=`<div style="text-align:center;padding:3rem 2rem">
       <div style="width:56px;height:56px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem"><i class="ti ti-brain" style="font-size:24px;color:var(--text3)"></i></div>
       <div style="font-weight:600;margin-bottom:.5rem">No AI Visibility data yet</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;max-width:320px;margin-left:auto;margin-right:auto">Go to SEMrush → AI → Visibility Overview, enter eracore.com, then log the snapshot here.</div>
-      <button class="btn btn-primary" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log first snapshot</button>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;max-width:320px;margin-left:auto;margin-right:auto">Click Fetch to pull live AI Overview keyword data from your SEMrush Position Tracking campaign.</div>
+      <button class="btn btn-primary" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i> Fetch AI data from SEMrush</button>
     </div>`;return;
   }
 
-  // ── KPI tiles from latest snapshot ──────────────────────────────────────
   const w=latest;
+  const aioKws=w.aioKeywordList||[];
   const scoreColor=w.score>=50?'var(--green)':w.score>=25?'var(--amber)':'var(--red)';
-  const chgBadge=(v,suffix='')=>v==null?'':v>0?`<span style="color:var(--green);font-size:11px"> ▲${v}${suffix}</span>`:`<span style="color:var(--red);font-size:11px"> ▼${Math.abs(v)}${suffix}</span>`;
-  const llms=[
-    {name:'ChatGPT',val:w.chatgptMentions??0,color:'#10a37f'},
-    {name:'AI Overview',val:w.aioMentions??0,color:'#4285F4'},
-    {name:'AI Mode',val:w.aimodeMentions??0,color:'#1a73e8'},
-    {name:'Gemini',val:w.geminiMentions??0,color:'#9B59B6'},
-  ];
-  const totalLLM=llms.reduce((s,l)=>s+(l.val||0),0)||1;
-  const countries=(w.countries||[]).filter(c=>c.name);
 
   el.innerHTML=`
+  <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
     <div>
       <div style="font-size:13px;font-weight:600">AI Visibility — eracore.com</div>
-      <div style="font-size:11px;color:var(--text3)">Source: SEMrush AI Visibility · ${w.week||'—'}</div>
+      <div style="font-size:11px;color:var(--text3)">${w.fetchedFromApi?'Live from SEMrush PT API':'Manual snapshot'} · ${w.week||'—'}</div>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn" style="font-size:11px;padding:4px 10px" onclick="openAIEOLog()"><i class="ti ti-plus" style="font-size:11px"></i> Log snapshot</button>
+      <button class="btn btn-primary" style="font-size:12px" onclick="fetchAIEOData()"><i class="ti ti-refresh" style="font-size:12px"></i> Refresh</button>
+      <button class="btn" style="font-size:12px" onclick="openAIEOLog()"><i class="ti ti-pencil" style="font-size:12px"></i> Log extra metrics</button>
     </div>
   </div>
 
-  <!-- Score + Main Metrics -->
-  <div style="display:grid;grid-template-columns:180px 1fr;gap:12px;margin-bottom:1rem;align-items:stretch">
-    <!-- AI Visibility Score gauge -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">AI Visibility Score</div>
-      <div style="position:relative;width:100px;height:60px;overflow:hidden;margin-bottom:.5rem">
-        <svg viewBox="0 0 100 55" style="width:100%;height:auto">
-          <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="var(--border)" stroke-width="10" stroke-linecap="round"/>
-          <path d="M10,50 A40,40 0 0,1 90,50" fill="none" stroke="${scoreColor}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(w.score||0)*1.257} 999" opacity="0.85"/>
-        </svg>
-        <div style="position:absolute;bottom:0;left:0;right:0;text-align:center">
-          <div style="font-size:1.75rem;font-weight:800;color:${scoreColor};line-height:1">${w.score||0}</div>
-          <div style="font-size:10px;color:var(--text3);font-weight:600">/100</div>
-        </div>
-      </div>
-      <div style="font-size:11px;color:${scoreColor};font-weight:600">${(w.score||0)>=50?'Good':(w.score||0)>=25?'Medium':'Low'}</div>
-    </div>
-    <!-- Mentions / Citations / Cited Pages -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-      ${[
-        ['Mentions',w.mentions,w.mentionsChg,'%','var(--blue)'],
-        ['Citations',w.citations,w.citationsChg,'%','var(--green)'],
-        ['Cited Pages',w.citedPages,w.citedPagesChg,'%','var(--amber)']
-      ].map(([lbl,val,chg,suffix,col])=>`
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;display:flex;flex-direction:column;justify-content:space-between">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:.25rem">${lbl}</div>
-        <div style="font-size:1.75rem;font-weight:700;color:${col}">${val??'—'}</div>
-        <div style="font-size:11px;margin-top:.25rem">${chg!=null?`<span style="color:${chg>=0?'var(--green)':'var(--red)'}">${chg>=0?'+':''}${chg}%</span>`:'—'}</div>
-      </div>`).join('')}
-    </div>
+  <!-- AI Overview KPIs (from API) -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem">
+    ${[
+      ['AI Overview Keywords',w.aioKeywords??'—','var(--blue)','Keywords from your campaign that appear in Google AI Overview'],
+      ['Bing Ask AI Keywords',w.aaiKeywords??'—','var(--green)','Keywords triggering Bing Ask AI / AI Chat'],
+      ['AI Mode Keywords',w.aimKeywords??'—','var(--amber)','Keywords triggering Google AI Mode'],
+      ['Total Tracked',w.totalTracked??'—','var(--text)','Total keywords in your Position Tracking campaign'],
+    ].map(([lbl,val,col,tip])=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem" title="${tip}">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:.375rem">${lbl}</div>
+      <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
+    </div>`).join('')}
   </div>
 
-  <!-- Distribution by LLM + Country -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
-    <!-- LLM breakdown -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">Distribution by LLM</div>
-      ${llms.map(l=>{
-        const pct=Math.round((l.val/totalLLM)*100);
-        return`<div style="margin-bottom:.625rem">
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
-            <span style="color:var(--text2)">${l.name}</span>
-            <span style="font-weight:600;color:${l.color}">${l.val} <span style="color:var(--text3);font-weight:400">(${pct}%)</span></span>
-          </div>
-          <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${l.color};border-radius:3px;transition:width .4s"></div>
-          </div>
-        </div>`;
-      }).join('')}
+  <!-- Score + Mentions (manual, from Semrush One) -->
+  ${w.score!=null||w.mentions!=null?`
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:12px;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between">
+      <span>AI Visibility Score & Metrics <span style="font-size:11px;font-weight:400;color:var(--text3)">(from SEMrush One — logged manually)</span></span>
     </div>
-    <!-- Country breakdown -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">Mentions by Country</div>
-      ${countries.length?`<table style="width:100%;font-size:12px;border-collapse:collapse">
-        <tr style="color:var(--text3);font-size:11px"><td style="padding:2px 0">Country</td><td style="text-align:right">Share</td><td style="text-align:right;padding-left:12px">Mentions</td></tr>
-        ${countries.map(c=>`<tr style="border-top:1px solid var(--border)">
-          <td style="padding:5px 0">${c.name}</td>
-          <td style="text-align:right;color:var(--text2)">${c.pct}%</td>
-          <td style="text-align:right;font-weight:600;padding-left:12px;color:var(--blue)">${Math.round((w.mentions||0)*c.pct/100)||'—'}</td>
-        </tr>`).join('')}
-      </table>`:'<div style="font-size:12px;color:var(--text3);text-align:center;padding-top:1rem">No country data logged</div>'}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      ${[['Score /100',w.score,'var(--blue)'],['Mentions',w.mentions,'var(--green)'],['Citations',w.citations,'var(--amber)'],['Cited Pages',w.citedPages,'var(--text)']].map(([l,v,c])=>v!=null?`
+      <div style="text-align:center;padding:.75rem;background:var(--surface2);border-radius:var(--r)">
+        <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
+        <div style="font-size:11px;color:var(--text3)">${l}</div>
+      </div>`:''  ).join('')}
     </div>
-  </div>
+  </div>`:`
+  <div style="background:var(--surface2);border:1px dashed var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:1rem;font-size:12px;color:var(--text2);display:flex;align-items:center;justify-content:space-between">
+    <span><i class="ti ti-info-circle"></i> AI Visibility Score, Mentions & Citations require <b>SEMrush One</b> — log them manually from the UI</span>
+    <button class="btn" style="font-size:11px;padding:3px 10px" onclick="openAIEOLog()">Log metrics</button>
+  </div>`}
 
-  <!-- Performing Topics + Opportunities -->
-  ${(w.wins?.some(x=>x.prompt)||w.drops?.some(x=>x.prompt))?`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
-    ${w.wins?.some(x=>x.prompt)?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:.75rem"><i class="ti ti-sparkles" style="font-size:12px"></i> Performing Topics</div>
-      ${w.wins.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;padding:.375rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <span style="color:var(--text)">${x.prompt}</span>
-        <span style="color:var(--green);font-weight:600;white-space:nowrap;padding-left:8px">${x.chg} mentions</span>
+  <!-- AI Overview keywords list -->
+  ${aioKws.length?`
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:12px;font-weight:600;margin-bottom:.75rem"><i class="ti ti-sparkles" style="color:var(--blue);font-size:12px"></i> Keywords in Google AI Overview (${aioKws.length})</div>
+    <div style="display:grid;grid-template-columns:1fr auto;font-size:11px;color:var(--text3);padding:.3rem .5rem;border-bottom:2px solid var(--border);font-weight:600"><span>Keyword</span><span>Volume</span></div>
+    <div style="max-height:240px;overflow-y:auto">
+      ${aioKws.slice(0,50).map(k=>`<div style="display:grid;grid-template-columns:1fr auto;font-size:12px;padding:.4rem .5rem;border-bottom:1px solid var(--border)">
+        <span>${k.keyword}</span><span style="color:var(--text2)">${(k.volume||0).toLocaleString()}</span>
       </div>`).join('')}
-    </div>`:'' }
-    ${w.drops?.some(x=>x.prompt)?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:.75rem"><i class="ti ti-target" style="font-size:12px"></i> Topic Opportunities</div>
-      ${w.drops.filter(x=>x.prompt).map(x=>`<div style="font-size:12px;padding:.375rem 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-        <span style="color:var(--text)">${x.prompt}</span>
-        <span style="color:var(--amber);font-weight:600;white-space:nowrap;padding-left:8px">${x.chg} competitors</span>
-      </div>`).join('')}
-    </div>`:'' }
-  </div>`:'' }
+    </div>
+  </div>`:''}
 
   <!-- History -->
   ${aieoWeeks.length>1?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-    <div style="font-size:12px;font-weight:600;margin-bottom:.875rem">History</div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:.75rem">History</div>
     <div style="display:grid;grid-template-columns:auto repeat(4,1fr);gap:0;font-size:11px;color:var(--text3);padding:.3rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
-      <span>Date</span><span style="text-align:right">Score</span><span style="text-align:right">Mentions</span><span style="text-align:right">Citations</span><span style="text-align:right">Cited Pages</span>
+      <span>Date</span><span style="text-align:right">AIO kws</span><span style="text-align:right">Ask AI</span><span style="text-align:right">Score</span><span style="text-align:right">Mentions</span>
     </div>
-    ${aieoWeeks.map(snap=>`<div style="display:grid;grid-template-columns:auto repeat(4,1fr);gap:0;font-size:12px;padding:.45rem .5rem;border-bottom:1px solid var(--border)">
+    ${aieoWeeks.map(snap=>`<div style="display:grid;grid-template-columns:auto repeat(4,1fr);gap:0;font-size:12px;padding:.4rem .5rem;border-bottom:1px solid var(--border)">
       <span style="color:var(--text2)">${snap.week||'—'}</span>
-      <span style="text-align:right;font-weight:700;color:var(--blue)">${snap.score??'—'}</span>
+      <span style="text-align:right;font-weight:700;color:var(--blue)">${snap.aioKeywords??'—'}</span>
+      <span style="text-align:right">${snap.aaiKeywords??'—'}</span>
+      <span style="text-align:right">${snap.score??'—'}</span>
       <span style="text-align:right">${snap.mentions??'—'}</span>
-      <span style="text-align:right">${snap.citations??'—'}</span>
-      <span style="text-align:right">${snap.citedPages??'—'}</span>
     </div>`).join('')}
   </div>`:''}
   `;
@@ -8400,34 +8423,30 @@ function saveAIEOWeek(){
   const gI=id=>{const v=parseInt(document.getElementById(id)?.value);return isNaN(v)?null:v;};
   const gS=id=>document.getElementById(id)?.value.trim()||'';
   const countries=[1,2,3].map(i=>({name:gS(`aieo-country${i}`),pct:gN(`aieo-country${i}-pct`)})).filter(c=>c.name);
+  const date=gS('aieo-week')||new Date().toISOString().slice(0,10);
+  // Merge with existing API data for this date if available
+  const existing=aieoWeeks.find(w=>w.week===date)||{};
   const snap={
-    id:uid(),
-    week:gS('aieo-week'),
-    score:gI('aieo-score'),
-    mentions:gI('aieo-mentions'),
-    mentionsChg:gN('aieo-mentions-chg'),
-    citations:gI('aieo-citations'),
-    citationsChg:gN('aieo-citations-chg'),
-    citedPages:gI('aieo-cited-pages'),
+    ...existing,
+    id:existing.id||uid(),week:date,
+    score:gI('aieo-score'),mentions:gI('aieo-mentions'),
+    mentionsChg:gN('aieo-mentions-chg'),citations:gI('aieo-citations'),
+    citationsChg:gN('aieo-citations-chg'),citedPages:gI('aieo-cited-pages'),
     citedPagesChg:gN('aieo-cited-pages-chg'),
-    chatgptMentions:gI('aieo-chatgpt-mentions'),
-    aioMentions:gI('aieo-aio-mentions'),
-    aimodeMentions:gI('aieo-aimode-mentions'),
-    geminiMentions:gI('aieo-gemini-mentions'),
+    chatgptMentions:gI('aieo-chatgpt-mentions'),aioMentions:gI('aieo-aio-mentions'),
+    aimodeMentions:gI('aieo-aimode-mentions'),geminiMentions:gI('aieo-gemini-mentions'),
     countries,
     wins:[1,2,3].map(i=>({prompt:gS(`aieo-win${i}-prompt`),chg:gI(`aieo-win${i}-chg`)})).filter(x=>x.prompt),
     drops:[1,2,3].map(i=>({prompt:gS(`aieo-drop${i}-prompt`),chg:gI(`aieo-drop${i}-chg`)})).filter(x=>x.prompt),
     created:Date.now()
   };
-  // Remove same-date entry if re-logging
-  aieoWeeks=aieoWeeks.filter(w=>w.week!==snap.week);
-  aieoWeeks.unshift(snap);
-  aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));
-  saveSEO();
-  document.getElementById('aieo-overlay').classList.remove('open');
+  aieoWeeks=aieoWeeks.filter(w=>w.week!==date);
+  aieoWeeks.unshift(snap);aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));
+  saveSEO();document.getElementById('aieo-overlay').classList.remove('open');
   renderAIEO();renderSEOOverview();
-  toast(`AI Visibility snapshot saved · Score: ${snap.score??'—'}/100 · Mentions: ${snap.mentions??'—'}`);
+  toast(`AI Visibility metrics saved · Score: ${snap.score??'—'}/100`);
 }
+
 function renderDeliverables(){
   const el=document.getElementById('seo-deliverables');if(!el)return;
   const today=new Date().toISOString().slice(0,10);
