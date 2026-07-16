@@ -819,8 +819,8 @@ select.sm:focus{border-color:var(--blue)}
         <option value="this_year">This year</option>
       </select>
       <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
-      <button class="btn" id="meta-btn" onclick="startMetaOAuth()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
-      <button class="btn" id="li-btn" onclick="startLinkedInOAuth()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
+      <button class="btn" id="meta-btn" onclick="fetchMetaAds()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
+      <button class="btn" id="li-btn" onclick="fetchLinkedInAds()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
       <button class="btn" style="border-style:dashed" onclick="openBingAdsUpload()"><i class="ti ti-brand-bing"></i> Microsoft CSV</button>
       <button class="btn btn-primary" onclick="openPaidEntry()"><i class="ti ti-plus"></i> Log this week</button>
     </div>
@@ -4054,7 +4054,13 @@ function onNavTo(id){
       try{fetchSemrush();}catch(e){}
     }
   }
-  if(id==='paiddash'){renderPaidDash();renderHubSpotAdsBlock();}
+  if(id==='paiddash'){
+    loadPaidAdsData();updatePaidBlendedKPIs();renderPaidDash();renderHubSpotAdsBlock();
+    // Auto-refresh live data if credentials available
+    if(getGAdsCreds()?.refreshToken){try{fetchGoogleAdsLive();}catch(e){}}
+    if(getMetaToken()&&getMetaAdAccount()){try{fetchMetaAds();}catch(e){}}
+    if(getLinkedInToken()&&getLinkedInAdAccount()){try{fetchLinkedInAds();}catch(e){}}
+  }
   if(id==='socialdash'){renderSocialDash();renderInstagramBlock();renderFacebookBlock();}
   if(id==='mktdash'){renderDashboard();buildNotifications();}
   if(id==='standup')renderStandupHistory();
@@ -8788,9 +8794,10 @@ function updatePaidBlendedKPIs(){
   if(el('paid-total-conversions'))el('paid-total-conversions').textContent=fmt(totalConv);
   if(el('paid-avg-cpl'))el('paid-avg-cpl').textContent=avgCPL!=='—'?'$'+avgCPL:'—';
   // Update connect button states
-  if(gadsData&&el('gads-btn-lbl'))el('gads-btn-lbl').textContent='Google Ads ✓';
-  if(metaAdsData&&el('meta-btn-lbl'))el('meta-btn-lbl').textContent='Meta ✓';
-  if(liAdsData&&el('li-btn-lbl'))el('li-btn-lbl').textContent='LinkedIn ✓';
+  const gadsBtn=el('gads-btn');const metaBtn=el('meta-btn');const liBtn=el('li-btn');
+  if(gadsData&&gadsBtn)gadsBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
+  if(metaAdsData&&metaBtn)metaBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
+  if(liAdsData&&liBtn)liBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
 }
 
 function renderPaidOverview(){
@@ -8886,7 +8893,7 @@ function renderPaidMetaTab(){
       <i class="ti ti-brand-facebook" style="font-size:2rem;display:block;margin-bottom:.75rem" style="color:#1877F2"></i>
       <div style="font-weight:600;margin-bottom:.5rem">Meta Ads not connected</div>
       <div style="font-size:13px;margin-bottom:1rem">You'll need a Meta System User Access Token and Ad Account ID from business.facebook.com</div>
-      <button class="btn btn-primary" style="margin-top:.5rem" onclick="startMetaOAuth()"><i class="ti ti-plug"></i> Connect Meta</button>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchMetaAds()"><i class="ti ti-plug"></i> Connect Meta</button>
     </div>`;return;
   }
   const ctr=metaAdsData.ctr?metaAdsData.ctr.toFixed(2)+'%':'—';
@@ -8909,7 +8916,7 @@ function renderPaidLinkedInTab(){
       <i class="ti ti-brand-linkedin" style="font-size:2rem;display:block;margin-bottom:.75rem;color:#0A66C2"></i>
       <div style="font-weight:600;margin-bottom:.5rem">LinkedIn Ads not connected</div>
       <div style="font-size:13px;margin-bottom:1rem">You'll need a LinkedIn OAuth token and Campaign Manager Account ID</div>
-      <button class="btn btn-primary" style="margin-top:.5rem" onclick="startLinkedInOAuth()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchLinkedInAds()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
     </div>`;return;
   }
   const cpl=liAdsData.leads&&liAdsData.spend?'$'+Math.round(liAdsData.spend/liAdsData.leads):'—';
@@ -8943,38 +8950,48 @@ function renderPaidWeeklyTab(){
 }
 
 async function fetchGoogleAdsLive(){
-  const devToken=getGadsToken();
-  const cid=getGadsCid().replace(/-/g,'');
-  if(!gscToken){toast('Connect Google first (SEO/AIEO page)');return;}
-  if(!devToken||!cid){toast('Google Ads credentials not set — check Settings');return;}
+  const creds=getGAdsCreds();
+  const devToken=creds?.devToken||'';
+  const cid=(creds?.customerId||'').replace(/-/g,'');
+  if(!devToken||!cid){toast('Google Ads credentials not set — check Settings');openSettingsToSection('google-ads');return;}
+  if(!creds?.refreshToken){toast('No Google Ads refresh token — generate one in Settings → Google Ads');openSettingsToSection('google-ads');return;}
   const btn=document.getElementById('gads-btn');
-  if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Fetching…';
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   const range=getPaidDateRange();
   try{
-    const body=JSON.stringify({query:`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} ORDER BY metrics.cost_micros DESC`});
-    // Route through main.js proxy to bypass CORS
+    // Get a fresh access token using the adwords-scoped refresh token
+    const accessToken=await getGAdsAccessToken();
+    const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
+    // Route through main.js /gads-query proxy (required to bypass CORS)
     const res=await fetch('http://127.0.0.1:8742/gads-query',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({customerId:cid,devToken,accessToken:gscToken,query:body})
+      body:JSON.stringify({customerId:cid,devToken,accessToken,query})
     });
-    if(!res.ok){const err=await res.json();throw new Error(err.error||'Proxy error '+res.status);}
-    const data=await res.json();
+    const text=await res.text();
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('Proxy returned HTML instead of JSON — run app with npx electron . (not the built exe)');}
+    if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const rows=data.results||[];
     gadsData={
-      spend:rows.reduce((s,r)=>s+(r.metrics?.costMicros||0)/1e6,0),
-      clicks:rows.reduce((s,r)=>s+(r.metrics?.clicks||0),0),
-      impressions:rows.reduce((s,r)=>s+(r.metrics?.impressions||0),0),
-      conversions:rows.reduce((s,r)=>s+(r.metrics?.conversions||0),0),
-      campaigns:rows.map(r=>({name:r.campaign?.name||'',spend:(r.metrics?.costMicros||0)/1e6,clicks:r.metrics?.clicks||0,impressions:r.metrics?.impressions||0,conversions:r.metrics?.conversions||0})),
+      spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
+      clicks:rows.reduce((s,r)=>s+(parseInt(r.metrics?.clicks)||0),0),
+      impressions:rows.reduce((s,r)=>s+(parseInt(r.metrics?.impressions)||0),0),
+      conversions:rows.reduce((s,r)=>s+(parseFloat(r.metrics?.conversions)||0),0),
+      campaigns:rows.map(r=>({
+        name:r.campaign?.name||'',
+        spend:(r.metrics?.costMicros||0)/1e6,
+        clicks:parseInt(r.metrics?.clicks)||0,
+        impressions:parseInt(r.metrics?.impressions)||0,
+        conversions:parseFloat(r.metrics?.conversions)||0
+      })),
       dateRange:range.gads,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
-    updatePaidBlendedKPIs();
-    renderPaidOverview();
-    renderPaidGoogleTab();
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
-    toast('Google Ads: $'+Math.round(gadsData.spend)+' spend, '+gadsData.clicks+' clicks');
+    toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks · ${rows.length} campaigns`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-google"></i> <span>Connect Google Ads</span>';
     toast('Google Ads error: '+e.message);
@@ -8984,44 +9001,62 @@ async function fetchGoogleAdsLive(){
 
 function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
 function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
-async function fetchMetaAdsLive(){if(metaAdsData)return fetchMetaAds();}
-async function fetchLinkedInAdsLive(){if(liAdsData)return fetchLinkedInAds();}
+async function fetchMetaAdsLive(){return fetchMetaAds();}
+async function fetchLinkedInAdsLive(){return fetchLinkedInAds();}
 async function fetchGoogleAds(){return fetchGoogleAdsLive();}
 
 // ── META ADS — live API ────────────────────────────────────────────────────
 async function fetchMetaAds(){
   const token=getMetaToken();const actId=getMetaAdAccount().replace('act_','');
   if(!token||!actId){toast('Set Meta Ads credentials in Settings first');openSettingsToSection('meta-ads');return;}
+  const btn=document.getElementById('meta-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
+    const proxy=(url)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`;
     const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
-    const res=await fetch(`https://graph.facebook.com/v19.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=last_7_days&level=account`);
+    const url=`https://graph.facebook.com/v19.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=last_7_days&level=account`;
+    const res=await fetch(proxy(url));
     if(!res.ok)throw new Error('Meta API '+res.status);
     const data=await res.json();
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const d=data.data?.[0]||{};
     const leads=(d.actions||[]).find(a=>a.action_type==='lead')?.value||0;
-    const metaData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),fetched:Date.now()};
-    localStorage.setItem('ec-meta-live',JSON.stringify(metaData));
-    renderPaidDash();toast('Meta Ads updated');
-  }catch(e){toast('Meta Ads error: '+e.message,'error');}
+    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),fetched:Date.now()};
+    localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
+    toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
+    toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
+  }
 }
 
 // ── LINKEDIN ADS — live API ────────────────────────────────────────────────
 async function fetchLinkedInAds(){
   const token=getLinkedInToken();const actId=getLinkedInAdAccount();
   if(!token||!actId){toast('Set LinkedIn Ads credentials in Settings first');openSettingsToSection('li-ads');return;}
+  const btn=document.getElementById('li-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
+    const proxy=(url,hdrs)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent(hdrs||'')}`;
     const end=new Date().toISOString().slice(0,10);
     const start=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
-    const res=await fetch(`https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&dateRange.start.year=${start.slice(0,4)}&dateRange.start.month=${parseInt(start.slice(5,7))}&dateRange.start.day=${parseInt(start.slice(8,10))}&dateRange.end.year=${end.slice(0,4)}&dateRange.end.month=${parseInt(end.slice(5,7))}&dateRange.end.day=${parseInt(end.slice(8,10))}&timeGranularity=ALL&accounts=urn:li:sponsoredAccount:${actId}&pivot=ACCOUNT&fields=spend,impressions,clicks,leadGenerationMailContactInfoShares`,{
-      headers:{'Authorization':'Bearer '+token,'LinkedIn-Version':'202401','X-Restli-Protocol-Version':'2.0.0'}
-    });
+    const url=`https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&dateRange.start.year=${start.slice(0,4)}&dateRange.start.month=${parseInt(start.slice(5,7))}&dateRange.start.day=${parseInt(start.slice(8,10))}&dateRange.end.year=${end.slice(0,4)}&dateRange.end.month=${parseInt(end.slice(5,7))}&dateRange.end.day=${parseInt(end.slice(8,10))}&timeGranularity=ALL&accounts=urn:li:sponsoredAccount:${actId}&pivot=ACCOUNT&fields=spend,impressions,clicks,leadGenerationMailContactInfoShares`;
+    const res=await fetch(proxy(url,'Bearer '+token));
     if(!res.ok)throw new Error('LinkedIn API '+res.status);
     const data=await res.json();
-    const e=data.elements?.[0]||{};
-    const liData={spend:e.spend?.amount?parseFloat(e.spend.amount):0,impressions:e.impressions||0,clicks:e.clicks||0,leads:e.leadGenerationMailContactInfoShares||0,fetched:Date.now()};
-    localStorage.setItem('ec-li-live',JSON.stringify(liData));
-    renderPaidDash();toast('LinkedIn Ads updated');
-  }catch(e){toast('LinkedIn Ads error: '+e.message,'error');}
+    if(data.message||data.serviceErrorCode)throw new Error(data.message||'LinkedIn error '+data.serviceErrorCode);
+    const el=data.elements?.[0]||{};
+    liAdsData={spend:el.spend?.amount?parseFloat(el.spend.amount):0,impressions:el.impressions||0,clicks:el.clicks||0,leads:el.leadGenerationMailContactInfoShares||0,fetched:Date.now()};
+    localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
+    toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span>Connect LinkedIn</span>';
+    toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
+  }
 }
 
 // ── HUBSPOT MARKETING API — live ads data ─────────────────────────────────
