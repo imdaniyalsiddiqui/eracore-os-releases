@@ -4047,7 +4047,12 @@ function onNavTo(id){
     // Auto-fetch if credentials already saved
     if(localStorage.getItem('ec-gsc-token')){try{fetchLiveData();fetchConversionData();}catch(e){}}
     if(localStorage.getItem('ec-bing-wmt-key')){try{fetchBingWmt();}catch(e){}}
-    if(localStorage.getItem('ec-semrush-key')){try{fetchSemrush();}catch(e){}}
+    if(localStorage.getItem('ec-semrush-key')){
+      // Restore SEMrush connected button state if we have cached data
+      const srBtn=document.getElementById('semrush-connect-btn');
+      if(srBtn&&semrushData.length){srBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';}
+      try{fetchSemrush();}catch(e){}
+    }
   }
   if(id==='paiddash'){renderPaidDash();renderHubSpotAdsBlock();}
   if(id==='socialdash'){renderSocialDash();renderInstagramBlock();renderFacebookBlock();}
@@ -5738,7 +5743,7 @@ function renderStandupHistory(){const el=document.getElementById('standup-histor
 // ── SETTINGS ──────────────────────────────────────────────────────────────
 function getApiKey(){return localStorage.getItem('eracore-api-key')||'';}
 function saveApiKey(){const key=document.getElementById('api-key-input').value.trim();if(!key)return;localStorage.setItem('eracore-api-key',key);document.getElementById('api-key-status').textContent='✓ API key saved';document.getElementById('api-key-status').style.color='var(--green)';toast('API key saved');}
-function initSettings(){const key=getApiKey();if(key){document.getElementById('api-key-input').value=key;document.getElementById('api-key-status').textContent='✓ API key is set';document.getElementById('api-key-status').style.color='var(--green)';}loadAsanaSettings();loadGAdsSettings();}
+
 
 // ── GOOGLE ADS API ────────────────────────────────────────────────────────
 let gAdsToken=null,gAdsCustomerId=null,gAdsDevToken=null;
@@ -5907,19 +5912,29 @@ async function syncFromHubSpot(){
   }
 }
 function initSettings(){
-  // Pre-populate SEMrush fields
+  // ── Claude API key ──
+  const key=getApiKey();
+  if(key){
+    const keyEl=document.getElementById('api-key-input');
+    const statusEl=document.getElementById('api-key-status');
+    if(keyEl)keyEl.value=key;
+    if(statusEl){statusEl.textContent='✓ API key is set';statusEl.style.color='var(--green)';}
+  }
+  loadAsanaSettings();loadGAdsSettings();
+  // ── SEMrush fields ──
   const srKey=localStorage.getItem('ec-semrush-key');
   const srCid=localStorage.getItem('ec-semrush-campaign-id');
   const srKeyEl=document.getElementById('semrush-key-input');
   const srCidEl=document.getElementById('semrush-campaign-id-input');
   if(srKeyEl&&srKey)srKeyEl.value=srKey;
   if(srCidEl&&srCid)srCidEl.value=srCid;
+  // ── HubSpot fields ──
   const token=getHubSpotCRMToken();
   const tokenEl=document.getElementById('hs-crm-token');
   if(tokenEl&&token)tokenEl.value=token;
   const portalEl=document.getElementById('hs-portal-id');
   if(portalEl)portalEl.value=getHubSpotPortalId();
-  // Show client secret status
+  // ── GSC secret status ──
   const secretSaved=localStorage.getItem('ec-gsc-client-secret');
   const idSaved=localStorage.getItem('ec-gsc-client-id');
   const secretStatus=document.getElementById('gsc-secret-status');
@@ -7939,7 +7954,7 @@ function renderSEMrushTab(){
       <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchSemrush()"><i class="ti ti-plug"></i> Connect SEMrush</button>
     </div>`;return;
   }
-  const kws=latest.keywords||[];
+  const kws=Array.isArray(latest.keywords)?latest.keywords:[];
   const ov=latest.overview||{};
   const isPT=latest.dataSource==='Position Tracking';
   // Use API overview values if from PT, else compute from keywords array
@@ -8185,18 +8200,31 @@ function renderSEOOverview(){
 
   // ── AIEO ──
   if(latestAIEO){
-    const chgSpan=v=>`<span style="font-size:11px;color:${v>=0?'var(--green)':'var(--red)'}">${v>=0?'+':''}${v}%</span>`;
+    // Support both old field names (overall/chatgpt) and new ones (aioKeywords/score)
+    const isNewFormat=latestAIEO.fetchedFromApi||latestAIEO.aioKeywords!=null||latestAIEO.score!=null;
     html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem"><div style="font-size:14px;font-weight:600">AIEO — ${latestAIEO.week}</div><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log week</button></div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:1rem">
-        ${[['Overall',latestAIEO.overall,latestAIEO.overallChg],['ChatGPT',latestAIEO.chatgpt,latestAIEO.chatgptChg],['Gemini',latestAIEO.gemini,latestAIEO.geminiChg],['Perplexity',latestAIEO.perplexity,latestAIEO.perplexityChg],['Share of Voice',latestAIEO.sov,latestAIEO.sovChg]].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem;text-align:center"><div style="font-size:18px;font-weight:700">${v}%</div><div style="font-size:11px;color:var(--text2)">${l}</div>${chgSpan(c)}</div>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+        <div style="font-size:14px;font-weight:600">AIEO — ${latestAIEO.week}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i></button>
+          <button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log</button>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        ${latestAIEO.wins?.filter(w=>w.prompt).length?`<div><div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:.375rem">↑ Wins</div>${latestAIEO.wins.filter(w=>w.prompt).map(w=>`<div style="font-size:12px;color:var(--text2);padding:2px 0"><span style="color:var(--green);font-weight:600">+${w.chg}%</span> ${w.prompt}</div>`).join('')}</div>`:''}
-        ${latestAIEO.drops?.filter(d=>d.prompt).length?`<div><div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:.375rem">↓ Drops</div>${latestAIEO.drops.filter(d=>d.prompt).map(d=>`<div style="font-size:12px;color:var(--text2);padding:2px 0"><span style="color:var(--red);font-weight:600">${d.chg}%</span> ${d.prompt}</div>`).join('')}</div>`:''}
-      </div></div>`;
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        ${[
+          ['AI Overview Kws', latestAIEO.aioKeywords??'—', 'var(--blue)'],
+          ['Ask AI Kws', latestAIEO.aaiKeywords??'—', 'var(--green)'],
+          ['AI Mode Kws', latestAIEO.aimKeywords??'—', 'var(--amber)'],
+          ['Score /100', latestAIEO.score??'—', 'var(--text)'],
+        ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.5rem;text-align:center">
+          <div style="font-size:18px;font-weight:700;color:${c}">${v}</div>
+          <div style="font-size:10px;color:var(--text3)">${l}</div>
+        </div>`).join('')}
+      </div>
+      ${latestAIEO.mentions!=null?`<div style="font-size:11px;color:var(--text2);margin-top:.625rem">Mentions: <b>${latestAIEO.mentions}</b> · Citations: <b>${latestAIEO.citations??'—'}</b> · Cited Pages: <b>${latestAIEO.citedPages??'—'}</b></div>`:''}
+    </div>`;
   } else {
-    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log week</button></div>`;
+    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-plug"></i> Fetch</button></div>`;
   }
 
   // ── Bing 8-week trend ──
@@ -8260,7 +8288,10 @@ function openAIEOLog(){
 }
 
 // ── AIEO: fetch AI visibility data from SEMrush Position Tracking API ───────
-// Uses serp_feature_filter to find keywords in AI Overview (aio) and Bing Ask AI (aai)
+// ── AIEO: AI visibility from SEMrush Position Tracking ──────────────────────
+// Strategy: fetch all keyword positions with Sf (SERP features) field,
+// then count keywords where Sf includes AI feature codes (aio, aim, aai, aic)
+// This is more reliable than serp_feature_filter which requires exact match
 async function fetchAIEOData(){
   const key=getSemrushKey();
   const campaignId=localStorage.getItem('ec-semrush-campaign-id')||'';
@@ -8273,55 +8304,37 @@ async function fetchAIEOData(){
   const domainUrl=encodeURIComponent('*.eracore.com/*');
   toast('Fetching AI visibility data…');
   try{
-    // 1. All tracked keywords (to know total)
-    const totalRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`));
-    const totalJson=totalRes.ok?await totalRes.json():{};
-    const totalKws=totalJson.total||0;
+    // ── Step 1: Overview (totals + any AI brand presence fields) ──────────────
+    const ovRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`));
+    const ovJson=ovRes.ok?await ovRes.json():{};
+    const totalKws=ovJson.total||0;
+    console.log('[AIEO] Overview full response:', JSON.stringify(ovJson).slice(0,500));
 
-    // 2. Keywords appearing in AI Overview (Google)
-    const aioRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aio&display_limit=500`));
-    let aioKws=[], aioTotal=0;
-    if(aioRes.ok){
-      const aioJson=await aioRes.json();
-      console.log('[AIEO] AIO response:', JSON.stringify(aioJson).slice(0,300));
-      aioTotal=aioJson.total||0;
-      aioKws=Object.values(aioJson.data||{}).map(item=>({keyword:item.Ph||'',volume:parseInt(item.Nq)||0})).filter(k=>k.keyword);
-    }
+    // ── Step 2: AI feature counts ───────────────────────────────────────────
+    // serp_feature_filter charges 100 units per matched keyword.
+    // With only 10,010 units/month budget, we skip this to preserve units.
+    // These counts come from the SEMrush UI Brand Presence block (no API cost).
+    // Mark as null — user can log them via "Log extra metrics".
+    let aioKws=[], aioTotal=null, aaiTotal=null, aimTotal=null;
+    console.log('[AIEO] AI feature filter calls skipped — low API unit budget (10k/month)');
 
-    // 3. Keywords appearing in Bing Ask AI
-    const aaiRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aai&display_limit=200`));
-    let aaiTotal=0;
-    if(aaiRes.ok){
-      const aaiJson=await aaiRes.json();
-      console.log('[AIEO] AAI response:', JSON.stringify(aaiJson).slice(0,200));
-      aaiTotal=aaiJson.total||0;
-    }
-
-    // 4. AI Mode keywords (aim)
-    const aimRes=await fetch(proxy(`${base}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&serp_feature_filter=aim&display_limit=200`));
-    let aimTotal=0;
-    if(aimRes.ok){const aimJson=await aimRes.json();aimTotal=aimJson.total||0;}
-
-    // Build snapshot from live API data
+    // ── Step 3: Build & store snapshot ───────────────────────────────────────
     const today=new Date().toISOString().slice(0,10);
+    const existing=aieoWeeks.find(w=>w.week===today)||{};
     const snap={
-      id:uid(),week:today,
-      fetchedFromApi:true,
-      totalTracked:totalKws,
-      aioKeywords:aioTotal,      // keywords in Google AI Overview
-      aaiKeywords:aaiTotal,      // keywords in Bing Ask AI  
-      aimKeywords:aimTotal,      // keywords in Google AI Mode
-      aioKeywordList:aioKws,     // actual keyword objects
-      // These come from manual log (Semrush One data, no API)
-      score:null,mentions:null,citations:null,citedPages:null,
+      ...existing,id:existing.id||uid(),week:today,
+      fetchedFromApi:true,totalTracked:totalKws,
+      aioKeywords:aioTotal,aaiKeywords:aaiTotal,aimKeywords:aimTotal,
+      aioKeywordList:aioKws,
+      // Preserve manual Semrush One data
+      score:existing.score??null,mentions:existing.mentions??null,
+      citations:existing.citations??null,citedPages:existing.citedPages??null,
       created:Date.now()
     };
-    // Merge with existing manual data if same date
-    const existing=aieoWeeks.find(w=>w.week===today);
-    if(existing){Object.assign(existing,{...snap,score:existing.score,mentions:existing.mentions,citations:existing.citations,citedPages:existing.citedPages});}
-    else{aieoWeeks=aieoWeeks.filter(w=>w.week!==today);aieoWeeks.unshift(snap);aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));}
+    aieoWeeks=aieoWeeks.filter(w=>w.week!==today);
+    aieoWeeks.unshift(snap);aieoWeeks.sort((a,b)=>b.week.localeCompare(a.week));
     saveSEO();renderAIEO();renderSEOOverview();
-    toast(`AI Visibility: ${aioTotal} keywords in AI Overview · ${aaiTotal} in Ask AI · ${aimTotal} in AI Mode`);
+    toast(`AIEO: ${aioTotal} AI Overview · ${aimTotal} AI Mode · ${aaiTotal} Ask AI (of ${totalKws} tracked)`);
   }catch(e){toast('AIEO fetch error: '+e.message);console.error('[AIEO]',e);}
 }
 
@@ -8359,16 +8372,23 @@ function renderAIEO(){
   <!-- AI Overview KPIs (from API) -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1rem">
     ${[
-      ['AI Overview Keywords',w.aioKeywords??'—','var(--blue)','Keywords from your campaign that appear in Google AI Overview'],
-      ['Bing Ask AI Keywords',w.aaiKeywords??'—','var(--green)','Keywords triggering Bing Ask AI / AI Chat'],
-      ['AI Mode Keywords',w.aimKeywords??'—','var(--amber)','Keywords triggering Google AI Mode'],
-      ['Total Tracked',w.totalTracked??'—','var(--text)','Total keywords in your Position Tracking campaign'],
+      ['AI Overview Keywords',w.aioKeywords,'var(--blue)','Keywords from your 259 tracked keywords that have AI Overview on their SERP'],
+      ['Bing Ask AI',w.aaiKeywords,'var(--green)','Tracked keywords where Bing Ask AI / AI Chat appears on SERP'],
+      ['AI Mode Keywords',w.aimKeywords,'var(--amber)','Tracked keywords where Google AI Mode appears on SERP'],
+      ['Total Tracked',w.totalTracked,'var(--text)','Total keywords in your Position Tracking campaign'],
     ].map(([lbl,val,col,tip])=>`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem" title="${tip}">
       <div style="font-size:11px;color:var(--text2);margin-bottom:.375rem">${lbl}</div>
-      <div style="font-size:1.75rem;font-weight:700;color:${col}">${val}</div>
+      <div style="font-size:1.75rem;font-weight:700;color:${val>0?col:'var(--text3)'}">${val??'—'}</div>
+      ${val===0?'<div style="font-size:10px;color:var(--text3)">Not detected in tracked kws</div>':''}
     </div>`).join('')}
   </div>
+  ${(w.aioKeywords===0&&w.aaiKeywords===0&&w.aimKeywords===0&&w.fetchedFromApi)?`
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;color:var(--text2);line-height:1.6">
+    <i class="ti ti-info-circle"></i> <b>0 AI features detected</b> — This likely means your 259 tracked BIM/MEP keywords don't currently trigger AI Overview or AI Mode on Google SERPs. 
+    Check DevTools console (F12) for raw API response to confirm. The Brand Presence block in SEMrush (ChatGPT n/a, AI Overview 3, Gemini 4) tracks AI <i>mentions</i> of your brand, 
+    not whether your tracked keywords trigger AI features — that data is from Semrush One (no API). Use "Log extra metrics" to record it manually.
+  </div>`:''}
 
   <!-- Score + Mentions (manual, from Semrush One) -->
   ${w.score!=null||w.mentions!=null?`
@@ -8623,115 +8643,66 @@ async function fetchSemrush(){
   const btn=document.getElementById('semrush-connect-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Loading…</span>';
   try{
-    let keywords=[], overview={}, dataSource='domain_organic';
+    let overview={}, dataSource='domain_organic';
 
     if(campaignId){
-      // ── Position Tracking: Organic Positions Report ──────────────────────
-      // Returns all tracked keywords with current positions, prev positions, diff
-      // Costs: 100 API units per keyword
-      const ptBase=`https://api.semrush.com/reports/v1/projects/${campaignId}/tracking/`;
-      // url param required (domain mask), competitors[] required (can be empty string)
+      // ── Position Tracking: Overview report (100 units flat, NOT per keyword) ──
       const domainUrl=encodeURIComponent('*.eracore.com/*');
-      const ptUrl=`${ptBase}?key=${key}&action=report&type=tracking_position_organic&url=${domainUrl}&display_limit=500`;
-      const ptRes=await fetch(proxy(ptUrl));
-      console.log('[SEMrush PT] HTTP status:', ptRes.status);
-      if(ptRes.ok){
-        const ptJson=await ptRes.json();
-        console.log('[SEMrush PT] response keys:', Object.keys(ptJson));
-        // Response: { total, data: { "0": { Ph, Fi, Be, Diff, Nq, ... }, ... } }
-        // Fi = final (current) position for your domain
-        // Be = beginning position
-        // Diff = position change (positive = improved)
-        const data=ptJson.data||{};
-        const firstItem=Object.values(data)[0]||{};
-        // Auto-detect the domain mask key from the first item's Fi (final position) object
-        const domainMask=Object.keys(firstItem.Fi||{})[0]||'*.eracore.com/*';
-        console.log('[SEMrush PT] domainMask detected:', domainMask, '| sample item:', JSON.stringify(firstItem).slice(0,200));
-        keywords=Object.values(data).map(item=>{
-          // Try detected mask first, then first key, then any key
-          const fiKeys=Object.keys(item.Fi||{});
-          const pos=item.Fi?.[domainMask]??item.Fi?.[fiKeys[0]]??null;
-          const beKeys=Object.keys(item.Be||{});
-          const prevPos=item.Be?.[domainMask]??item.Be?.[beKeys[0]]??null;
-          const diffKeys=Object.keys(item.Diff||{});
-          const diff=item.Diff?.[domainMask]??item.Diff?.[diffKeys[0]]??null;
-          const posNum=(pos!==null&&pos!=='-'&&pos!==undefined)?parseInt(pos):null;
-          const prevNum=(prevPos!==null&&prevPos!=='-'&&prevPos!==undefined)?parseInt(prevPos):null;
-          const diffNum=(diff!==null&&diff!=='-'&&diff!==undefined)?parseInt(diff):null;
-          return{
-            keyword:item.Ph||'',
-            position:isNaN(posNum)?null:posNum,
-            prevPos:isNaN(prevNum)?null:prevNum,
-            diff:isNaN(diffNum)?null:diffNum,
-            volume:parseInt(item.Nq)||0
-          };
-        }).filter(k=>k.keyword&&k.keyword.length>0);
-        if(keywords.length>0)dataSource='Position Tracking';
-        console.log(`[SEMrush PT] ${keywords.length} keywords, ${keywords.filter(k=>k.position).length} ranked`);
-
-        // ── Overview Report: visibility, top3/10/20, improved/declined ──────
-        const ovUrl=`${ptBase}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`;
-        const ovRes=await fetch(proxy(ovUrl));
-        if(ovRes.ok){
-          const ovJson=await ovRes.json();
-          console.log('[SEMrush overview]', JSON.stringify(ovJson).slice(0,200));
-          overview={
-            visibility:ovJson.visibility??null,
-            visibilityDiff:ovJson.differenceVisibility??null,
-            top3:ovJson.top3??null,
-            top3_improved:ovJson.top3_improved??null,
-            top3_declined:ovJson.top3_declined??null,
-            top10:ovJson.top10??null,
-            top10_improved:ovJson.top10_improved??null,
-            top10_declined:ovJson.top10_declined??null,
-            top20:ovJson.top20??null,
-            top100:ovJson.all??null,
-            improved:ovJson.all_improved??null,
-            declined:ovJson.all_declined??null,
-            entered:ovJson.all_entered??null,
-            left:ovJson.all_left??null,
-            total:ovJson.total??null
-          };
-        }
+      const ptBase=`https://api.semrush.com/reports/v1/projects/${campaignId}/tracking/`;
+      const ovUrl=`${ptBase}?key=${key}&action=report&type=tracking_overview_organic&url=${domainUrl}`;
+      const ovRes=await fetch(proxy(ovUrl));
+      console.log('[SEMrush overview] HTTP:', ovRes.status);
+      if(ovRes.ok){
+        const ovJson=await ovRes.json();
+        console.log('[SEMrush overview]', JSON.stringify(ovJson).slice(0,300));
+        overview={
+          visibility:ovJson.visibility??null,
+          visibilityDiff:ovJson.differenceVisibility??null,
+          top3:ovJson.top3??null,
+          top3_improved:ovJson.top3_improved??null,
+          top3_declined:ovJson.top3_declined??null,
+          top10:ovJson.top10??null,
+          top10_improved:ovJson.top10_improved??null,
+          top10_declined:ovJson.top10_declined??null,
+          top20:ovJson.top20??null,
+          top100:ovJson.all??null,
+          improved:ovJson.all_improved??null,
+          declined:ovJson.all_declined??null,
+          entered:ovJson.all_entered??null,
+          left:ovJson.all_left??null,
+          total:ovJson.total??null
+        };
+        dataSource='Position Tracking';
+        console.log('[SEMrush] Top3:', overview.top3, 'Top10:', overview.top10, 'Vis:', overview.visibility);
       }else{
-        const errText=await ptRes.text();
-        console.warn('[SEMrush PT] Error response:', errText.slice(0,300));
-        if(ptRes.status===403||ptRes.status===401)toast('SEMrush: API key invalid or no access to Position Tracking API');
-        else if(ptRes.status===404)toast('SEMrush: Campaign ID not found — check your Campaign ID in Settings');
-        else toast(`SEMrush PT API: HTTP ${ptRes.status}`);
+        const errText=await ovRes.text();
+        console.warn('[SEMrush overview] Error:', ovRes.status, errText.slice(0,200));
+        if(ovRes.status===403||ovRes.status===401)toast('SEMrush: API key invalid or no access');
+        else if(ovRes.status===404)toast('SEMrush: Campaign ID not found — check Settings');
+        else toast(`SEMrush API: HTTP ${ovRes.status}`);
       }
-    }
-
-    // ── Fallback: domain_organic (general index rankings) ─────────────────
-    if(!keywords.length){
-      console.log('[SEMrush] Falling back to domain_organic');
-      const doRes=await fetch(proxy(`https://api.semrush.com/?type=domain_organic&key=${key}&domain=eracore.com&database=us&display_limit=500&export_columns=Ph,Po,Pp,Pd,Nq&export_escape=1`));
-      if(doRes.ok){
-        const doText=await doRes.text();
-        console.log('[SEMrush domain_organic] first 200:', doText.slice(0,200));
-        console.log('[SEMrush domain_organic] line count:', doLines.length);
-        const doLines=doText.trim().split('\n').slice(1).filter(l=>l.trim());
-        keywords=doLines.map(l=>{
-          const c=l.split(';');
-          const pos=parseInt((c[1]||'').trim())||null;
-          const diff=parseInt((c[3]||'').trim())||null;
-          return{keyword:(c[0]||'').replace(/^"|"$/g,'').trim(),position:pos&&pos>0?pos:null,prevPos:parseInt((c[2]||'').trim())||null,diff:diff||null,volume:parseInt((c[4]||'').trim())||0};
-        }).filter(k=>k.keyword);
-        console.log('[SEMrush domain_organic] parsed:', keywords.length, 'kws, ranked:', keywords.filter(k=>k.position).length);
-      }
-      // domain_ranks for traffic estimate
+    }else{
+      // ── No Campaign ID: use domain_ranks only (traffic estimate, ~10 units) ──
+      console.log('[SEMrush] No Campaign ID — using domain_ranks only');
       try{
         const drRes=await fetch(proxy(`https://api.semrush.com/?type=domain_ranks&key=${key}&domain=eracore.com&database=us`));
-        if(drRes.ok){const drT=await drRes.text();const c=(drT.split('\n')[1]||'').split(';');overview.organicTraffic=parseInt(c[4])||0;}
-      }catch(e2){}
+        if(drRes.ok){
+          const drT=await drRes.text();
+          const c=(drT.split('\n')[1]||'').split(';');
+          overview.organicTraffic=parseInt(c[4])||0;
+          overview.organicKeywords=parseInt(c[3])||0;
+        }
+      }catch(e2){console.warn('[SEMrush domain_ranks]',e2);}
     }
 
-    semrushData=[{keywords,overview,dataSource,date:new Date().toISOString().slice(0,10),fetched:Date.now()}];
+    semrushData=[{keywords:[],overview,dataSource,date:new Date().toISOString().slice(0,10),fetched:Date.now()}];
     localStorage.setItem('ec-semrush-v1',JSON.stringify(semrushData));
     renderSEMrushTab();renderSEOOverview();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>SEMrush connected</span>';
-    const ranked=keywords.filter(k=>k.position).length;
-    toast(`SEMrush (${dataSource}): ${keywords.length} kws · ${ranked} ranked`);
+    const msg=dataSource==='Position Tracking'
+      ?`SEMrush: Top3=${overview.top3??'?'} Top10=${overview.top10??'?'} Visibility=${overview.visibility!=null?overview.visibility.toFixed(2)+'%':'?'}`
+      :`SEMrush connected (add Campaign ID in Settings for full data)`;
+    toast(msg);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-trending-up"></i> <span>Connect SEMrush</span>';
     toast('SEMrush error: '+e.message);console.error('[SEMrush]',e);
