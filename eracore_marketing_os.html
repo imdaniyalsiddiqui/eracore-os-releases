@@ -4103,6 +4103,7 @@ function loadData(){
   if(!videoProjects.length)videoProjects=JSON.parse(JSON.stringify(SEED_VIDEOS));
   if(!mqls.length)mqls=JSON.parse(JSON.stringify(SEED_MQLS));
   renderAll();
+  try{initBucketDropTargets();}catch(e){console.warn('[DnD]',e);}
   try{document.getElementById('standup-date').value=todayStr();}catch(e){}
 }
 
@@ -4547,18 +4548,91 @@ function quickMoveChannel(tid,e){
   const btn=e?.target?.closest('button');
   if(btn){const r=btn.getBoundingClientRect();pop.style.top=(r.bottom+6)+'px';pop.style.right=(window.innerWidth-r.right)+'px';}
   pop.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;padding:.25rem .5rem;margin-bottom:3px">Move to channel</div>`+
-    channels.map(([ch,lbl])=>`<div onclick="doMoveChannel('${tid}','${ch}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${t.channel===ch?700:400};color:${t.channel===ch?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${lbl}${t.channel===ch?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`).join('');
+    channels.map(([ch,lbl])=>`<div onclick="doMoveChannel('${tid}','${ch}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${t.channel===ch?700:400};color:${t.channel===ch?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${lbl}${t.channel===ch?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`).join('')+
+    `<div style="border-top:1px solid var(--border);margin:4px 0"></div>
+    <div onclick="doMoveToBranding('${tid}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${getAutoStrategyLinks(t).includes('hr-branding')?700:400};color:${getAutoStrategyLinks(t).includes('hr-branding')?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span><i class="ti ti-palette" style="font-size:12px;margin-right:4px"></i>Branding bucket</span>${getAutoStrategyLinks(t).includes('hr-branding')?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`;
   document.body.appendChild(pop);
   setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),50);
 }
 function doMoveChannel(tid,ch){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   const prev=t.channel;t.channel=ch;t.updatedAt=Date.now();
-  t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}`,dot:'h-stage',ts:Date.now()});
-  logActivity('task','Channel moved',t.translation,(CH_LABEL[prev]||prev)+' → '+(CH_LABEL[ch]||ch));
+  // Bucket semantics: explicitly placing a task in a channel bucket removes it
+  // from the keyword-matched Branding bucket (a task lives where you put it).
+  let brandingNote='';
+  if(getAutoStrategyLinks(t).includes('hr-branding')){
+    t.brandingExcluded=true;
+    t.strategyLinks=(t.strategyLinks||[]).filter(sid=>sid!=='hr-branding');
+    brandingNote=' · removed from Branding';
+  }
+  t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}${brandingNote}`,dot:'h-stage',ts:Date.now()});
+  logActivity('task','Channel moved',t.translation,(CH_LABEL[prev]||prev)+' → '+(CH_LABEL[ch]||ch)+brandingNote);
   saveData();renderMmTaskList();renderAll();
   document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
-  toast(`Moved to ${CH_LABEL[ch]||ch}`);
+  toast(`Moved to ${CH_LABEL[ch]||ch}${brandingNote?' — removed from Branding':''}`);
+}
+function doMoveToBranding(tid){
+  const t=tasks.find(x=>x.id===tid);if(!t)return;
+  t.brandingExcluded=false;
+  if(!(t.strategyLinks||[]).includes('hr-branding'))t.strategyLinks=[...(t.strategyLinks||[]),'hr-branding'];
+  if(t.strategyMode==='none')t.strategyMode='auto'; // un-suppress so the link shows
+  t.updatedAt=Date.now();
+  t.history.push({event:'stage',detail:'Added to Branding bucket',dot:'h-classify',ts:Date.now()});
+  logActivity('task','Added to Branding',t.translation,'');
+  saveData();renderMmTaskList();renderAll();
+  document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
+  toast('Added to Branding');
+}
+
+// ── DRAG & DROP — drag task cards onto bucket tabs to move them ──────────
+let _dragTid=null;
+// Which Marketing Management tabs accept drops, and what they mean
+const MM_DROP_TARGETS={seo:'seo',paid:'paid',social:'social',video:'video',ops:'ops',branding:'__branding__'};
+function taskDragStart(e,tid){
+  _dragTid=tid;
+  e.dataTransfer.effectAllowed='move';
+  try{e.dataTransfer.setData('text/plain',tid);}catch(err){}
+  e.currentTarget.style.opacity='.45';
+  // Light up valid drop targets
+  Object.keys(MM_DROP_TARGETS).forEach(k=>{
+    const btn=document.getElementById('mmt-'+k);
+    if(btn)btn.style.boxShadow='inset 0 -2px 0 var(--blue)';
+  });
+}
+function taskDragEnd(e){
+  e.currentTarget.style.opacity='';
+  _dragTid=null;
+  Object.keys(MM_DROP_TARGETS).forEach(k=>{
+    const btn=document.getElementById('mmt-'+k);
+    if(btn){btn.style.boxShadow='';btn.style.background='';}
+  });
+}
+function bucketDragOver(e){
+  if(!_dragTid)return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.style.background='var(--blue-l)';
+}
+function bucketDragLeave(e){e.currentTarget.style.background='';}
+function bucketDrop(e,key){
+  e.preventDefault();
+  e.currentTarget.style.background='';
+  const tid=_dragTid||e.dataTransfer.getData('text/plain');
+  if(!tid)return;
+  const target=MM_DROP_TARGETS[key];
+  if(target==='__branding__')doMoveToBranding(tid);
+  else doMoveChannel(tid,target);
+}
+// Attach drop handlers to the Marketing Management tabs once the DOM is ready
+function initBucketDropTargets(){
+  Object.keys(MM_DROP_TARGETS).forEach(k=>{
+    const btn=document.getElementById('mmt-'+k);
+    if(!btn||btn._dropWired)return;
+    btn._dropWired=true;
+    btn.addEventListener('dragover',bucketDragOver);
+    btn.addEventListener('dragleave',bucketDragLeave);
+    btn.addEventListener('drop',e=>bucketDrop(e,k));
+  });
 }
 
 
@@ -5439,7 +5513,7 @@ function getAutoStrategyLinks(t){
   }
   const links=[];
   const trans=(t.translation||t.raw||'').toLowerCase();
-  const brandingMatch=BRANDING_KEYWORDS.some(kw=>trans.includes(kw))||t.id==='li1';
+  const brandingMatch=(BRANDING_KEYWORDS.some(kw=>trans.includes(kw))||t.id==='li1')&&!t.brandingExcluded;
   if(brandingMatch)links.push('hr-branding');
   if(t.channel==='paid')links.push('paid-strategy');
   if(t.channel==='seo'||t.channel==='web')links.push('seo-strategy-2026');
@@ -5684,7 +5758,7 @@ function buildTaskCard(t){
   // Person chips (active stage owner)
   const chipsHtml=personChipsHtml(activeOwner,t.id);
 
-  return`<div class="tc t-${t.type}">
+  return`<div class="tc t-${t.type}" draggable="true" ondragstart="taskDragStart(event,'${t.id}')" ondragend="taskDragEnd(event)">
   <div class="card-main">
     <div class="card-top">
       <div class="card-body" style="flex:1;min-width:0">
@@ -5792,6 +5866,12 @@ function saveEditTask(){
     t.history.push({event:'stage',detail:`Deadline moved: ${activeStage.name} ${oldDue} → ${newDue}${dueReason?' — '+dueReason:''}`,dot:'h-stage',ts:Date.now()});
   }
   const note=prevChannel!==t.channel?` (moved from ${CH_LABEL[prevChannel]||prevChannel} → ${CH_LABEL[t.channel]||t.channel})`:'';
+  // Bucket semantics: changing channel pulls the task out of keyword-matched
+  // Branding, unless the user explicitly picked Branding in the strategy select.
+  if(prevChannel!==t.channel&&newStratMode==='auto'&&getAutoStrategyLinks(t).includes('hr-branding')&&!(t.strategyLinks||[]).includes('hr-branding')){
+    t.brandingExcluded=true;
+    t.history.push({event:'stage',detail:'Removed from Branding bucket (channel changed)',dot:'h-classify',ts:Date.now()});
+  }
   t.history.push({event:'stage',detail:'Task edited manually'+note,dot:'h-stage',ts:Date.now()});
   logActivity('task','Task edited',t.translation,note?('Channel moved: '+(CH_LABEL[prevChannel]||prevChannel)+' → '+(CH_LABEL[t.channel]||t.channel)):'Fields updated');
   saveData();
