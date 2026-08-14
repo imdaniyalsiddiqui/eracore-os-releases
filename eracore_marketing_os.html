@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eracore — Marketing OS 3.2</title>
+<title>Eracore — Marketing OS</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 :root{--bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F1F0ED;--border:#E2E1DC;--border2:#CCCBC5;--text:#1A1A18;--text2:#6B6B67;--text3:#9B9B96;--blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;--green:#3B6D11;--green-l:#EAF3DE;--red:#A32D2D;--red-l:#FCEBEB;--amber:#854F0B;--amber-l:#FAEEDA;--purple:#3C3489;--purple-l:#EEEDFE;--teal:#085041;--teal-l:#E1F5EE;--r:8px;--rl:12px}
@@ -162,6 +162,10 @@ select.sm:focus{border-color:var(--blue)}
 .principle-card:hover{border-color:var(--border2)}
 .p-tag{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:var(--purple-l);color:var(--purple)}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.page.active{animation:fadeIn .18s ease}
+.ti-spin{animation:spin 1s linear infinite}
+.overlay.open .modal{animation:fadeIn .15s ease}
 /* Strategy styles */
 .strategy-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px;transition:border-color .12s}
 .strategy-card:hover{border-color:var(--border2)}
@@ -310,6 +314,7 @@ select.sm:focus{border-color:var(--blue)}
   </div>
 
   <div class="nav-lbl" style="margin-top:.5rem">System</div>
+  <div class="nav-item" id="nav-activity" onclick="navTo('activity',this)"><i class="ti ti-history"></i> Activity Log <span class="nav-badge" id="nb-activity">0</span></div>
   <div class="nav-item" id="nav-settings" onclick="navTo('settings',this)"><i class="ti ti-settings"></i> Settings</div>
 
   <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);position:relative">
@@ -1004,6 +1009,29 @@ select.sm:focus{border-color:var(--blue)}
 </div>
 
 <!-- SETTINGS -->
+<!-- ACTIVITY LOG -->
+<div id="page-activity" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <div><div class="pt">Activity Log</div><div class="ps">Master audit trail — every change to tasks, stages, strategies, principles and integrations</div></div>
+    <button class="btn" onclick="clearActivityLog()"><i class="ti ti-trash"></i> Clear log</button>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="act-search" placeholder="Search activity…" oninput="renderActivityLog()">
+    <select class="sm" id="act-entity" onchange="renderActivityLog()">
+      <option value="">All types</option>
+      <option value="task">Tasks</option>
+      <option value="stage">Stages</option>
+      <option value="strategy">Strategies</option>
+      <option value="principle">Principles</option>
+      <option value="integration">Integrations</option>
+      <option value="asana">Asana</option>
+      <option value="data">Data</option>
+    </select>
+    <span id="act-count" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
+  </div>
+  <div id="activity-list" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem"></div>
+</div>
+
 <div id="page-settings" class="page">
   <!-- HubSpot CRM sync -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:620px;margin-bottom:1.5rem">
@@ -1456,6 +1484,12 @@ select.sm:focus{border-color:var(--blue)}
         <option value="open">Open</option><option value="pending">Pending MZ review</option><option value="reviewed">Reviewed</option><option value="approved">Approved</option>
       </select>
     </div>
+  </div>
+  <div class="field"><label>Strategy link <span>— Auto uses channel + keywords; set None to unlink completely</span></label>
+    <select id="et-strategy" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+      <option value="auto">Auto (keyword + channel matching)</option>
+      <option value="none">None — no strategy link</option>
+    </select>
   </div>
   <div class="g2">
     <div class="field"><label>Contingency <span>— blocker detail</span></label><textarea id="et-contingency" rows="2" placeholder="What's blocking this…"></textarea></div>
@@ -3903,6 +3937,71 @@ function saveData(){
   localStorage.setItem('ec-strategies-v2',JSON.stringify(strategies));
   localStorage.setItem('ec-standup-v1',JSON.stringify(standupHistory));
 }
+
+// ── GLOBAL ACTIVITY LOG ───────────────────────────────────────────────────
+// Every mutation across the app is recorded here — tasks, strategies,
+// principles, integrations. Separate from per-task history; this is the
+// master audit trail viewable in the Activity Log page.
+let activityLog=[];
+const ACTIVITY_MAX=800;
+const ACT_META={
+  task:{icon:'ti-checklist',color:'var(--blue)'},
+  stage:{icon:'ti-route',color:'var(--green)'},
+  strategy:{icon:'ti-chess',color:'var(--purple)'},
+  principle:{icon:'ti-bookmark',color:'var(--purple)'},
+  integration:{icon:'ti-plug',color:'var(--teal)'},
+  asana:{icon:'ti-layout-kanban',color:'var(--amber)'},
+  data:{icon:'ti-database',color:'var(--text2)'},
+};
+function loadActivity(){try{const d=localStorage.getItem('ec-activity-v1');if(d)activityLog=JSON.parse(d);}catch(e){activityLog=[];}}
+function logActivity(entity,action,name,detail){
+  try{
+    activityLog.unshift({id:uid(),entity,action,name:(name||'').slice(0,120),detail:(detail||'').slice(0,300),ts:Date.now()});
+    if(activityLog.length>ACTIVITY_MAX)activityLog.length=ACTIVITY_MAX;
+    localStorage.setItem('ec-activity-v1',JSON.stringify(activityLog));
+    const badge=document.getElementById('nb-activity');if(badge)badge.textContent=activityLog.length;
+  }catch(e){console.warn('[Activity]',e);}
+}
+function clearActivityLog(){
+  if(!confirm('Clear the entire activity log? Task-level history is not affected.'))return;
+  activityLog=[];localStorage.setItem('ec-activity-v1','[]');
+  renderActivityLog();toast('Activity log cleared');
+}
+function renderActivityLog(){
+  const el=document.getElementById('activity-list');if(!el)return;
+  const q=(document.getElementById('act-search')?.value||'').toLowerCase().trim();
+  const fEnt=document.getElementById('act-entity')?.value||'';
+  let list=activityLog.filter(a=>{
+    if(fEnt&&a.entity!==fEnt)return false;
+    if(q&&!(a.name||'').toLowerCase().includes(q)&&!(a.detail||'').toLowerCase().includes(q)&&!(a.action||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+  const cEl=document.getElementById('act-count');if(cEl)cEl.textContent=list.length+' event'+(list.length!==1?'s':'');
+  if(!list.length){el.innerHTML='<div class="empty"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:.5rem;opacity:.3"></i>No activity yet — changes to tasks, strategies and integrations will appear here.</div>';return;}
+  // Group by day
+  let html='';let lastDay='';
+  list.forEach(a=>{
+    const d=new Date(a.ts);
+    const dayKey=d.toDateString();
+    if(dayKey!==lastDay){
+      const today=new Date().toDateString();
+      const yesterday=new Date(Date.now()-86400000).toDateString();
+      const label=dayKey===today?'Today':dayKey===yesterday?'Yesterday':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .5rem;padding-bottom:.375rem;border-bottom:1px solid var(--border)">${label}</div>`;
+      lastDay=dayKey;
+    }
+    const meta=ACT_META[a.entity]||ACT_META.data;
+    html+=`<div style="display:flex;gap:10px;align-items:flex-start;padding:.5rem .625rem;border-radius:var(--r);transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <div style="width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px"><i class="ti ${meta.icon}" style="font-size:14px;color:${meta.color}"></i></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;line-height:1.4"><strong>${a.action}</strong>${a.name?' — '+a.name:''}</div>
+        ${a.detail?`<div style="font-size:12px;color:var(--text2);line-height:1.4;margin-top:1px">${a.detail}</div>`:''}
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} · ${{task:'Task',stage:'Stage',strategy:'Strategy',principle:'Principle',integration:'Integration',asana:'Asana',data:'Data'}[a.entity]||a.entity}</div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html;
+}
 function mergeSeedById(saved,seed){
   const seedIds=new Set(seed.map(x=>x.id));
   const extras=saved.filter(x=>!seedIds.has(x.id));
@@ -3995,7 +4094,7 @@ function loadData(){
   try{const s=localStorage.getItem('ec-strategies-v2');strategies=s?mergeSeedById(JSON.parse(s),SEED_STRATEGIES):SEED_STRATEGIES;}catch(e){strategies=SEED_STRATEGIES;}
   try{const sd=localStorage.getItem('ec-standup-v1');standupHistory=sd?mergeSeedById(JSON.parse(sd),SEED_STANDUP):SEED_STANDUP;}catch(e){standupHistory=SEED_STANDUP;}
   standupHistory.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.created||0)-(a.created||0));
-  try{loadPaid();loadSEO();loadSocial();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();}catch(e){console.warn('[OS] secondary load error',e);}
+  try{loadPaid();loadSEO();loadSocial();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();loadActivity();}catch(e){console.warn('[OS] secondary load error',e);}
   // Final safety — force-seed any array that is still empty
   if(!tasks.length)tasks=JSON.parse(JSON.stringify(SEED_TASKS));
   if(!strategies.length)strategies=JSON.parse(JSON.stringify(SEED_STRATEGIES));
@@ -4012,7 +4111,7 @@ const PAGE_MAP={
   dashboard:'page-dashboard', mktmgmt:'page-mktmgmt', strategy:'page-strategy',
   principles:'page-principles', marketingperf:'page-marketingperf',
   reporting:'page-mzreport',  // reporting redirects to mzreport
-  settings:'page-settings',
+  settings:'page-settings',activity:'page-activity',
   tasks:'page-tasks',seodash:'page-seodash',paiddash:'page-paiddash',
   socialdash:'page-socialdash',mktdash:'page-mktdash',
   standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview'
@@ -4063,6 +4162,7 @@ function onNavTo(id){
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
   if(id==='settings')initSettings();
+  if(id==='activity')renderActivityLog();
   if(id==='tasks')renderTasks();
   if(id==='seodash'){loadSEO();loadBingData();loadCalls();updateSEOTopCounters();renderSEODash();
     // Auto-fetch if credentials already saved
@@ -4455,6 +4555,7 @@ function doMoveChannel(tid,ch){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   const prev=t.channel;t.channel=ch;t.updatedAt=Date.now();
   t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}`,dot:'h-stage',ts:Date.now()});
+  logActivity('task','Channel moved',t.translation,(CH_LABEL[prev]||prev)+' → '+(CH_LABEL[ch]||ch));
   saveData();renderMmTaskList();renderAll();
   document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
   toast(`Moved to ${CH_LABEL[ch]||ch}`);
@@ -5241,7 +5342,7 @@ function saveTask(){
   const stages=stageDataArr.map(s=>({...s}));
   if(stages.length)stages[0].status='active';
   tasks.unshift({id:uid(),raw,translation:document.getElementById('f-translation').value.trim()||raw,type:selTypeVal,status:'open',priority:selPrioVal,template:selTplVal,channel:document.getElementById('f-ch-new').value,via:document.getElementById('f-via').value,infoNeeded:document.getElementById('f-info-needed').value.trim(),infoFrom:document.getElementById('f-info-from').value.trim(),contingency:document.getElementById('f-contingency').value.trim(),contingencyOwner:document.getElementById('f-contingency-owner').value.trim(),stages,brief:'',history:[{event:'created',detail:'Logged from Muhamed via '+document.getElementById('f-via').value,dot:'h-create',ts:now2},{event:'classified',detail:'Classified as '+TYPE_LABEL[selTypeVal]+' · '+PRIO_LABEL[selPrioVal]+' · '+(TPL_LABEL[selTplVal]||'Custom'),dot:'h-classify',ts:now2}],created:now2,updatedAt:now2});
-  saveData();renderAll();closeTaskOverlay();toast('Task saved');
+  saveData();logActivity('task','Task created',document.getElementById('f-translation').value.trim()||raw,TYPE_LABEL[selTypeVal]+' · '+PRIO_LABEL[selPrioVal]+' · via '+document.getElementById('f-via').value);renderAll();closeTaskOverlay();toast('Task saved');
 }
 
 function openStageUpdate(taskId,idx){
@@ -5281,6 +5382,8 @@ function saveStageUpdate(){
   else if(a==='move-deadline'){const newDue=document.getElementById('so-new-due').value;const reason=document.getElementById('so-deadline-reason').value.trim();if(!newDue){toast('Pick a new date first');return;}const oldDue=s.due||'no date';s.due=newDue;t.history.push({event:'stage',detail:`Deadline moved: ${s.name} from ${oldDue} → ${newDue}${reason?' — '+reason:''}`,dot:'h-stage',ts:now2});}
   else if(a==='reclassify'){const newType=document.getElementById('so-new-type').value;const reason=document.getElementById('so-reclassify-reason').value.trim();t.history.push({event:'back',detail:'Reclassified: '+TYPE_LABEL[t.type]+' → '+TYPE_LABEL[newType]+(reason?' — '+reason:''),dot:'h-back',ts:now2});t.type=newType;}
   t.updatedAt=now2;
+  const actLabel={complete:'Stage completed','mz-approve':'MZ approved','mz-reject':'MZ rejected — sent back',note:'Note added','move-deadline':'Deadline moved',reclassify:'Task reclassified'}[a]||'Stage updated';
+  logActivity('stage',actLabel,t.translation,'Stage '+(idx+1)+': '+s.name);
   saveData();renderAll();closeStageOverlay();toast('Updated');
 }
 
@@ -5293,7 +5396,7 @@ function toggleHistory(id,btn){
   }
   document.getElementById('hist-'+id)?.classList.toggle('open');
 }
-function deleteTask(id){if(confirm('Delete this task?')){tasks=tasks.filter(t=>t.id!==id);saveData();renderAll();toast('Deleted');}}
+function deleteTask(id){if(confirm('Delete this task?')){const dt=tasks.find(t=>t.id===id);tasks=tasks.filter(t=>t.id!==id);logActivity('task','Task deleted',dt?dt.translation:id,'');saveData();renderAll();toast('Deleted');}}
 
 function prioTag(p){const dots={urgent:'var(--red)',high:'var(--amber)',normal:'var(--text3)',low:'var(--green)'};return`<span class="prio-tag prio-${p}"><span class="prio-dot" style="background:${dots[p]}"></span>${PRIO_LABEL[p]}</span>`;}
 
@@ -5327,6 +5430,13 @@ function personChipsHtml(ownerStr,taskId){
 // ── STRATEGY AUTO-LINKING ─────────────────────────────────────────────────
 const BRANDING_KEYWORDS=['banner','bio','t-shirt','tshirt','merch','photoshoot','headshot','appraisal','linkedin bio','company page','culture'];
 function getAutoStrategyLinks(t){
+  // Manual override wins over all keyword/channel auto-linking.
+  // strategyMode: 'auto' (default) | 'none' | '<strategy-id>'
+  if(t.strategyMode==='none')return[];
+  if(t.strategyMode&&t.strategyMode!=='auto'){
+    const chosen=strategies.find(s=>s.id===t.strategyMode);
+    return chosen?[t.strategyMode]:[];
+  }
   const links=[];
   const trans=(t.translation||t.raw||'').toLowerCase();
   const brandingMatch=BRANDING_KEYWORDS.some(kw=>trans.includes(kw))||t.id==='li1';
@@ -5374,6 +5484,8 @@ function saveFileLinks(){
   });
   if(!added){toast('Add at least one URL');return;}
   t.updatedAt=Date.now();
+  t.history.push({event:'stage',detail:added+' file link'+(added!==1?'s':'')+' added',dot:'h-stage',ts:Date.now()});
+  logActivity('task','File links added',t.translation,added+' link'+(added!==1?'s':''));
   document.getElementById('file-link-overlay').classList.remove('open');
   saveData();renderTasks();
   toast(`${added} file link${added!==1?'s':''} added`);
@@ -5455,11 +5567,23 @@ function openStrategyPanel(sid,e){
       </div>`).join('')}
     </div>`:''}
     ${linkedTasks.length?`<div class="panel-section">
-      <div class="panel-section-title"><i class="ti ti-link" style="font-size:12px"></i> Linked tasks (${linkedTasks.length})</div>
-      ${linkedTasks.map(t=>`<div class="panel-task-item">
-        <div class="panel-task-name">${t.translation}</div>
-        <div class="panel-task-meta">${STATUS_LABEL[t.status]||t.status}</div>
-      </div>`).join('')}
+      <div class="panel-section-title"><i class="ti ti-link" style="font-size:12px"></i> Linked tasks (${linkedTasks.filter(t=>t.status==='approved').length}/${linkedTasks.length} complete)</div>
+      ${linkedTasks.map(t=>{
+        const done=t.stages.filter(st=>st.status==='done').length;
+        const pct=t.stages.length?Math.round(done/t.stages.length*100):0;
+        const activeIdx=t.stages.findIndex(st=>st.status==='active');
+        const activeStage=activeIdx>=0?t.stages[activeIdx]:null;
+        const isComplete=t.status==='approved';
+        return`<div class="panel-task-item" style="${isComplete?'opacity:.6':''}">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div class="panel-task-name" style="${isComplete?'text-decoration:line-through':''}">${t.translation}</div>
+            <div class="panel-task-meta">${isComplete?'✓ Complete':(STATUS_LABEL[t.status]||t.status)+(activeStage?' · '+activeStage.name:'')} · ${pct}%</div>
+            <div class="prog-bar" style="margin-top:4px"><div class="prog-fill" style="width:${pct}%;${isComplete?'background:var(--green)':''}"></div></div>
+          </div>
+          ${!isComplete&&activeIdx>=0?`<button class="btn-icon btn" onclick="event.stopPropagation();closeAllPanels();openStageUpdate('${t.id}',${activeIdx})" title="Update current stage" style="flex-shrink:0"><i class="ti ti-player-track-next"></i></button>`:''}
+        </div>
+      </div>`;}).join('')}
     </div>`:''}`;
   document.getElementById('strategy-drawer').classList.add('open');
   document.getElementById('panel-overlay').classList.add('open');
@@ -5624,6 +5748,13 @@ function openEditTask(tid,e){
   if(stageNameEl)stageNameEl.textContent=activeStage?`— ${activeStage.name}`:'— no active stage';
   document.getElementById('et-due').value=activeStage?.due||'';
   document.getElementById('et-due-reason').value='';
+  // Strategy link override selector — rebuild options from live strategies
+  const stratSel=document.getElementById('et-strategy');
+  if(stratSel){
+    stratSel.innerHTML='<option value="auto">Auto (keyword + channel matching)</option><option value="none">None — no strategy link</option>'+
+      strategies.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    stratSel.value=t.strategyMode||'auto';
+  }
   document.getElementById('edit-task-title').textContent='Edit — '+t.translation.slice(0,40)+(t.translation.length>40?'…':'');
   document.getElementById('edit-task-overlay').classList.add('open');
 }
@@ -5643,6 +5774,14 @@ function saveEditTask(){
   t.contingencyOwner=g('et-contingency-owner');
   t.infoNeeded=g('et-info-needed');
   t.infoFrom=g('et-info-from');
+  // Strategy link override
+  const prevStratMode=t.strategyMode||'auto';
+  const newStratMode=g('et-strategy')||'auto';
+  if(newStratMode!==prevStratMode){
+    t.strategyMode=newStratMode;
+    const label=newStratMode==='auto'?'Auto':newStratMode==='none'?'None':(strategies.find(s=>s.id===newStratMode)?.name||newStratMode);
+    t.history.push({event:'stage',detail:'Strategy link changed → '+label,dot:'h-classify',ts:Date.now()});
+  }
   t.updatedAt=Date.now();
   // Update active stage due date if changed
   const activeStage=t.stages.find(s=>s.status==='active')||t.stages.find(s=>s.status!=='done');
@@ -5654,6 +5793,7 @@ function saveEditTask(){
   }
   const note=prevChannel!==t.channel?` (moved from ${CH_LABEL[prevChannel]||prevChannel} → ${CH_LABEL[t.channel]||t.channel})`:'';
   t.history.push({event:'stage',detail:'Task edited manually'+note,dot:'h-stage',ts:Date.now()});
+  logActivity('task','Task edited',t.translation,note?('Channel moved: '+(CH_LABEL[prevChannel]||prevChannel)+' → '+(CH_LABEL[t.channel]||t.channel)):'Fields updated');
   saveData();
   document.getElementById('edit-task-overlay').classList.remove('open');
   renderAll();
@@ -5691,6 +5831,7 @@ function saveNewStrategy(){
   strategies.unshift({id:uid(),name,brief:document.getElementById('sm-brief').value.trim(),owner:document.getElementById('sm-owner').value.trim(),status:document.getElementById('sm-status').value,created:Date.now(),gate:{exists:false,text:''},tracks:[],depChain:[],missing:[],journal:[{type:'note',text:'Strategy created',ts:Date.now()}]});
   ['sm-name','sm-brief','sm-owner'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('strategy-modal').classList.remove('open');
+  logActivity('strategy','Strategy created',name,'');
   saveData();renderStrategies();toast('Strategy saved');
 }
 function openJournalModal(sid){document.getElementById('jm-sid').value=sid;document.getElementById('jm-text').value='';document.getElementById('jm-type').value='note';document.getElementById('journal-modal').classList.add('open');}
@@ -5701,9 +5842,10 @@ function saveJournalEntry(){
   const s=strategies.find(i=>i.id===sid);if(!s)return;
   s.journal.unshift({type,text,ts:Date.now()});
   document.getElementById('journal-modal').classList.remove('open');
+  logActivity('strategy','Journal entry added',s.name,text.slice(0,120));
   saveData();renderStrategies();toast('Entry saved');
 }
-function deleteStrategy(id){if(confirm('Delete this strategy?')){strategies=strategies.filter(s=>s.id!==id);saveData();renderStrategies();toast('Deleted');}}
+function deleteStrategy(id){if(confirm('Delete this strategy?')){const ds=strategies.find(s=>s.id===id);strategies=strategies.filter(s=>s.id!==id);logActivity('strategy','Strategy deleted',ds?ds.name:id,'');saveData();renderStrategies();toast('Deleted');}}
 
 function renderStrategies(){
   document.getElementById('nb-strategy').textContent=strategies.length;
@@ -5716,7 +5858,38 @@ function renderStrategies(){
     const missingHtml=s.missing&&s.missing.length?`<div class="missing-section"><div class="missing-title">Missing pieces</div>${s.missing.map(m=>`<div class="missing-item"><i class="ti ti-alert-circle" style="font-size:13px;flex-shrink:0;margin-top:1px"></i>${m}</div>`).join('')}</div>`:'';
     const journalHtml=s.journal&&s.journal.length?`<div class="journal-section"><div class="journal-title"><span>Journal</span><button class="btn btn-sm" onclick="openJournalModal('${s.id}')"><i class="ti ti-plus"></i> Add entry</button></div>${s.journal.map((j,i)=>`<div class="j-item"><div style="display:flex;flex-direction:column;align-items:center"><div class="j-dot ${j.type}"></div>${i<s.journal.length-1?`<div class="j-vline"></div>`:''}</div><div class="j-body"><div class="j-type">${J_LABEL[j.type]||j.type}</div><div class="j-text">${j.text}</div><div class="j-time">${fmtTs(j.ts)}</div></div></div>`).join('')}</div>`:'';
     const filesHtml=s.files&&s.files.length?`<div style="padding:.625rem 1rem;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px"><i class="ti ti-paperclip" style="font-size:11px"></i>Files</span>${s.files.map(f=>`<a href="${f.url}" target="_blank" class="file-chip" onclick="event.stopPropagation()"><i class="ti ti-external-link" style="font-size:10px"></i>${f.label}</a>`).join('')}</div>`:'';
-    return`<div class="strategy-card ${s.status}-s"><div class="s-header" onclick="toggleStratBody('${s.id}')"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div class="s-name">${s.name}</div><div class="s-brief">${s.brief}</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="pill pill-${s.status==='active'?'reviewed':s.status==='stalled'?'pending':'approved'}">${STRAT_STATUS[s.status]}</span>${s.gate&&s.gate.exists?'<span class="pill pill-blocker" style="font-size:10px">🔒 Gate active</span>':''}<span style="font-size:12px;color:var(--text2)">Started ${fmtDate(s.created)}</span>${s.owner?`<span style="font-size:12px;color:var(--text2)">${s.owner}</span>`:''}<span style="font-size:12px;color:var(--text2)">${s.journal?s.journal.length:0} journal entries</span>${s.files&&s.files.length?`<span style="font-size:12px;color:var(--blue)"><i class="ti ti-paperclip" style="font-size:11px"></i> ${s.files.length} file${s.files.length!==1?'s':''}</span>`:''}</div></div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn-icon btn" onclick="event.stopPropagation();openJournalModal('${s.id}')" title="Add journal entry"><i class="ti ti-pencil"></i></button><button class="btn-icon btn" onclick="event.stopPropagation();deleteStrategy('${s.id}')" title="Delete"><i class="ti ti-trash"></i></button></div></div></div><div class="s-body" id="sb-${s.id}">${gateHtml}${tracksHtml}${depHtml}${missingHtml}${journalHtml}</div>${filesHtml}</div>`;
+    // ── LIVE LINKED TASKS — derived from actual task data, updates in real time ──
+    const linked=tasks.filter(t=>getAutoStrategyLinks(t).includes(s.id));
+    const linkedDone=linked.filter(t=>t.status==='approved').length;
+    const linkedHtml=linked.length?`<div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.625rem">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Linked tasks — live (${linkedDone}/${linked.length} complete)</div>
+      </div>
+      ${linked.map(t=>{
+        const done=t.stages.filter(st=>st.status==='done').length;
+        const pct=t.stages.length?Math.round(done/t.stages.length*100):0;
+        const activeIdx=t.stages.findIndex(st=>st.status==='active');
+        const activeStage=activeIdx>=0?t.stages[activeIdx]:null;
+        const isComplete=t.status==='approved';
+        const statusPill=isComplete?'<span class="pill pill-approved">✓ Complete</span>':`<span class="pill pill-${t.status}">${STATUS_LABEL[t.status]||t.status}</span>`;
+        return`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem .875rem;margin-bottom:6px;display:flex;align-items:center;gap:10px;${isComplete?'opacity:.65':''}">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;margin-bottom:3px;${isComplete?'text-decoration:line-through;color:var(--text2)':''}">${t.translation}</div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              ${statusPill}
+              <span style="font-size:11px;color:var(--text3)">${activeStage?'Now: '+activeStage.name+(activeStage.owner?' · '+activeStage.owner:''):(isComplete?'All stages done':done+'/'+t.stages.length+' stages')}</span>
+            </div>
+            <div class="prog-bar" style="margin-top:6px;max-width:220px"><div class="prog-fill" style="width:${pct}%;${isComplete?'background:var(--green)':''}"></div></div>
+          </div>
+          <div style="display:flex;gap:2px;flex-shrink:0">
+            ${!isComplete&&activeIdx>=0?`<button class="btn-icon btn" onclick="event.stopPropagation();openStageUpdate('${t.id}',${activeIdx})" title="Update current stage"><i class="ti ti-player-track-next"></i></button>`:''}
+            <button class="btn-icon btn" onclick="event.stopPropagation();openAddFileLink('${t.id}')" title="Add file link"><i class="ti ti-paperclip"></i></button>
+            <button class="btn-icon btn" onclick="event.stopPropagation();openEditTask('${t.id}',event)" title="Edit task"><i class="ti ti-pencil"></i></button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:'';
+    return`<div class="strategy-card ${s.status}-s"><div class="s-header" onclick="toggleStratBody('${s.id}')"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div class="s-name">${s.name}</div><div class="s-brief">${s.brief}</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="pill pill-${s.status==='active'?'reviewed':s.status==='stalled'?'pending':'approved'}">${STRAT_STATUS[s.status]}</span>${s.gate&&s.gate.exists?'<span class="pill pill-blocker" style="font-size:10px">🔒 Gate active</span>':''}${linked.length?`<span style="font-size:12px;color:var(--blue);font-weight:600">${linkedDone}/${linked.length} tasks complete</span>`:''}<span style="font-size:12px;color:var(--text2)">Started ${fmtDate(s.created)}</span>${s.owner?`<span style="font-size:12px;color:var(--text2)">${s.owner}</span>`:''}<span style="font-size:12px;color:var(--text2)">${s.journal?s.journal.length:0} journal entries</span>${s.files&&s.files.length?`<span style="font-size:12px;color:var(--blue)"><i class="ti ti-paperclip" style="font-size:11px"></i> ${s.files.length} file${s.files.length!==1?'s':''}</span>`:''}</div></div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn-icon btn" onclick="event.stopPropagation();openJournalModal('${s.id}')" title="Add journal entry"><i class="ti ti-pencil"></i></button><button class="btn-icon btn" onclick="event.stopPropagation();deleteStrategy('${s.id}')" title="Delete"><i class="ti ti-trash"></i></button></div></div></div><div class="s-body" id="sb-${s.id}">${gateHtml}${linkedHtml}${tracksHtml}${depHtml}${missingHtml}${journalHtml}</div>${filesHtml}</div>`;
   }).join('');
 }
 
@@ -5729,8 +5902,8 @@ function renderPrinciples(){
   if(!list.length){el.innerHTML='<div class="empty"><i class="ti ti-bookmark" style="font-size:32px;display:block;margin-bottom:.5rem;opacity:.3"></i>No principles yet.</div>';return;}
   el.innerHTML=list.map(p=>`<div class="principle-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text2);font-style:italic;margin-bottom:6px">"${p.raw}"</div>${p.meaning?`<div style="font-size:14px;font-weight:600;line-height:1.4;margin-bottom:6px">${p.meaning}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="p-tag">Principle</span>${p.applies?`<span style="font-size:12px;color:var(--text2)">Applies to: ${p.applies}</span>`:''}<span style="font-size:12px;color:var(--text2)">Via ${p.via}</span></div></div><button class="btn-icon btn" onclick="deletePrinciple('${p.id}')" title="Remove"><i class="ti ti-trash"></i></button></div></div>`).join('');
 }
-function savePrinciple(){const raw=document.getElementById('p-raw').value.trim();if(!raw)return;principles.unshift({id:uid(),raw,meaning:document.getElementById('p-meaning').value.trim(),applies:document.getElementById('p-applies').value.trim(),via:document.getElementById('p-via').value,created:Date.now()});['p-raw','p-meaning','p-applies'].forEach(id=>document.getElementById(id).value='');document.getElementById('principle-overlay').classList.remove('open');saveData();renderPrinciples();toast('Principle saved');}
-function deletePrinciple(id){principles=principles.filter(p=>p.id!==id);saveData();renderPrinciples();}
+function savePrinciple(){const raw=document.getElementById('p-raw').value.trim();if(!raw)return;principles.unshift({id:uid(),raw,meaning:document.getElementById('p-meaning').value.trim(),applies:document.getElementById('p-applies').value.trim(),via:document.getElementById('p-via').value,created:Date.now()});['p-raw','p-meaning','p-applies'].forEach(id=>document.getElementById(id).value='');document.getElementById('principle-overlay').classList.remove('open');logActivity('principle','Principle saved',raw.slice(0,80),'');saveData();renderPrinciples();toast('Principle saved');}
+function deletePrinciple(id){const dp=principles.find(p=>p.id===id);principles=principles.filter(p=>p.id!==id);logActivity('principle','Principle removed',dp?dp.raw.slice(0,80):id,'');saveData();renderPrinciples();}
 
 // ── STANDUP ────────────────────────────────────────────────────────────────
 const TEAM_ORDER=['Sauleh','Javeria','Anas','Bilal','Haider','Kasun','Praneeth','Muskan','Hamna','Sheeza'];
@@ -6091,27 +6264,38 @@ async function getGAdsAccessToken(){
   if(data.access_token){gAdsToken=data.access_token;return data.access_token;}
   throw new Error('Token refresh failed: '+(data.error||JSON.stringify(data)));
 }
+// Shared Google Ads query helper — ALWAYS routes through the main.js /gads-query
+// proxy. Direct browser calls to googleads.googleapis.com fail on CORS.
+async function gadsQuery(query){
+  const creds=getGAdsCreds();
+  if(!creds?.devToken||!creds?.customerId)throw new Error('Save credentials first');
+  const token=await getGAdsAccessToken();
+  const custId=creds.customerId.replace(/-/g,'');
+  const res=await fetch('http://127.0.0.1:8742/gads-query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({customerId:custId,devToken:creds.devToken,accessToken:token,query})
+  });
+  const text=await res.text();
+  let data;
+  try{data=JSON.parse(text);}catch(e){throw new Error('Proxy response ('+res.status+'): '+text.slice(0,200));}
+  if(!res.ok)throw new Error(data?.error?.message||data?.error||'HTTP '+res.status);
+  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+  return data;
+}
 async function testGAdsConnection(){
   const statusEl=document.getElementById('gads-status');
   if(statusEl){statusEl.textContent='Testing…';statusEl.style.color='var(--text3)';}
   try{
-    const creds=getGAdsCreds();
-    if(!creds?.devToken||!creds?.customerId){throw new Error('Save credentials first');}
-    const token=await getGAdsAccessToken();
-    const custId=creds.customerId.replace(/-/g,'');
-    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
-      body:JSON.stringify({query:'SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1'})
-    });
-    const data=await res.json();
+    const data=await gadsQuery('SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1');
     if(data.results?.length){
       const name=data.results[0].customer?.descriptiveName||'Connected';
       if(statusEl){statusEl.textContent=`✓ Connected — ${name}`;statusEl.style.color='var(--green)';}
       const badge=document.getElementById('gads-status-badge');if(badge){badge.textContent='Connected ✓';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+      logActivity('integration','Google Ads connected',name,'Connection test passed');
       toast('Google Ads connected');
-    }else if(data.error){
-      throw new Error(data.error.message||JSON.stringify(data.error));
+    }else{
+      throw new Error('No customer data returned — check Customer ID');
     }
   }catch(e){
     if(statusEl){statusEl.textContent='Failed: '+e.message;statusEl.style.color='var(--red)';}
@@ -6123,15 +6307,7 @@ async function fetchGAdsData(){
   const creds=getGAdsCreds();
   if(!creds?.devToken||!creds?.customerId){toast('Set up Google Ads in Settings first');return null;}
   try{
-    const token=await getGAdsAccessToken();
-    const custId=creds.customerId.replace(/-/g,'');
-    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
-      body:JSON.stringify({query:`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`})
-    });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    const data=await gadsQuery(`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`);
     return (data.results||[]).map(r=>({
       name:r.campaign?.name||'',
       status:r.campaign?.status||'',
@@ -6425,6 +6601,7 @@ async function syncAsana(){
   localStorage.setItem('ec-asana-last-sync',String(asanaLastSync));
   saveData();renderAll();
   asanaSyncing=false;
+  logActivity('asana','Asana sync',pushed+' pushed'+(failed?', '+failed+' failed':''),'');
   updateAsanaStatus('Synced — pushed '+pushed+(failed?', '+failed+' failed':''));
   toast('Asana sync complete');
 }
@@ -6437,6 +6614,7 @@ async function pullFromAsana(){
     try{pulled+=await pullAsanaTasksForChannel(cfg);}catch(e){console.log('Asana pull error',e);}
   }
   saveData();renderAll();
+  if(pulled)logActivity('asana','Pulled from Asana',pulled+' new task'+(pulled!==1?'s':''),'');
   toast(pulled?`Pulled ${pulled} new task${pulled!==1?'s':''} from Asana`:'No new tasks in Asana to pull');
 }
 function cleanOrphanedAsanaLinks(){
@@ -7509,21 +7687,24 @@ function renderAll(){
   try{renderStrategies();}catch(e){console.warn('[OS]',e);}
   try{renderPrinciples();}catch(e){console.warn('[OS]',e);}
   try{buildNotifications();}catch(e){}
-  navTo('dashboard',document.getElementById('nav-dashboard'));
-  // Immediate skeleton so dashboard is never blank
-  var _dsv=document.getElementById('dash-sv-main');
-  if(_dsv){
-    var _o=tasks.filter(function(t){return t.status!=='approved';}).length;
-    var _p=tasks.filter(function(t){return t.status==='pending';}).length;
-    var _b=tasks.filter(function(t){return t.type==='blocker'&&t.status!=='approved';}).length;
-    _dsv.innerHTML='<div style="padding:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--blue)">'+_o+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Open tasks</div></div>'+
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--amber)">'+_p+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Pending MZ</div></div>'+
-      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--red)">'+_b+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Blockers</div></div>'+
-    '</div>';
+  // Re-render the dashboard skeleton only if dashboard is the currently active page —
+  // never navigate away from whatever tab the user is on.
+  var _activePage=document.querySelector('.page.active');
+  var _isDash=_activePage&&_activePage.id==='page-dashboard';
+  if(_isDash){
+    var _dsv=document.getElementById('dash-sv-main');
+    if(_dsv){
+      var _o=tasks.filter(function(t){return t.status!=='approved';}).length;
+      var _p=tasks.filter(function(t){return t.status==='pending';}).length;
+      var _b=tasks.filter(function(t){return t.type==='blocker'&&t.status!=='approved';}).length;
+      _dsv.innerHTML='<div style="padding:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--blue)">'+_o+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Open tasks</div></div>'+
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--amber)">'+_p+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Pending MZ</div></div>'+
+        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--red)">'+_b+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Blockers</div></div>'+
+      '</div>';
+    }
+    setTimeout(function(){try{renderDashboardMain();}catch(e){console.warn('[OS]',e);}},80);
   }
-  // Defer heavy SVG charts
-  setTimeout(function(){try{renderDashboardMain();}catch(e){console.warn('[OS]',e);}},80);
   _updateNavBadges();
 }
 function _updateNavBadges(){
@@ -7531,6 +7712,7 @@ function _updateNavBadges(){
   const el=document.getElementById('nb-tasks');if(el)el.textContent=nonApproved||tasks.length;
   const sel=document.getElementById('nb-strategy');if(sel)sel.textContent=strategies.length;
   const pel=document.getElementById('nb-principles');if(pel)pel.textContent=principles.length;
+  const ael=document.getElementById('nb-activity');if(ael)ael.textContent=activityLog.length;
 }
 
 // ── NOTIFICATION BELL ────────────────────────────────────────────────────
@@ -9004,7 +9186,7 @@ function renderPaidLinkedInTab(){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-linkedin" style="font-size:2rem;display:block;margin-bottom:.75rem;color:#0A66C2"></i>
       <div style="font-weight:600;margin-bottom:.5rem">LinkedIn Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem">You'll need a LinkedIn OAuth token and Campaign Manager Account ID</div>
+      <div style="font-size:13px;margin-bottom:1rem;line-height:1.6">Needs a LinkedIn Marketing API OAuth token and Campaign Manager Account ID.<br>Add both in Settings → LinkedIn Ads, then connect here.</div>
       <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchLinkedInAds()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
     </div>`;return;
   }
@@ -9026,7 +9208,7 @@ function renderPaidMicrosoftTab(){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--purple)"></i>
       <div style="font-weight:600;margin-bottom:.5rem">Microsoft Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem">Add your credentials in Settings → Microsoft Ads, then connect.</div>
+      <div style="font-size:13px;margin-bottom:1rem;line-height:1.6">Requires Azure admin consent from the Nexera Design tenant admin before OAuth can complete.<br>Once consent is granted: Settings → Microsoft Ads → Generate token → Save & connect.</div>
       <button class="btn btn-primary" onclick="fetchMsAds()"><i class="ti ti-plug"></i> Connect Microsoft Ads</button>
     </div>`;return;
   }
@@ -9080,21 +9262,8 @@ async function fetchGoogleAdsLive(){
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   const range=getPaidDateRange();
   try{
-    // Get a fresh access token using the adwords-scoped refresh token
-    const accessToken=await getGAdsAccessToken();
     const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
-    // Route through main.js /gads-query proxy (required to bypass CORS)
-    const res=await fetch('http://127.0.0.1:8742/gads-query',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({customerId:cid,devToken,accessToken,query})
-    });
-    const text=await res.text();
-    let data;
-    console.log('[GAds] Raw response:', text.slice(0,500));
-    try{data=JSON.parse(text);}catch(e){throw new Error('Server response ('+res.status+'): '+text.slice(0,200));}
-    if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
-    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    const data=await gadsQuery(query);
     const rows=data.results||[];
     gadsData={
       spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
@@ -9111,6 +9280,7 @@ async function fetchGoogleAdsLive(){
       dateRange:range.gads,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
+    logActivity('integration','Google Ads refreshed','$'+Math.round(gadsData.spend)+' spend · '+gadsData.clicks.toLocaleString()+' clicks',gadsData.campaigns.length+' campaigns · '+range.gads);
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
     toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks · ${rows.length} campaigns`);
@@ -9164,12 +9334,15 @@ async function fetchMetaAds(){
     }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
     metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,fetched:Date.now()};
     localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
+    logActivity('integration','Meta Ads refreshed','$'+Math.round(metaAdsData.spend)+' spend · '+metaAdsData.clicks.toLocaleString()+' clicks','Last 7 days');
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
     toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
-    toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
+    const expired=/expired|invalid.*token|OAuthException|Session has expired/i.test(e.message);
+    toast(expired?'Meta token expired — paste a fresh System User token in Settings → Meta Ads':'Meta Ads error: '+e.message);
+    console.error('[Meta Ads]',e);
   }
 }
 
@@ -9191,6 +9364,7 @@ async function fetchLinkedInAds(){
     const el=data.elements?.[0]||{};
     liAdsData={spend:el.spend?.amount?parseFloat(el.spend.amount):0,impressions:el.impressions||0,clicks:el.clicks||0,leads:el.leadGenerationMailContactInfoShares||0,fetched:Date.now()};
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
+    logActivity('integration','LinkedIn Ads refreshed','$'+Math.round(liAdsData.spend)+' spend · '+liAdsData.clicks.toLocaleString()+' clicks','Last 7 days');
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
     toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
