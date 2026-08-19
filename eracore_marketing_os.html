@@ -296,18 +296,39 @@ select.sm:focus{border-color:var(--blue)}
 .ps-pipeline{display:grid;gap:10px}
 .ps-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;cursor:pointer;transition:border-color .12s}
 .ps-card:hover{border-color:var(--border2)}
+.ps-card.stage-mql{border-left:3px solid var(--border2)}
+.ps-card.stage-urgent{border-left:3px solid var(--red)}
+.ps-card.stage-attempted{border-left:3px solid var(--amber)}
 .ps-card.stage-contacted{border-left:3px solid var(--blue)}
-.ps-card.stage-proposal{border-left:3px solid var(--amber)}
-.ps-card.stage-followup{border-left:3px solid var(--purple)}
-.ps-card.stage-negotiating{border-left:3px solid var(--teal)}
+.ps-card.stage-connected{border-left:3px solid var(--teal)}
+.ps-card.stage-demo{border-left:3px solid var(--purple)}
+.ps-card.stage-rfp{border-left:3px solid var(--amber)}
 .ps-card.stage-won{border-left:3px solid var(--green)}
 .ps-card.stage-lost{border-left:3px solid var(--red);opacity:.7}
 .ps-stage-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px}
-.ps-stage-badge.contacted{background:var(--blue-l);color:var(--blue)}.ps-stage-badge.proposal{background:var(--amber-l);color:var(--amber)}.ps-stage-badge.followup{background:var(--purple-l);color:var(--purple)}.ps-stage-badge.negotiating{background:var(--teal-l);color:var(--teal)}.ps-stage-badge.won{background:var(--green-l);color:var(--green)}.ps-stage-badge.lost{background:var(--red-l);color:var(--red)}
+.ps-stage-badge.mql{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.ps-stage-badge.urgent{background:var(--red-l);color:var(--red)}
+.ps-stage-badge.attempted{background:var(--amber-l);color:var(--amber)}
+.ps-stage-badge.contacted{background:var(--blue-l);color:var(--blue)}
+.ps-stage-badge.connected{background:var(--teal-l);color:var(--teal)}
+.ps-stage-badge.demo{background:var(--purple-l);color:var(--purple)}
+.ps-stage-badge.rfp{background:var(--amber-l);color:var(--amber)}
+.ps-stage-badge.won{background:var(--green-l);color:var(--green)}
+.ps-stage-badge.lost{background:var(--red-l);color:var(--red)}
 .ps-tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
 .ps-tl-item:last-child{border-bottom:none}
 .ps-tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
 .ps-tl-icon.meeting{background:var(--blue-l);color:var(--blue)}.ps-tl-icon.call{background:var(--green-l);color:var(--green)}.ps-tl-icon.email{background:var(--purple-l);color:var(--purple)}.ps-tl-icon.note{background:var(--surface2);color:var(--text2)}.ps-tl-icon.proposal{background:var(--amber-l);color:var(--amber)}
+/* ── OUTREACH SHEET VIEW ────────────────────────────────── */
+.lt-month-row td{background:var(--surface2);font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--border);border-top:1px solid var(--border)}
+.lt-call-sel{width:110px;height:28px;font-size:11px;padding:0 4px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text3);cursor:pointer;outline:none}
+.lt-call-sel.filled{color:var(--text);border-color:var(--border2);font-weight:500}
+.lt-call-sel.email{background:var(--blue-l)}
+.lt-call-sel.email.filled{border-color:var(--blue)}
+.lt-call-sel:focus{border-color:var(--blue)}
+.lt-note-input{width:100%;min-width:150px;height:28px;font-size:12px;padding:0 8px;border:1px solid transparent;border-radius:var(--r);background:transparent;color:var(--text);outline:none}
+.lt-note-input:hover{border-color:var(--border);background:var(--surface)}
+.lt-note-input:focus{border-color:var(--blue);background:var(--surface)}
 /* ── USER MANAGEMENT ────────────────────────────────────── */
 .um-user-row{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:13px}
 .um-user-row:last-child{border-bottom:none}
@@ -1452,7 +1473,7 @@ select.sm:focus{border-color:var(--blue)}
 <!-- LEAD OUTREACH TRACKER PAGE -->
 <div id="page-outreach" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">Outreach</div><div class="ps">Lead outreach tracker — 3–4 touchpoints then mark inactive</div></div>
+    <div><div class="pt">Outreach</div><div class="ps">6-touch sequence — call + email pairs over ~8 days, then auto-delist</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn" onclick="ltOpenImport()"><i class="ti ti-file-import"></i> Import</button>
       <button class="btn" id="lt-export-btn" onclick="ltExport()" style="display:none"><i class="ti ti-download"></i> Export</button>
@@ -1481,19 +1502,43 @@ select.sm:focus{border-color:var(--blue)}
         <option value="overdue">Overdue</option><option value="converted">Converted</option><option value="inactive">Delisted</option>
       </select>
       <select class="sm" id="lt-filter-source" onchange="ltRenderTable()">
-        <option value="">All sources</option><option value="hubspot">HubSpot</option>
-        <option value="excel">Excel sheet</option><option value="manual">Manual</option>
+        <option value="">All sources</option>
+      </select>
+      <select class="sm" id="lt-filter-month" onchange="ltRenderTable()">
+        <option value="">All months</option>
       </select>
     </div>
+    <!-- Bulk action bar — appears when rows are selected -->
+    <div id="lt-bulk-bar" style="display:none;align-items:center;gap:10px;margin-bottom:.75rem;padding:.625rem .875rem;background:var(--blue-l);border:1px solid var(--blue);border-radius:var(--rl)">
+      <span id="lt-bulk-count" style="font-size:13px;font-weight:600;color:var(--blue-d)">0 selected</span>
+      <select class="sm" id="lt-bulk-status" style="height:32px">
+        <option value="">Set status…</option>
+        <option value="converted">Mark Converted</option>
+        <option value="inactive">Mark Delisted</option>
+        <option value="reset">Reset to Pending (clears calls)</option>
+      </select>
+      <button class="btn btn-sm btn-primary" onclick="ltBulkApply()"><i class="ti ti-check"></i> Apply</button>
+      <button class="btn btn-sm" onclick="ltBulkClear()">Clear selection</button>
+    </div>
     <div style="overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse">
+      <table style="width:100%;border-collapse:collapse;min-width:1500px">
         <thead><tr>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Name / Contact</th>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Source</th>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Form date</th>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Status</th>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Touchpoints</th>
-          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Next action</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;text-align:center;width:32px"><input type="checkbox" id="lt-sel-all" onchange="ltToggleSelAll(this.checked)" title="Select all visible"></th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;width:28px">#</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Date</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Source</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Name / Contact</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Company</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Trade</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">HubSpot ID</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Status</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">1st Call</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Intro Email</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">2nd Call</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Follow-up Email</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">3rd Call</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Final Email</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">Notes</th>
           <th style="border-bottom:1px solid var(--border)"></th>
         </tr></thead>
         <tbody id="lt-lead-body"></tbody>
@@ -1508,26 +1553,45 @@ select.sm:focus{border-color:var(--blue)}
     <div id="lt-timeline-list"></div>
   </div>
   <div id="lt-view-ltsettings" class="itab-pane">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px;margin-bottom:1.5rem">
-      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Outreach rules</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Max touchpoints before delisting</div><input type="number" id="lt-max-touch" value="4" min="1" max="10" onchange="ltSaveSetting()" style="width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Days between follow-ups</div><input type="number" id="lt-follow-days" value="3" min="1" max="14" onchange="ltSaveSetting()" style="width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div>Auto-delist after max attempts</div><label class="lt-toggle"><input type="checkbox" id="lt-auto-delist" checked onchange="ltSaveSetting()"><span class="lt-slider"></span></label></div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px">
-      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Email sequence templates</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 1 — warm intro email</div><button class="btn btn-sm" onclick="ltDraftEmail(1)">Draft</button></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 2 — follow-up email (~3 days later)</div><button class="btn btn-sm" onclick="ltDraftEmail(2)">Draft</button></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 3 — phone call / voicemail script</div><button class="btn btn-sm" onclick="ltDraftEmail(3)">Draft</button></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div>Touch 4 — break-up message (polite close)</div><button class="btn btn-sm" onclick="ltDraftEmail(4)">Draft</button></div>
+    <div style="display:grid;grid-template-columns:minmax(320px,480px) minmax(380px,1fr);gap:1.25rem;align-items:start">
+      <div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1.25rem">
+          <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Outreach rules</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Call attempts per lead</div><span style="font-size:13px;color:var(--text2);font-weight:600">3 (fixed columns)</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Days between follow-ups</div><input type="number" id="lt-follow-days" value="3" min="1" max="14" onchange="ltSaveSetting()" style="width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div>Auto-delist after all 3 calls with no positive outcome</div><label class="lt-toggle"><input type="checkbox" id="lt-auto-delist" checked onchange="ltSaveSetting()"><span class="lt-slider"></span></label></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
+          <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Email &amp; call templates</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div><strong>Intro email</strong> — same day as 1st call</div><button class="btn btn-sm" id="lt-tpl-btn-1" onclick="ltShowTemplate(1)">Draft</button></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div><strong>Follow-up email</strong> — with 2nd call (day 3–4)</div><button class="btn btn-sm" id="lt-tpl-btn-2" onclick="ltShowTemplate(2)">Draft</button></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div><strong>Call script</strong> — all 3 calls (live + voicemail)</div><button class="btn btn-sm" id="lt-tpl-btn-3" onclick="ltShowTemplate(3)">Draft</button></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div><strong>Final email</strong> — break-up, after 3rd call (day 7–8)</div><button class="btn btn-sm" id="lt-tpl-btn-4" onclick="ltShowTemplate(4)">Draft</button></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:.75rem;line-height:1.5"><i class="ti ti-info-circle" style="font-size:11px"></i> Cadence: Day 1 — call + intro email · Day 3–4 — call + follow-up · Day 7–8 — final call + break-up. Placeholders {{FirstName}} and {{Company}} — replace before sending. Edits save automatically.</div>
+        </div>
+      </div>
+      <div id="lt-tpl-panel" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;min-height:420px">
+        <div id="lt-tpl-empty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px;color:var(--text3);font-size:13px;gap:8px"><i class="ti ti-mail-opened" style="font-size:28px"></i>Select a template on the left to view and edit it here.</div>
+        <div id="lt-tpl-editor" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:1rem">
+            <div id="lt-tpl-title" style="font-size:14px;font-weight:600"></div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" onclick="ltCopyTemplate()"><i class="ti ti-copy"></i> Copy</button>
+              <button class="btn btn-sm" onclick="ltResetTemplate()" title="Restore the default draft"><i class="ti ti-refresh"></i> Reset</button>
+            </div>
+          </div>
+          <div class="field"><label>Subject</label><input id="lt-tpl-subject" onchange="ltSaveTemplate()" placeholder="Subject line…"></div>
+          <div class="field" style="margin-bottom:0"><label>Body</label><textarea id="lt-tpl-body" rows="16" onchange="ltSaveTemplate()" style="font-size:13px;line-height:1.6;resize:vertical"></textarea></div>
+          <div id="lt-tpl-saved" style="font-size:11px;color:var(--green);margin-top:.5rem;visibility:hidden"><i class="ti ti-check"></i> Saved</div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
 <!-- PRE-SALES PAGE -->
 <div id="page-presales" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">Pre-Sales</div><div class="ps">MQL → Contacted → Proposal → Negotiating → Close</div></div>
+    <div><div class="pt">Pre-Sales</div><div class="ps">SDR qualification — MQL → Attempted → Contacted → Connected → Demo → RFP → Contract</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn" onclick="psOpenLog()"><i class="ti ti-notes"></i> Log touchpoint</button>
       <button class="btn btn-primary" onclick="psOpenAdd()"><i class="ti ti-plus"></i> Add prospect</button>
@@ -1542,16 +1606,20 @@ select.sm:focus{border-color:var(--blue)}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
       <span style="font-size:12px;color:var(--text2);font-weight:600">Stage:</span>
       <button class="btn btn-sm" id="ps-stg-all" onclick="psFilterStage('',this)" style="background:var(--text);color:white;border-color:var(--text)">All</button>
+      <button class="btn btn-sm" id="ps-stg-mql" onclick="psFilterStage('mql',this)">MQL</button>
+      <button class="btn btn-sm" id="ps-stg-urgent" onclick="psFilterStage('urgent',this)">Urgent Follow Up</button>
+      <button class="btn btn-sm" id="ps-stg-attempted" onclick="psFilterStage('attempted',this)">Attempted Call</button>
       <button class="btn btn-sm" id="ps-stg-contacted" onclick="psFilterStage('contacted',this)">Contacted</button>
-      <button class="btn btn-sm" id="ps-stg-proposal" onclick="psFilterStage('proposal',this)">Proposal Sent</button>
-      <button class="btn btn-sm" id="ps-stg-followup" onclick="psFilterStage('followup',this)">Follow-up</button>
-      <button class="btn btn-sm" id="ps-stg-negotiating" onclick="psFilterStage('negotiating',this)">Negotiating</button>
+      <button class="btn btn-sm" id="ps-stg-connected" onclick="psFilterStage('connected',this)">Connected</button>
+      <button class="btn btn-sm" id="ps-stg-demo" onclick="psFilterStage('demo',this)">Demo Call</button>
+      <button class="btn btn-sm" id="ps-stg-rfp" onclick="psFilterStage('rfp',this)">RFP</button>
     </div>
-    <div class="counters" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+    <div class="counters" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
       <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ps-s-active">0</div><div class="counter-lbl">Active prospects</div></div>
-      <div class="counter"><div class="counter-val" style="color:var(--amber)" id="ps-s-proposal">0</div><div class="counter-lbl">Proposals out</div></div>
-      <div class="counter"><div class="counter-val" style="color:var(--green)" id="ps-s-won">0</div><div class="counter-lbl">Won (all time)</div></div>
-      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ps-s-value">$0</div><div class="counter-lbl">Est. pipeline value</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--purple)" id="ps-s-demo">0</div><div class="counter-lbl">Demo calls</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--amber)" id="ps-s-rfp">0</div><div class="counter-lbl">RFPs out</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--green)" id="ps-s-won">0</div><div class="counter-lbl">Closed contracts</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ps-s-value">$0</div><div class="counter-lbl">Pipeline value</div></div>
     </div>
     <div id="ps-pipeline-list"></div>
   </div>
@@ -1890,10 +1958,13 @@ select.sm:focus{border-color:var(--blue)}
     <div class="g2">
       <div class="field"><label>Stage</label>
         <select id="ps-f-stage" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="mql">MQL</option>
+          <option value="urgent">Urgent Follow Up</option>
+          <option value="attempted">Attempted Call</option>
           <option value="contacted">Contacted</option>
-          <option value="proposal">Proposal Sent</option>
-          <option value="followup">Follow-up</option>
-          <option value="negotiating">Negotiating</option>
+          <option value="connected">Connected</option>
+          <option value="demo">Demo Call</option>
+          <option value="rfp">RFP</option>
         </select>
       </div>
       <div class="field"><label>MQL date</label><input id="ps-f-date" type="date"></div>
@@ -1926,18 +1997,26 @@ select.sm:focus{border-color:var(--blue)}
       </div>
       <div class="field"><label>Date</label><input id="ps-l-date" type="date"></div>
     </div>
-    <div class="field"><label>Notes / summary</label><textarea id="ps-l-notes" placeholder="What was discussed, what was their feedback…"></textarea></div>
     <div class="field"><label>Outcome</label>
       <select id="ps-l-outcome" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
         <option value="none">No update</option>
-        <option value="interested">Still interested</option>
-        <option value="proposal">Ready for proposal</option>
-        <option value="negotiating">Negotiating</option>
-        <option value="won">Closed — Won</option>
-        <option value="lost">Closed — Lost</option>
+        <option value="no_answer">No Answer</option>
+        <option value="voicemail">Voicemail</option>
+        <option value="callback">Call Back Requested</option>
+        <option value="replied">Replied</option>
+        <option value="meeting_set">Meeting Set</option>
+        <option value="demo_done">Demo Completed</option>
+        <option value="rfp_sent">RFP Sent</option>
+        <option value="won">Contract Signed</option>
+        <option value="not_interested">Not Interested</option>
       </select>
     </div>
-    <div class="field" id="ps-l-reason-wrap" style="display:none"><label>Win / loss reason</label><input id="ps-l-reason" placeholder="e.g. Chose competitor, budget constraint, project cancelled…"></div>
+    <div class="field"><label>Notes / summary</label><textarea id="ps-l-notes" rows="2" placeholder="What was discussed, their feedback…"></textarea></div>
+    <div class="g2">
+      <div class="field"><label>Next steps</label><input id="ps-l-nextsteps" placeholder="e.g. Send capability deck, call Thursday"></div>
+      <div class="field"><label>Follow-up date</label><input id="ps-l-nextdate" type="date"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem;line-height:1.5"><i class="ti ti-info-circle" style="font-size:11px"></i> The outcome moves the prospect forward in the pipeline automatically — it never moves them backward.</div>
     <p id="ps-l-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem">Select a prospect.</p>
     <div class="modal-actions">
       <button class="btn" onclick="document.getElementById('ps-modal-log').classList.remove('open')">Cancel</button>
@@ -4345,9 +4424,11 @@ function saveData(){
   localStorage.setItem('ec-standup-v1',JSON.stringify(standupHistory));
 }
 function mergeSeedById(saved,seed){
-  const seedIds=new Set(seed.map(x=>x.id));
-  const extras=saved.filter(x=>!seedIds.has(x.id));
-  return [...seed,...extras];
+  // SAVED DATA WINS. Seeds only backfill items the user doesn't have yet.
+  // (Previous version did the reverse — seed overwrote saved — which silently
+  // discarded every edit to a seeded strategy/principle/standup on each load.)
+  const savedIds=new Set(saved.map(x=>x.id));
+  return [...saved,...seed.filter(x=>!savedIds.has(x.id))];
 }
 function backfillStageOwners(){
   let changed=false;
@@ -6140,9 +6221,12 @@ function saveNewStrategy(){
 function openJournalModal(sid){document.getElementById('jm-sid').value=sid;document.getElementById('jm-text').value='';document.getElementById('jm-type').value='note';document.getElementById('journal-modal').classList.add('open');}
 function saveJournalEntry(){
   const sid=document.getElementById('jm-sid').value;
-  const text=document.getElementById('jm-text').value.trim();if(!text)return;
+  const text=document.getElementById('jm-text').value.trim();
+  if(!text){toast('Write something first');return;}
   const type=document.getElementById('jm-type').value;
-  const s=strategies.find(i=>i.id===sid);if(!s)return;
+  const s=strategies.find(i=>i.id===sid);
+  if(!s){toast('Strategy not found — close and reopen the modal');return;}
+  if(!Array.isArray(s.journal))s.journal=[];
   s.journal.unshift({type,text,ts:Date.now()});
   document.getElementById('journal-modal').classList.remove('open');
   saveData();renderStrategies();toast('Entry saved');
@@ -11265,33 +11349,90 @@ function umDeleteUser(idx){
 }
 
 // ══════════════════════════════════════════════════════════════
-// LEAD OUTREACH TRACKER
-// Storage: ec-lt-leads / ec-lt-activities / ec-lt-settings
-// All user-supplied strings pass through esc() before rendering.
+// LEAD OUTREACH TRACKER — sheet-style view
+// Month-grouped rows (latest month last, like the Excel tabs),
+// 3 call columns with outcome dropdowns, inline notes,
+// mass select + bulk status changes.
 // ══════════════════════════════════════════════════════════════
-let ltLeads=[],ltActivities=[],ltSettings={maxTouch:4,followDays:3,autoDelist:true};
+let ltLeads=[],ltActivities=[],ltSettings={followDays:3,autoDelist:true};
+let ltSelected=new Set();
 const LT_LEADS_KEY='ec-lt-leads';
 const LT_ACT_KEY='ec-lt-activities';
 const LT_SETS_KEY='ec-lt-settings';
-const LT_DEFAULT_SETTINGS={maxTouch:4,followDays:3,autoDelist:true};
-const LT_NEXT_ACTIONS=['Send intro email','Follow-up email','Try a call','Break-up message'];
+const LT_DEFAULT_SETTINGS={followDays:3,autoDelist:true};
+const LT_CALLS=3; // 1st / 2nd / 3rd call columns
+// Call outcomes — from the SDR call sheet, plus Bad Number
+const LT_CALL_OUTCOMES={
+  '':{label:'—'},
+  no_answer:{label:'No Answer'},
+  voicemail:{label:'Voicemail'},
+  callback:{label:'Call Back'},
+  meeting_set:{label:'Meeting Set',terminal:'converted'},
+  not_interested:{label:'Not Interested',terminal:'inactive'},
+  bad_number:{label:'Bad Number',terminal:'inactive'}
+};
+// Email drop after the 2nd call — its own outcome set
+const LT_EMAIL_OUTCOMES={
+  '':{label:'—'},
+  sent:{label:'Sent'},
+  no_reply:{label:'No Reply'},
+  replied:{label:'Replied'},
+  meeting_set:{label:'Meeting Set',terminal:'converted'},
+  not_interested:{label:'Not Interested',terminal:'inactive'},
+  bounced:{label:'Bounced'}
+};
 const LT_STATUS_LABEL={new:'Pending',active:'In progress',overdue:'Overdue',converted:'Converted',inactive:'Delisted'};
 const LT_SRC_LABEL={hubspot:'HubSpot',excel:'Excel',manual:'Manual'};
 const LT_SRC_CLASS={hubspot:'src-hs',excel:'src-xl',manual:'src-manual'};
 
+const LT_SEED_LEADS=[{"id":"sd-patrickcoalmontcom","name":"Patrick Robinson","email":"patrick@coalmont.com","company":"Coalmont Electrical Development","phone":"+1 (334) 726-2504","formDate":"2026-08-04","source":"excel","sourceRaw":"Direct Traffic","trade":"","hsStage":"Genusys Marketing Qualified","hubspot":"","notes":"","status":"pending"},{"id":"sd-craigshellyfsdataservice","name":"Craig Shelly","email":"craig.shelly@fsdataservices.com","company":"FSD Data Services","phone":"+1 (469) 246-0983","formDate":"2026-08-06","source":"excel","sourceRaw":"Direct Traffic","trade":"","hsStage":"Subscriber","hubspot":"","notes":"","status":"pending"},{"id":"sd-kthuangaztrongcom","name":"Kuan-Tsae Huang","email":"kthuang@aztrong.com","company":"AzTrong","phone":"+886-918-750-050","formDate":"2026-08-08","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing Qualified Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-rochardjimenez99hmailcom","name":"Jose","email":"rochardjimenez99@hmail.com","company":"","phone":"+1 (786) 670-5881","formDate":"2026-08-09","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-eduardshokulgmailcom","name":"eduardshokul","email":"eduardshokul@gmail.com","company":"","phone":"","formDate":"2026-08-09","source":"excel","sourceRaw":"Facebook Ads","trade":"Training Program","hsStage":"Subscriber","hubspot":"","notes":"","status":"pending"},{"id":"sd-marknardongccom","name":"Mark","email":"mark.nardo@ngc.com","company":"Northrop Grumman","phone":"+1 (321) 353-7491","formDate":"2026-08-09","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing Qualified Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-audreyburtongloballeadma","name":"Audrey Burton","email":"audrey.burton@globalleadmatrix.com","company":"Global Lead Matrix","phone":"+1 (330) 897-7817","formDate":"2026-08-10","source":"excel","sourceRaw":"Direct Traffic","trade":"","hsStage":"Subscriber","hubspot":"","notes":"","status":"pending"},{"id":"sd-licn003gmailcom","name":"licn003","email":"licn003@gmail.com","company":"","phone":"","formDate":"2026-08-11","source":"excel","sourceRaw":"Google Search","trade":"Electrical","hsStage":"Subscriber","hubspot":"","notes":"","status":"pending"},{"id":"sd-nhoodmarkthreecom","name":"Nicholas Hood","email":"nhood@mark-three.com","company":"MII Construction","phone":"+1 (916) 838-8811","formDate":"2026-08-12","source":"excel","sourceRaw":"Google Search","trade":"Electrical","hsStage":"Genusys Marketing Qualified","hubspot":"","notes":"","status":"pending"},{"id":"sd-justinsgalaxyintegratedc","name":"Dusty","email":"justins@galaxyintegrated.com","company":"Galaxy Integrated Technologies","phone":"+1 (508) 566-0183","formDate":"2026-08-12","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-henryvtgipowercom","name":"Henry","email":"henryv@tgipower.com","company":"TGI Power","phone":"+1 (305) 988-7500","formDate":"2026-08-12","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing Qualified Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-brendajmarshgmailcom","name":"Brenda","email":"brendajmarsh@gmail.com","company":"","phone":"","formDate":"2026-08-15","source":"excel","sourceRaw":"Google Ads","trade":"Electrical","hsStage":"Subscriber","hubspot":"","notes":"","status":"pending"},{"id":"sd-manuelzunigac3communicat","name":"Antonio","email":"manuel.zuniga@c3communications.net","company":"C3 Communications","phone":"+1 (561) 825-8604","formDate":"2026-08-17","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing Qualified Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-nilayjhaveriwspcom","name":"Nilay Javeri","email":"nilay.jhaveri@wsp.com","company":"WSP","phone":"+1 (678) 481-1959","formDate":"2026-08-17","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing Qualified Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-rodgerarmstronge2opticsc","name":"Rodger Armstrong","email":"rodger.armstrong@e2optics.com","company":"E2 Optics","phone":"+1 (936) 234-3414","formDate":"2026-07-01","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing - Inbound","hubspot":"","notes":"","status":"pending"},{"id":"sd-ctrinitymetroonecontract","name":"Christopher F.","email":"ctrinity@metroonecontracting.com","company":"Metro One Contracting","phone":"+1 (586) 219-2510","formDate":"2026-07-02","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing - Connected","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/232819559782/","notes":"","status":"pending"},{"id":"sd-scottharrisaraktekcom","name":"Scott","email":"scott.harris@araktek.com","company":"Arak Tek","phone":"+1 (480) 652-5931","formDate":"2026-07-03","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/233060149280/","notes":"","status":"pending"},{"id":"sd-scottjenningselectricinc","name":"Scott","email":"Scott@jenningselectricinc.com","company":"Jennings Electric","phone":"+1 (253) 691-1376","formDate":"2026-07-04","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/233314924034/","notes":"","status":"pending"},{"id":"sd-luisrgecscom","name":"Luis","email":"Luis@rgecs.com","company":"RGE Consulting Services","phone":"+1 (786) 512-9285","formDate":"2026-07-05","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/233440694697/","notes":"","status":"pending"},{"id":"sd-chrisbeauchampgraycom","name":"Christopher","email":"chris.beauchamp@gray.com","company":"HITT","phone":"+1 214-364-6030","formDate":"2026-07-11","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-mateoidealunlimitedus","name":"Mateo Torfs","email":"mateo@idealunlimited.us","company":"Ideal Unlimited","phone":"+1 561-451-5181","formDate":"2026-07-12","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/234654227287/","notes":"","status":"pending"},{"id":"sd-sandippatelkeentelengine","name":"Sandip","email":"sandip.patel@keentelengineering.com","company":"Keentel Engineering","phone":"+1 865-771-9190","formDate":"2026-07-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/234777600439/","notes":"","status":"pending"},{"id":"sd-wulffrvillaracom","name":"Rich Wolf","email":"wulffr@villara.com","company":"Villara Building Systems","phone":"+1 (707) 628-9038","formDate":"2026-07-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Marketing - Inbound","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/234876867476/","notes":"","status":"pending"},{"id":"sd-salesogisolarcom","name":"Terry","email":"Sales@ogisolar.com","company":"Off Grid Innovations","phone":"17275127188","formDate":"2026-07-14","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/234719882820/","notes":"","status":"pending"},{"id":"sd-jeffwhalenzekelmancom","name":"Jeff Whalen","email":"jeff.whalen@zekelman.com","company":"zekelman industries","phone":"+1 (432) 301-8682","formDate":"2026-07-14","source":"hubspot","sourceRaw":"Bing Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235158934791/?conversionId=7d46e2ac-67fe-404e-96fc-8c7033ff76b2","notes":"","status":"pending"},{"id":"sd-federicoogando123gmailco","name":"Federico -","email":"federicoogando123@gmail.com","company":"-","phone":"+1 (770) 765-9917","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235861998372/","notes":"","status":"pending"},{"id":"sd-chienluong0677gmailcom","name":"Chien","email":"chienluong0677@gmail.com","company":"Je richard","phone":"+1 (571) 213-3490","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235774034974/","notes":"","status":"pending"},{"id":"sd-kriscarterggmailcom","name":"Kris","email":"kris.carterg@gmail.com","company":"","phone":"+1 (224) 475-6754","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235981120562/","notes":"","status":"pending"},{"id":"sd-donalddutton83yahoocom","name":"Donald","email":"donalddutton83@yahoo.com","company":"","phone":"+1 (803) 482-6399","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235866426400/","notes":"","status":"pending"},{"id":"sd-tmathewstxgmailcom","name":"Tony","email":"tmathewstx@gmail.com","company":"EM Electric","phone":"+1 (512) 897-7666","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235758555034/","notes":"","status":"pending"},{"id":"sd-rmarkovicintegracom","name":"Daniela","email":"rmarkovic@integra.com","company":"Integra Mission Critical","phone":"+1 (713) 408-9848","formDate":"2026-07-17","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235926453018/","notes":"","status":"pending"},{"id":"sd-erahbinutpnccom","name":"Eiman Rahbin","email":"erahbin@utpnc.com","company":"Utility Packaging & Construction Inc.","phone":"+1 (267) 739-8767","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235786111488/","notes":"","status":"pending"},{"id":"sd-kuff1809gmailcom","name":"Robert -","email":"kuff1809@gmail.com","company":"-","phone":"+1 (832) 387-0925","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236108801842/","notes":"","status":"pending"},{"id":"sd-rigobertomedina49gmailco","name":"Rigoberto","email":"rigobertomedina49@gmail.com","company":"","phone":"+1 (817) 891-5824","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235989283457/","notes":"","status":"pending"},{"id":"sd-smavarezgmailcom","name":"Sotero","email":"s.mavarez@gmail.com","company":"","phone":"+1 (305) 890-8624","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236047352133/","notes":"","status":"pending"},{"id":"sd-hernanprado1982gmailcom","name":"Hernan","email":"hernanprado1982@gmail.com","company":"Ransa","phone":"+1 (940) 280-8228","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/235961424015/","notes":"","status":"pending"},{"id":"sd-rmyers1659gmailcom","name":"Ricky","email":"rmyers1659@gmail.com","company":"MYERS ELECTRIC LLC","phone":"+1 (404) 308-9706","formDate":"2026-07-18","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236003186052/","notes":"","status":"pending"},{"id":"sd-r14181712gmailcom","name":"Pedro -","email":"r14181712@gmail.com","company":"Cccgroup","phone":"+1 (407) 369-2970","formDate":"2026-07-19","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236170087227/","notes":"","status":"pending"},{"id":"sd-edespinozagagmailcom","name":"Edgard Espinoza","email":"edespinozaga@gmail.com","company":"E&DR PROJECTS AND WORKS","phone":"+1 (503) 267-0413","formDate":"2026-07-19","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236128510608/","notes":"","status":"pending"},{"id":"sd-akrongrstudentsanedu","name":"Richard","email":"akrongr@students.an.edu","company":"Students.an.edu","phone":"+1 (571) 992-6416","formDate":"2026-07-19","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236264064105/","notes":"","status":"pending"},{"id":"sd-billawimsatteatoncom","name":"Bill","email":"billawimsatt@eaton.com","company":"Eaton Corporation","phone":"+1 (270) 925-1111","formDate":"2026-07-19","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236272181778/","notes":"","status":"pending"},{"id":"sd-antoniolizarazogmailcom","name":"Antonio","email":"antoniolizarazo@gmail.com","company":"Antonio","phone":"+1 (470) 983-1058","formDate":"2026-07-19","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236245832970/","notes":"","status":"pending"},{"id":"sd-willybarrios1983gmailcom","name":"Willy","email":"willybarrios1983@gmail.com","company":"","phone":"+1 (786) 809-8881","formDate":"2026-07-20","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236286418360/","notes":"","status":"pending"},{"id":"sd-ofrederickoenvironmental","name":"Oliver","email":"ofredericko@environmentalallies.com","company":"Environmental Allies","phone":"+1 (214) 907-9498","formDate":"2026-07-21","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236564482318/","notes":"","status":"pending"},{"id":"sd-ericfordbigredelectricco","name":"Eric","email":"eric.ford@bigredelectric.com","company":"Big Red Electric","phone":"+1 (870) 926-2606","formDate":"2026-07-21","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/236750580243/","notes":"","status":"pending"},{"id":"sd-tiagogavinhosgmailcom","name":"Tiago Gavinhos","email":"tiago.gavinhos@gmail.com","company":"—","phone":"—","formDate":"2026-07-23","source":"hubspot","sourceRaw":"Direct Traffic","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/contact/237017472951/","notes":"","status":"pending"},{"id":"sd-vamshisrinergycom","name":"Vamshi Murki","email":"vamshi@srinergy.com","company":"Srinergy","phone":"+1 (248) 935-4991","formDate":"2026-07-23","source":"hubspot","sourceRaw":"Google Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/contact/237209937948/","notes":"","status":"pending"},{"id":"sd-mickthelakesidecompanies","name":"Mick","email":"mick@thelakesidecompanies.com","company":"Lakeside Data Centers, LLC","phone":"+1 704-996-2631","formDate":"2026-07-25","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/237348038824/","notes":"","status":"pending"},{"id":"sd-shanepurteraitcom","name":"Shane","email":"shane@purtera-it.com","company":"Purtera IT","phone":"+1 678-793-7200","formDate":"2026-07-26","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/237751003772/","notes":"","status":"pending"},{"id":"sd-matthewn1qpsisbestcom","name":"Matt","email":"matthewn1@qpsisbest.com","company":"Quality Plus Services","phone":"+1 (850) 630-4896","formDate":"2026-07-28","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-richardwrightforgeorgia2","name":"RICHARD WRIGHT","email":"richard@wrightforgeorgia2026.com","company":"Wright for Georgia 2026","phone":"+1 (404) 759-3226","formDate":"2026-07-09","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-makins223gmailcom","name":"Makins223 —","email":"makins223@gmail.com","company":"—","phone":"—","formDate":"2026-07-07","source":"hubspot","sourceRaw":"Organic Social (Facebook)","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/233715006631/","notes":"","status":"pending"},{"id":"sd-tlamercapviewconstructio","name":"Tim","email":"tlamer@capviewconstruction.com","company":"Capitol View Construction","phone":"+1 (717) 825-4071","formDate":"2026-07-30","source":"excel","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-skarimbnlgov","name":"shahnaz shahnaz","email":"skarim@bnl.gov","company":"Brookhaven National Laboratory","phone":"—","formDate":"2026-07-30","source":"excel","sourceRaw":"Organic Search","trade":"—","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-ahernandezveracityelectr","name":"Andrew Hernandez","email":"ahernandez@veracityelectric.com","company":"HBS Construction / Veracity","phone":"+1 (602) 856-3420","formDate":"2026-06-02","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/225931877541/","notes":"","status":"pending"},{"id":"sd-crodriguez1helixelectric","name":"Christian Rodriguez","email":"crodriguez1@helixelectric.com","company":"Helix Electric","phone":"-","formDate":"2026-06-04","source":"excel","sourceRaw":"Bing Ads","trade":"electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-jimodonnellelectricnet","name":"James ODonnell","email":"jim@odonnellelectric.net","company":"O'Donnell Electric","phone":"+1 (734) 459-4455","formDate":"2026-06-04","source":"hubspot","sourceRaw":"Google Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/196057444968/","notes":"","status":"pending"},{"id":"sd-geradillinoisstateelectr","name":"Grad Ales","email":"gerad@illinoisstateelectricllc.com","company":"Illinois State Electric LLC","phone":"+1 (224) 548-5548","formDate":"2026-06-04","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/226474038031/","notes":"","status":"pending"},{"id":"sd-dkleemanmillereadscom","name":"Dale Kleeman","email":"dkleeman@miller-eads.com","company":"Miller-Eads","phone":"+1 (317) 538-0437","formDate":"2026-06-06","source":"hubspot","sourceRaw":"Google Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/156701577567/","notes":"","status":"pending"},{"id":"sd-cwwidmerengineeringbmsco","name":"Chris Widmer","email":"cw@widmerengineeringbms.com","company":"Widmer Engineering BMS Controls","phone":"+1 (214) 489-7982","formDate":"2026-06-06","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/226741554278/","notes":"","status":"pending"},{"id":"sd-mikejampedelectricllpcom","name":"Mike Jannace","email":"mikej@ampedelectricllp.com","company":"Amped Electric","phone":"+1 (973) 800-7330","formDate":"2026-06-07","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/226984026028/","notes":"","status":"pending"},{"id":"sd-glseldonstcaudiovideocom","name":"George Seldon","email":"glseldon@stcaudiovideo.com","company":"STC Audio Video Services - Tucker Georgia","phone":"+1 (404) 925-8530","formDate":"2026-06-10","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/227458303494/","notes":"","status":"pending"},{"id":"sd-robertggonzoelectriccom","name":"Robert Tanner Gonzales","email":"robertg@gonzoelectric.com","company":"Gonzo Electric","phone":"+1 (832) 475-2777","formDate":"2026-06-11","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/227859674773/","notes":"","status":"pending"},{"id":"sd-cadlmcspro","name":"Alber Pernia","email":"cad@lmcs.pro","company":"Liberty Mission Critical Services","phone":"+1 (561) 619-0805","formDate":"2026-06-15","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/228588032863/","notes":"","status":"pending"},{"id":"sd-jondeannorthstarfirecom","name":"Jon Dean","email":"jon.dean@northstarfire.com","company":"Northstar Fire Protection","phone":"+1 (470) 587-4825","formDate":"2026-06-15","source":"hubspot","sourceRaw":"Organic","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/228597654840/","notes":"","status":"pending"},{"id":"sd-kmilleronediversifiedcom","name":"Kurt Miller","email":"kmiller@onediversified.com","company":"Diversified","phone":"+1 (224) 628-0147","formDate":"2026-06-17","source":"hubspot","sourceRaw":"Google Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/229201222658/","notes":"","status":"pending"},{"id":"sd-blitzenbergerdirectltxco","name":"Ben Litzenberger","email":"blitzenberger@directltx.com","company":"DirectLTx","phone":"+1 (610) 898-5506","formDate":"2026-06-22","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/230319787647/","notes":"","status":"pending"},{"id":"sd-ernestsolidworkllc","name":"Ernest Cantú","email":"ernest@solidwork.llc","company":"Solidwork, LLC","phone":"+1 (806) 317-3655","formDate":"2026-06-23","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/230680376175/","notes":"","status":"pending"},{"id":"sd-eddypaul0569gmailcom","name":"Eddy Paul","email":"eddypaul0569@gmail.com","company":"N/A","phone":"+1 (718) 502-1565","formDate":"2026-05-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"mechanical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/220569512100","notes":"","status":"pending"},{"id":"sd-lmassolasyahoofr","name":"Louis Massolas","email":"lmassolas@yahoo.fr","company":"N/A","phone":"+1 (480) 238-9808","formDate":"2026-05-10","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/220771463527","notes":"","status":"pending"},{"id":"sd-patricio44ghotmailcom","name":"Patricio Guerrero","email":"Patricio.44.g@hotmail.com","company":"N/A","phone":"+1 (203) 219-9044","formDate":"2026-05-10","source":"hubspot","sourceRaw":"Facebook Ads","trade":"mechanical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/220819101029","notes":"","status":"pending"},{"id":"sd-codythebimcubecom","name":"Cody Nowak","email":"cody@thebimcube.com","company":"CUBE","phone":"+1 (360) 941-0438","formDate":"2026-05-11","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/220844290705","notes":"","status":"pending"},{"id":"sd-nicheelectriccorpgmailco","name":"Carlos Delgado","email":"nicheelectriccorp@gmail.com","company":"Niche electric corp","phone":"+1 (401) 255-9693","formDate":"2026-05-11","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221039273091","notes":"","status":"pending"},{"id":"sd-moxelectricusgmailcom","name":"Oslay Xuarez","email":"mox.electric.us@gmail.com","company":"Mox Electric Inc","phone":"+1 (786) 759-7562","formDate":"2026-05-11","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221027122195","notes":"","status":"pending"},{"id":"sd-richardbradoniselectricc","name":"Richard Brown","email":"richard.br@adoniselectric.com","company":"Adonis Electric","phone":"+1 (720) 635-2328","formDate":"2026-05-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221335740825/","notes":"","status":"pending"},{"id":"sd-pasosardgmailcom","name":"Pablo Sosa","email":"pasosard@gmail.com","company":"Clinting Electric Inc","phone":"+1 (470) 680-4722","formDate":"2026-05-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221337797528/","notes":"","status":"pending"},{"id":"sd-jraschespecopsllccom","name":"Jim Rasche","email":"jrasche@specopsllc.com","company":"Spec Ops, LLC","phone":"+1 (305) 582-5274","formDate":"2026-05-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221381347968/","notes":"","status":"pending"},{"id":"sd-luatnktcotecconsvn","name":"Luat Nguyen","email":"luatnkt@coteccons.vn","company":"CTC","phone":"+1 (321) 515-3250","formDate":"2026-05-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/221394253868/","notes":"","status":"pending"},{"id":"sd-cmanuelbciflnet","name":"Calvin Manuel","email":"cmanuel@bcifl.net","company":"BCI","phone":"+1 (561) 510-4040","formDate":"2026-05-29","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/224831361598","notes":"","status":"pending"},{"id":"sd-jpbouyeasnesitecom","name":"Jeffrey P Bouyea","email":"jpbouyea@snesite.com","company":"SNE Site Development","phone":"+1 (413) 426-5397","formDate":"2026-05-30","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/225064099748","notes":"","status":"pending"},{"id":"sd-vabrilintegracom","name":"Vladimir Abril","email":"vabril@integra.com","company":"Integra","phone":"+1 (601) 813-7981","formDate":"2026-05-31","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/225276664739","notes":"","status":"pending"},{"id":"sd-dkinlawbeargateelectrica","name":"Dallas Kinlaw","email":"dkinlaw@beargateelectrical.com","company":"Beargate Electrical","phone":"+1 (910) 734-9526","formDate":"2026-05-31","source":"hubspot","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/225293161321","notes":"","status":"pending"},{"id":"sd-sandovalelectric05gmailc","name":"Ernesto","email":"sandovalelectric05@gmail.com","company":"Fast elec inc","phone":"+1 (408) 833-9216","formDate":"2026-04-21","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/216924721475/","notes":"","status":"pending"},{"id":"sd-scottjgetltsolutionscom","name":"Scott","email":"scottj@getltsolutions.com","company":"LT Solutions","phone":"+1 (316) 371-8264","formDate":"2026-04-21","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/217031940381/","notes":"","status":"pending"},{"id":"sd-achavezcherivccom","name":"Allen","email":"achavez@cherivc.com","company":"Cheri group inc","phone":"+1 (432) 265-7332","formDate":"2026-04-26","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/218034898470/","notes":"","status":"pending"},{"id":"sd-johnnynickels435gmailcom","name":"Danny Boutin","email":"johnnynickels435@gmail.com","company":"Tower construction","phone":"13373457905","formDate":"2026-01-09","source":"excel","sourceRaw":"Facebook Ads","trade":"Mechanical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-lipenhancement95gmailcom","name":"Taylor K. Lawton","email":"Lipenhancement95@gmail.com","company":"Taylor’s day care Llc 2020","phone":"16106577221","formDate":"2026-01-11","source":"excel","sourceRaw":"Facebook Ads","trade":"Mechanical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-matthewhalula90icloudcom","name":"Matthew Halula","email":"matthewhalula90@icloud.com","company":"Mph production","phone":"12283460858","formDate":"2026-01-12","source":"excel","sourceRaw":"Facebook Ads","trade":"MEP","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-lgrlbaedcom","name":"Lisa Ann Grimes","email":"lg@rlbaed.com","company":"Elba High School Alumni Page","phone":"+1 (334) 282-3320","formDate":"2026-01-19","source":"excel","sourceRaw":"Facebook Ads","trade":"others","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-jimtefhotmailcom","name":"Jim Ansara","email":"jimtef@hotmail.com","company":"Build health international","phone":"+1 (978) 969-6335","formDate":"2026-01-24","source":"excel","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-josephszendregmailcom","name":"Joseph Szendre","email":"joseph.szendre@gmail.com","company":"Delta Electric","phone":"+1 (801) 897-4666","formDate":"2026-01-25","source":"excel","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-dannylumenstechnologycom","name":"Danny","email":"danny@lumenstechnology.com","company":"Lumens Technology","phone":"+1 (516) 400-6149","formDate":"2026-01-26","source":"excel","sourceRaw":"Facebook Ads","trade":"electrical","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-ramseykevaolcom","name":"ramseykev","email":"ramseykev@aol.com","company":"","phone":"","formDate":"2026-01-15","source":"excel","sourceRaw":"Google Ads","trade":"","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-infomasterelectricalcont","name":"Elvis Liriano","email":"info@masterelectricalcontractor.com","company":"Master Electrical Contractor","phone":"+1 (954) 999-3637","formDate":"2026-01-12","source":"excel","sourceRaw":"Google Ads","trade":"electrical","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-greergreerleelucidmotors","name":"Lee Greer","email":"greergreer.lee@lucidmotors.com","company":"Lucid Group","phone":"+1 (317) 893-5071","formDate":"2026-01-05","source":"excel","sourceRaw":"Google Ads","trade":"","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-halstonbowenswscom","name":"HALSTON BOWEN","email":"halston.bowen@sws.com","company":"https://sws.com/","phone":"+1 (847) 571-5233","formDate":"2026-01-04","source":"excel","sourceRaw":"Google Ads","trade":"MEP BIM","hsStage":"MQL","hubspot":"","notes":"","status":"pending"},{"id":"sd-whitneyulamberticloudcom","name":"whitneyulambert","email":"whitneyulambert@icloud.com","company":"","phone":"","formDate":"2026-01-04","source":"excel","sourceRaw":"Google Ads","trade":"","hsStage":"Lead","hubspot":"","notes":"","status":"pending"},{"id":"sd-ruthbayasmingmailcom","name":"Ruthba Yasmin","email":"ruthbayasmin@gmail.com","company":"The University of South Alabama","phone":"1 (857) 506-1281","formDate":"2025-12-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183051262586","notes":"","status":"pending"},{"id":"sd-jerrynelson1708gmailcom","name":"Jerry Nelson","email":"jerrynelson1708@gmail.com","company":"Nelson Electric","phone":"1 (928) 255-9171","formDate":"2025-12-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183083328669","notes":"","status":"pending"},{"id":"sd-eimanrahbingmailcom","name":"Eiman Rahbin","email":"eimanrahbin@gmail.com","company":"Utility Packaging & Construction Inc.","phone":"1 (267) 739-8766","formDate":"2025-12-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183125185097","notes":"","status":"pending"},{"id":"sd-npi669gmailcom","name":"Neil Patterson","email":"npi669@gmail.com","company":"NPI  LLC","phone":"1 (973) 678-2561","formDate":"2025-12-09","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183351375741","notes":"","status":"pending"},{"id":"sd-tandersonaesindcom","name":"Tim Anderson","email":"tanderson@aesind.com","company":"AES Industries LLC","phone":"1 (361) 244-5645","formDate":"2025-12-09","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183394779208","notes":"","status":"pending"},{"id":"sd-stacyswagg37bomaincom","name":"Stacy Smith","email":"stacyswagg37@bomain.com","company":"Bomain Internet Solutions","phone":"+1 (325) 338-0196","formDate":"2025-12-09","source":"hubspot","sourceRaw":"Google Ads","trade":"","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/183628308083","notes":"","status":"pending"},{"id":"sd-lopezfelipefl96gmailcom","name":"Felipe de Jesus","email":"lopezfelipe.fl96@gmail.com","company":"M&CL Electric","phone":"1 (832) 332-1422","formDate":"2025-11-01","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/171001141788/","notes":"","status":"pending"},{"id":"sd-jthobbs76gmailcom","name":"Jason Hobbs","email":"jt.hobbs76@gmail.com","company":"Prizm Electrical Solutions, Inc.","phone":"1 (720) 607-1402","formDate":"2025-11-02","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/171141615124/","notes":"","status":"pending"},{"id":"sd-tbertolinicenterlineelec","name":"Todd Bertolini","email":"tbertolini@centerline-elec.com","company":"Center Line Electric","phone":"1 (586) 873-2159","formDate":"2025-11-03","source":"hubspot","sourceRaw":"Google Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/171473152291/","notes":"","status":"pending"},{"id":"sd-naseemnicemanyahoocom","name":"Naseem Abbas","email":"naseemniceman@yahoo.com","company":"Ericsson Inc","phone":"1 (571) 530-9633","formDate":"2025-11-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/173015721829/","notes":"","status":"pending"},{"id":"sd-yeuem1yahoocom","name":"Tommy Lam","email":"yeuem1@yahoo.com","company":"PN Mechanical company, LLC","phone":"1 (561) 729-7977","formDate":"2025-11-08","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/173320994608/","notes":"","status":"pending"},{"id":"sd-ricardonegron765hotmailc","name":"Ricardo Negron","email":"ricardonegron765@hotmail.com","company":"Journeyman Electrician","phone":"1 (239) 357-0495","formDate":"2025-11-09","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/173497273245/","notes":"","status":"pending"},{"id":"sd-gadamacagmailcom","name":"Alexander Marquez","email":"gadamaca@gmail.com","company":"Sky Resorts","phone":"1 (786) 322-0693","formDate":"2025-11-09","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/173611070273/","notes":"","status":"pending"},{"id":"sd-contrerasmatthew12gmailc","name":"Matthew Contreras","email":"contrerasmatthew12@gmail.com","company":"Super D Electric Technicians, LLC","phone":"1 (786) 754-6546","formDate":"2025-11-09","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/173308756862/","notes":"","status":"pending"},{"id":"sd-estebanrocaaolcom","name":"Esteban Roca","email":"esteban.roca@aol.com","company":"Ejroca","phone":"1 (407) 403-7178","formDate":"2025-11-11","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/174093984137","notes":"","status":"pending"},{"id":"sd-luisclavijo20gmailcom","name":"Luis","email":"luisclavijo20@gmail.com","company":"Staffing","phone":"1 (407) 807-8340","formDate":"2025-11-13","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/174902788006","notes":"","status":"pending"},{"id":"sd-madambafredygooglemailco","name":"Fredy Rachidal","email":"madambafredy@googlemail.com","company":"FMA Construction","phone":"1 (513) 657-9867","formDate":"2025-11-24","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/179000154475","notes":"","status":"pending"},{"id":"sd-egarciafiskcorpcom","name":"Edward Garcia","email":"egarcia@fiskcorp.com","company":"Fisk Electric","phone":"1 (210) 355-5623","formDate":"2025-11-26","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/179532807953","notes":"","status":"pending"},{"id":"sd-sambhiorg","name":"Jim Ansara","email":"sam@bhi.org","company":"Build Health International","phone":"1 (978) 969-6335","formDate":"2025-11-28","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"MQL","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/180001503009","notes":"","status":"pending"},{"id":"sd-sparedesiglesiatechcom","name":"Salomon","email":"sparedes@iglesiatech.com","company":"Ekklesia USA","phone":"1 (571) 786-9056","formDate":"2025-11-28","source":"hubspot","sourceRaw":"Facebook Ads","trade":"Electrical","hsStage":"Lead","hubspot":"https://app.hubspot.com/contacts/43813644/record/0-1/180002775675","notes":"","status":"pending"}];
+const LT_SEED_OLD_NOTES={"sd-patrickcoalmontcom":"Ad source: Direct Traffic · HubSpot stage: Genusys Marketing Qualified","sd-craigshellyfsdataservice":"Ad source: Direct Traffic · HubSpot stage: Subscriber","sd-kthuangaztrongcom":"Ad source: Facebook Ads · HubSpot stage: Marketing Qualified Lead · Trade: Electrical","sd-rochardjimenez99hmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical","sd-eduardshokulgmailcom":"Ad source: Facebook Ads · HubSpot stage: Subscriber · Trade: Training Program","sd-marknardongccom":"Ad source: Facebook Ads · HubSpot stage: Marketing Qualified Lead · Trade: Electrical","sd-audreyburtongloballeadma":"Ad source: Direct Traffic · HubSpot stage: Subscriber","sd-licn003gmailcom":"Ad source: Google Search · HubSpot stage: Subscriber · Trade: Electrical","sd-nhoodmarkthreecom":"Ad source: Google Search · HubSpot stage: Genusys Marketing Qualified · Trade: Electrical","sd-justinsgalaxyintegratedc":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical","sd-henryvtgipowercom":"Ad source: Facebook Ads · HubSpot stage: Marketing Qualified Lead · Trade: Electrical","sd-brendajmarshgmailcom":"Ad source: Google Ads · HubSpot stage: Subscriber · Trade: Electrical","sd-manuelzunigac3communicat":"Ad source: Facebook Ads · HubSpot stage: Marketing Qualified Lead · Trade: Electrical","sd-nilayjhaveriwspcom":"Ad source: Facebook Ads · HubSpot stage: Marketing Qualified Lead · Trade: Electrical","sd-rodgerarmstronge2opticsc":"Ad source: Facebook Ads · HubSpot stage: Marketing - Inbound · Trade: Electrical","sd-ctrinitymetroonecontract":"Ad source: Facebook Ads · HubSpot stage: Marketing - Connected · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/232819559782/","sd-scottharrisaraktekcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/233060149280/","sd-scottjenningselectricinc":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/233314924034/","sd-luisrgecscom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/233440694697/","sd-chrisbeauchampgraycom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical","sd-mateoidealunlimitedus":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/234654227287/","sd-sandippatelkeentelengine":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/234777600439/","sd-wulffrvillaracom":"Ad source: Facebook Ads · HubSpot stage: Marketing - Inbound · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/234876867476/","sd-salesogisolarcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/234719882820/","sd-jeffwhalenzekelmancom":"Ad source: Bing Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235158934791/?conversionId=7d46e2ac-67fe-404e-96fc-8c7033ff76b2","sd-federicoogando123gmailco":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235861998372/","sd-chienluong0677gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235774034974/","sd-kriscarterggmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235981120562/","sd-donalddutton83yahoocom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235866426400/","sd-tmathewstxgmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235758555034/","sd-rmarkovicintegracom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235926453018/","sd-erahbinutpnccom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235786111488/","sd-kuff1809gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236108801842/","sd-rigobertomedina49gmailco":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235989283457/","sd-smavarezgmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236047352133/","sd-hernanprado1982gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/235961424015/","sd-rmyers1659gmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236003186052/","sd-r14181712gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236170087227/","sd-edespinozagagmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236128510608/","sd-akrongrstudentsanedu":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236264064105/","sd-billawimsatteatoncom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236272181778/","sd-antoniolizarazogmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236245832970/","sd-willybarrios1983gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236286418360/","sd-ofrederickoenvironmental":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236564482318/","sd-ericfordbigredelectricco":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/236750580243/","sd-tiagogavinhosgmailcom":"Ad source: Direct Traffic · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/contact/237017472951/","sd-vamshisrinergycom":"Ad source: Google Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/contact/237209937948/","sd-mickthelakesidecompanies":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/237348038824/","sd-shanepurteraitcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/237751003772/","sd-matthewn1qpsisbestcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical","sd-richardwrightforgeorgia2":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical","sd-makins223gmailcom":"Ad source: Organic Social (Facebook) · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/233715006631/","sd-tlamercapviewconstructio":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical","sd-skarimbnlgov":"Ad source: Organic Search · HubSpot stage: Lead · Trade: —","sd-ahernandezveracityelectr":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/225931877541/","sd-crodriguez1helixelectric":"Ad source: Bing Ads · HubSpot stage: MQL · Trade: electrical","sd-jimodonnellelectricnet":"Ad source: Google Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/196057444968/","sd-geradillinoisstateelectr":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/226474038031/","sd-dkleemanmillereadscom":"Ad source: Google Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/156701577567/","sd-cwwidmerengineeringbmsco":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/226741554278/","sd-mikejampedelectricllpcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/226984026028/","sd-glseldonstcaudiovideocom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/227458303494/","sd-robertggonzoelectriccom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/227859674773/","sd-cadlmcspro":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/228588032863/","sd-jondeannorthstarfirecom":"Ad source: Organic · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/228597654840/","sd-kmilleronediversifiedcom":"Ad source: Google Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/229201222658/","sd-blitzenbergerdirectltxco":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/230319787647/","sd-ernestsolidworkllc":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/230680376175/","sd-eddypaul0569gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: mechanical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/220569512100","sd-lmassolasyahoofr":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/220771463527","sd-patricio44ghotmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: mechanical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/220819101029","sd-codythebimcubecom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/220844290705","sd-nicheelectriccorpgmailco":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221039273091","sd-moxelectricusgmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221027122195","sd-richardbradoniselectricc":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221335740825/","sd-pasosardgmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221337797528/","sd-jraschespecopsllccom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221381347968/","sd-luatnktcotecconsvn":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/221394253868/","sd-cmanuelbciflnet":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/224831361598","sd-jpbouyeasnesitecom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/225064099748","sd-vabrilintegracom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/225276664739","sd-dkinlawbeargateelectrica":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/225293161321","sd-sandovalelectric05gmailc":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/216924721475/","sd-scottjgetltsolutionscom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/217031940381/","sd-achavezcherivccom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/218034898470/","sd-johnnynickels435gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Mechanical","sd-lipenhancement95gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Mechanical","sd-matthewhalula90icloudcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: MEP","sd-lgrlbaedcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: others","sd-jimtefhotmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical","sd-josephszendregmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: electrical","sd-dannylumenstechnologycom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: electrical","sd-ramseykevaolcom":"Ad source: Google Ads · HubSpot stage: Lead","sd-infomasterelectricalcont":"Ad source: Google Ads · HubSpot stage: MQL · Trade: electrical","sd-greergreerleelucidmotors":"Ad source: Google Ads · HubSpot stage: MQL","sd-halstonbowenswscom":"Ad source: Google Ads · HubSpot stage: MQL · Trade: MEP BIM","sd-whitneyulamberticloudcom":"Ad source: Google Ads · HubSpot stage: Lead","sd-ruthbayasmingmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183051262586","sd-jerrynelson1708gmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183083328669","sd-eimanrahbingmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183125185097","sd-npi669gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183351375741","sd-tandersonaesindcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183394779208","sd-stacyswagg37bomaincom":"Ad source: Google Ads · HubSpot stage: Lead · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/183628308083","sd-lopezfelipefl96gmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/171001141788/","sd-jthobbs76gmailcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/171141615124/","sd-tbertolinicenterlineelec":"Ad source: Google Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/171473152291/","sd-naseemnicemanyahoocom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/173015721829/","sd-yeuem1yahoocom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/173320994608/","sd-ricardonegron765hotmailc":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/173497273245/","sd-gadamacagmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/173611070273/","sd-contrerasmatthew12gmailc":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/173308756862/","sd-estebanrocaaolcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/174093984137","sd-luisclavijo20gmailcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/174902788006","sd-madambafredygooglemailco":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/179000154475","sd-egarciafiskcorpcom":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/179532807953","sd-sambhiorg":"Ad source: Facebook Ads · HubSpot stage: MQL · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/180001503009","sd-sparedesiglesiatechcom":"Ad source: Facebook Ads · HubSpot stage: Lead · Trade: Electrical · HubSpot: https://app.hubspot.com/contacts/43813644/record/0-1/180002775675"};
+
 function ltToday(){return new Date().toISOString().split('T')[0];}
 function ltDaysSince(d){if(!d)return 999;const t=new Date(d).getTime();return isNaN(t)?999:Math.floor((Date.now()-t)/86400000);}
+function ltEnsureShape(l){
+  if(!Array.isArray(l.calls)||l.calls.length!==LT_CALLS)l.calls=[{o:'',d:''},{o:'',d:''},{o:'',d:''}];
+  l.calls.forEach(c=>{if(typeof c!=='object')return;if(c.o===undefined)c.o='';if(c.d===undefined)c.d='';});
+  if(!Array.isArray(l.emails)||l.emails.length!==LT_CALLS){
+    l.emails=[{o:'',d:''},{o:'',d:''},{o:'',d:''}];
+    // Migrate the old single email slot (sat after 2nd call → follow-up position)
+    if(l.emailTouch&&l.emailTouch.o)l.emails[1]={o:l.emailTouch.o,d:l.emailTouch.d||''};
+    delete l.emailTouch;
+  }
+  l.emails.forEach(c=>{if(typeof c!=='object')return;if(c.o===undefined)c.o='';if(c.d===undefined)c.d='';});
+  if(l.notes===undefined)l.notes='';
+  if(l.hubspot===undefined)l.hubspot='';
+}
 
 function ltLoad(){
   ltLeads=Store.get(LT_LEADS_KEY,[]);
   if(!Array.isArray(ltLeads))ltLeads=[];
+  const removedSeeds=new Set(Store.get('ec-lt-removed-seeds',[]));
+  const haveIds=new Set(ltLeads.map(l=>l.id));
+  const seedById=new Map(LT_SEED_LEADS.map(x=>[x.id,x]));
+  let changed=false;
+  // Backfill seeds the user doesn't have (saved data always wins)
+  LT_SEED_LEADS.forEach(sd=>{if(!haveIds.has(sd.id)&&!removedSeeds.has(sd.id)){ltLeads.push({...sd,created:Date.now()});changed=true;}});
+  // Migration: upgrade previously-stored seeds to the structured column model
+  ltLeads.forEach(l=>{
+    const sd=seedById.get(l.id);
+    if(sd&&l.sourceRaw===undefined){
+      l.sourceRaw=sd.sourceRaw;l.trade=sd.trade;l.hsStage=sd.hsStage;l.hubspot=sd.hubspot;
+      // Clear the old auto-generated notes ONLY if the user never touched them
+      if(l.notes===(LT_SEED_OLD_NOTES[l.id]||''))l.notes='';
+      changed=true;
+    }
+    const before=JSON.stringify(l.calls);
+    ltEnsureShape(l);
+    if(JSON.stringify(l.calls)!==before)changed=true;
+  });
+  if(changed)Store.set(LT_LEADS_KEY,ltLeads);
   ltActivities=Store.get(LT_ACT_KEY,[]);
   if(!Array.isArray(ltActivities))ltActivities=[];
   ltSettings=Object.assign({},LT_DEFAULT_SETTINGS,Store.get(LT_SETS_KEY,{}));
-  // Clamp settings to sane ranges regardless of what's in storage
-  ltSettings.maxTouch=Math.min(10,Math.max(1,parseInt(ltSettings.maxTouch)||4));
   ltSettings.followDays=Math.min(14,Math.max(1,parseInt(ltSettings.followDays)||3));
   ltSettings.autoDelist=!!ltSettings.autoDelist;
+  ltSelected.clear();
 }
 function ltSave(){
   Store.set(LT_LEADS_KEY,ltLeads);
@@ -11299,18 +11440,34 @@ function ltSave(){
   Store.set(LT_SETS_KEY,ltSettings);
 }
 
-// Status is derived, never stored (except terminal states converted/inactive)
+function ltGetTouches(id){
+  const l=ltLeads.find(x=>x.id===id);
+  if(!l)return 0;
+  ltEnsureShape(l);
+  return l.calls.filter(c=>c.o).length;
+}
+// Status is derived from call outcomes; stored status only holds explicit overrides
 function ltGetStatus(lead){
+  ltEnsureShape(lead);
   if(lead.status==='converted')return'converted';
   if(lead.status==='inactive')return'inactive';
-  const touches=ltGetTouches(lead.id);
+  for(const c of lead.calls){
+    const t=LT_CALL_OUTCOMES[c.o]?.terminal;
+    if(t==='converted')return'converted';
+    if(t==='inactive')return'inactive';
+  }
+  for(const c of lead.emails){
+    const t=LT_EMAIL_OUTCOMES[c.o]?.terminal;
+    if(t==='converted')return'converted';
+    if(t==='inactive')return'inactive';
+  }
+  const touches=lead.calls.filter(c=>c.o).length+lead.emails.filter(c=>c.o).length;
   if(touches===0)return'new';
-  if(touches>=ltSettings.maxTouch&&ltSettings.autoDelist)return'inactive';
-  const last=ltActivities.filter(a=>a.leadId===lead.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
-  if(last&&ltDaysSince(last.date)>ltSettings.followDays)return'overdue';
+  if(lead.calls.filter(c=>c.o).length>=LT_CALLS&&ltSettings.autoDelist)return'inactive';
+  const lastDate=[...lead.calls,...lead.emails].filter(c=>c.o&&c.d).map(c=>c.d).sort().pop();
+  if(lastDate&&ltDaysSince(lastDate)>ltSettings.followDays)return'overdue';
   return'active';
 }
-function ltGetTouches(id){return ltActivities.filter(a=>a.leadId===id&&a.type!=='note').length;}
 
 function ltSwitchTab(t,el){
   document.querySelectorAll('#page-outreach .itab').forEach(b=>b.classList.remove('active'));
@@ -11322,6 +11479,8 @@ function ltSwitchTab(t,el){
 }
 
 function ltRender(){
+  safeRun('lt sources',ltPopulateSourceFilter);
+  safeRun('lt months',ltPopulateMonthFilter);
   safeRun('lt table',ltRenderTable);
   safeRun('lt filter',ltPopulateTlFilter);
   safeRun('lt settings',ltInitSettings);
@@ -11340,51 +11499,171 @@ function ltUpdateStats(){
   setNum('lt-s-dead',statuses.filter(x=>x==='inactive').length);
 }
 
-function ltRenderTable(){
-  const tbody=document.getElementById('lt-lead-body');if(!tbody)return;
+function ltPopulateSourceFilter(){
+  const sel=document.getElementById('lt-filter-source');if(!sel)return;
+  const cur=sel.value;
+  const srcs=[...new Set(ltLeads.map(l=>l.sourceRaw||'Unknown'))].sort();
+  sel.innerHTML='<option value="">All sources</option>'+srcs.map(s=>`<option value="${esc(s)}"${s===cur?' selected':''}>${esc(s)}</option>`).join('');
+}
+function ltPopulateMonthFilter(){
+  const sel=document.getElementById('lt-filter-month');if(!sel)return;
+  const cur=sel.value;
+  // Latest month first so the current month is one click away
+  const months=[...new Set(ltLeads.map(l=>ltMonthKey(l.formDate)))].sort().reverse();
+  const nowKey=new Date().toISOString().slice(0,7);
+  sel.innerHTML='<option value="">All months</option>'+months.map(m=>`<option value="${m}"${m===cur?' selected':''}>${ltMonthLabel(m)}${m===nowKey?' (current)':''}</option>`).join('');
+}
+function ltMonthKey(d){return(d&&/^\d{4}-\d{2}/.test(d))?d.slice(0,7):'0000-00';}
+function ltMonthLabel(key){
+  if(key==='0000-00')return'No date';
+  const[y,m]=key.split('-');
+  const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return(names[parseInt(m)-1]||m)+' '+y;
+}
+
+function ltVisibleLeads(){
   const q=(document.getElementById('lt-search')?.value||'').toLowerCase();
   const fs=document.getElementById('lt-filter-status')?.value||'';
   const fsrc=document.getElementById('lt-filter-source')?.value||'';
-  const max=ltSettings.maxTouch;
-  const superAdmin=isSuperAdmin();
-  const rows=ltLeads.filter(l=>{
+  const fmonth=document.getElementById('lt-filter-month')?.value||'';
+  return ltLeads.filter(l=>{
     const st=ltGetStatus(l);
     if(fs&&st!==fs)return false;
-    if(fsrc&&l.source!==fsrc)return false;
-    if(q&&!`${l.name||''}${l.email||''}${l.company||''}`.toLowerCase().includes(q))return false;
+    if(fsrc&&(l.sourceRaw||'Unknown')!==fsrc)return false;
+    if(fmonth&&ltMonthKey(l.formDate)!==fmonth)return false;
+    if(q&&!`${l.name||''}${l.email||''}${l.company||''}${l.trade||''}${l.sourceRaw||''}`.toLowerCase().includes(q))return false;
     return true;
   });
+}
+
+function ltCallSelect(lead,idx){
+  const cur=lead.calls[idx]?.o||'';
+  const opts=Object.entries(LT_CALL_OUTCOMES).map(([k,v])=>`<option value="${k}"${k===cur?' selected':''}>${v.label}</option>`).join('');
+  const d=lead.calls[idx]?.d;
+  return`<select class="lt-call-sel${cur?' filled':''}" onchange="ltSetCall('${esc(lead.id)}',${idx},this.value)" onclick="event.stopPropagation()">${opts}</select>${d?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${esc(d)}</div>`:''}`;
+}
+function ltEmailSelect(lead,idx){
+  const cur=lead.emails[idx]?.o||'';
+  const opts=Object.entries(LT_EMAIL_OUTCOMES).map(([k,v])=>`<option value="${k}"${k===cur?' selected':''}>${v.label}</option>`).join('');
+  const d=lead.emails[idx]?.d;
+  return`<select class="lt-call-sel email${cur?' filled':''}" onchange="ltSetEmail('${esc(lead.id)}',${idx},this.value)" onclick="event.stopPropagation()">${opts}</select>${d?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${esc(d)}</div>`:''}`;
+}
+function ltHsCell(lead){
+  const link=lead.hubspot&&/^https?:\/\//.test(lead.hubspot)?`<a href="${esc(lead.hubspot)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--blue);text-decoration:none;font-size:11px;white-space:nowrap"><i class="ti ti-external-link" style="font-size:10px"></i> Open</a>`:'';
+  return`<div style="display:flex;flex-direction:column;gap:3px">${link}<input type="text" class="lt-note-input" style="min-width:110px;width:110px;font-size:11px" value="${esc(lead.hubspot)}" placeholder="Paste record URL…" onchange="ltSetHubspot('${esc(lead.id)}',this.value)" onclick="event.stopPropagation()"></div>`;
+}
+
+function ltRenderTable(){
+  const tbody=document.getElementById('lt-lead-body');if(!tbody)return;
+  const rows=ltVisibleLeads();
+  ltUpdateBulkBar();
   if(!rows.length){
-    tbody.innerHTML='<tr><td colspan="7"><div class="empty">'+(ltLeads.length?'No leads match this filter':'No leads yet — add one or import from HubSpot / Excel')+'</div></td></tr>';
+    tbody.innerHTML='<tr><td colspan="17"><div class="empty">'+(ltLeads.length?'No leads match this filter':'No leads yet — add one or import')+'</div></td></tr>';
     ltUpdateStats();return;
   }
-  const td='font-size:13px;color:var(--text);padding:10px;border-bottom:1px solid var(--border);vertical-align:middle';
-  tbody.innerHTML=rows.map(l=>{
-    const st=ltGetStatus(l);
-    const t=ltGetTouches(l.id);
-    const dots=Array.from({length:max},(_,i)=>{
-      if(i<t)return'<div class="lt-dot done"></div>';
-      if(i===t&&t<max)return'<div class="lt-dot next"></div>';
-      return'<div class="lt-dot pending"></div>';
-    }).join('');
-    const nextAction=(st==='inactive'||st==='converted')?'—':LT_NEXT_ACTIONS[Math.min(t,LT_NEXT_ACTIONS.length-1)];
-    const delistBtn=(st!=='inactive'&&st!=='converted'&&superAdmin)?`<button class="lt-action-btn" onclick="ltDelistLead('${esc(l.id)}')">Delist</button>`:'';
-    return`<tr>
-      <td style="${td}"><div style="font-weight:600">${esc(l.name)}</div><div style="font-size:11px;color:var(--text3)">${esc(l.email)}</div>${l.company?`<div style="font-size:11px;color:var(--text3)">${esc(l.company)}</div>`:''}</td>
-      <td style="${td}"><span class="lt-src ${LT_SRC_CLASS[l.source]||'src-manual'}">${esc(LT_SRC_LABEL[l.source]||l.source)}</span></td>
-      <td style="${td};font-size:12px;color:var(--text2)">${esc(l.formDate)||'—'}</td>
-      <td style="${td}"><span class="lt-badge ${st}">${LT_STATUS_LABEL[st]}</span></td>
-      <td style="${td}"><div class="lt-touch-dots">${dots}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}/${max}</div></td>
-      <td style="${td};font-size:12px;color:var(--text2)">${nextAction}</td>
-      <td style="${td}"><div style="display:flex;gap:6px">
-        <button class="lt-action-btn log" onclick="ltOpenLogFor('${esc(l.id)}')">Log</button>
-        ${delistBtn}
-      </div></td>
-    </tr>`;
-  }).join('');
+  // Group by month, oldest month first (latest last — like the sheet tabs)
+  const groups=new Map();
+  rows.forEach(l=>{const k=ltMonthKey(l.formDate);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(l);});
+  const keys=[...groups.keys()].sort();
+  const td='font-size:13px;color:var(--text);padding:8px 8px;border-bottom:1px solid var(--border);vertical-align:top';
+  let html='';
+  keys.forEach(k=>{
+    const group=groups.get(k).sort((a,b)=>(a.formDate||'').localeCompare(b.formDate||''));
+    html+=`<tr class="lt-month-row"><td colspan="17"><i class="ti ti-calendar-month" style="font-size:12px"></i> ${ltMonthLabel(k)} <span style="font-weight:400;color:var(--text3)">· ${group.length} lead${group.length!==1?'s':''}</span></td></tr>`;
+    group.forEach((l,gi)=>{
+      ltEnsureShape(l);
+      const st=ltGetStatus(l);
+      const checked=ltSelected.has(l.id)?' checked':'';
+      html+=`<tr>
+        <td style="${td};text-align:center"><input type="checkbox"${checked} onchange="ltToggleSel('${esc(l.id)}',this.checked)" onclick="event.stopPropagation()"></td>
+        <td style="${td};color:var(--text3);font-size:11px">${gi+1}</td>
+        <td style="${td};font-size:12px;color:var(--text2);white-space:nowrap">${esc(l.formDate)||'—'}</td>
+        <td style="${td};font-size:12px">${esc(l.sourceRaw)||'—'}</td>
+        <td style="${td}"><div style="font-weight:600">${esc(l.name)}</div><div style="font-size:11px;color:var(--text3)">${esc(l.email)}</div>${l.phone?`<div style="font-size:11px;color:var(--text3)">${esc(l.phone)}</div>`:''}</td>
+        <td style="${td};font-size:12px">${esc(l.company)||'—'}</td>
+        <td style="${td};font-size:12px;color:var(--text2)">${esc(l.trade)||'—'}</td>
+        <td style="${td}">${ltHsCell(l)}</td>
+        <td style="${td}"><span class="lt-badge ${st}">${LT_STATUS_LABEL[st]}</span>${l.hsStage?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${esc(l.hsStage)}</div>`:''}</td>
+        <td style="${td}">${ltCallSelect(l,0)}</td>
+        <td style="${td}">${ltEmailSelect(l,0)}</td>
+        <td style="${td}">${ltCallSelect(l,1)}</td>
+        <td style="${td}">${ltEmailSelect(l,1)}</td>
+        <td style="${td}">${ltCallSelect(l,2)}</td>
+        <td style="${td}">${ltEmailSelect(l,2)}</td>
+        <td style="${td};min-width:160px"><input type="text" class="lt-note-input" value="${esc(l.notes)}" placeholder="Notes…" onchange="ltSetNote('${esc(l.id)}',this.value)" onclick="event.stopPropagation()"></td>
+        <td style="${td}"><button class="lt-action-btn log" onclick="ltOpenLogFor('${esc(l.id)}')">Log</button></td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
+  const selAll=document.getElementById('lt-sel-all');
+  if(selAll)selAll.checked=rows.length>0&&rows.every(l=>ltSelected.has(l.id));
   ltUpdateStats();
 }
 
+// ── Call outcome + notes ──────────────────────────────────────
+function ltSetCall(id,idx,outcome){
+  const l=ltLeads.find(x=>x.id===id);if(!l)return;
+  ltEnsureShape(l);
+  if(!(outcome in LT_CALL_OUTCOMES))return;
+  l.calls[idx]={o:outcome,d:outcome?ltToday():''};
+  ltSave();ltRenderTable();
+}
+function ltSetEmail(id,idx,outcome){
+  const l=ltLeads.find(x=>x.id===id);if(!l)return;
+  ltEnsureShape(l);
+  if(!(outcome in LT_EMAIL_OUTCOMES))return;
+  l.emails[idx]={o:outcome,d:outcome?ltToday():''};
+  ltSave();ltRenderTable();
+}
+function ltSetHubspot(id,val){
+  const l=ltLeads.find(x=>x.id===id);if(!l)return;
+  l.hubspot=(val||'').trim();
+  ltSave();ltRenderTable();
+}
+function ltSetNote(id,val){
+  const l=ltLeads.find(x=>x.id===id);if(!l)return;
+  l.notes=(val||'').trim();
+  ltSave();
+}
+
+// ── Mass selection + bulk actions ─────────────────────────────
+function ltToggleSel(id,on){
+  if(on)ltSelected.add(id);else ltSelected.delete(id);
+  ltUpdateBulkBar();
+  const selAll=document.getElementById('lt-sel-all');
+  if(selAll){const vis=ltVisibleLeads();selAll.checked=vis.length>0&&vis.every(l=>ltSelected.has(l.id));}
+}
+function ltToggleSelAll(on){
+  const vis=ltVisibleLeads();
+  if(on)vis.forEach(l=>ltSelected.add(l.id));
+  else vis.forEach(l=>ltSelected.delete(l.id));
+  ltRenderTable();
+}
+function ltUpdateBulkBar(){
+  const bar=document.getElementById('lt-bulk-bar');if(!bar)return;
+  const n=ltSelected.size;
+  bar.style.display=n?'flex':'none';
+  const lbl=document.getElementById('lt-bulk-count');if(lbl)lbl.textContent=n+' selected';
+}
+function ltBulkApply(){
+  const action=document.getElementById('lt-bulk-status')?.value;
+  if(!action||!ltSelected.size)return;
+  let n=0;
+  ltLeads.forEach(l=>{
+    if(!ltSelected.has(l.id))return;
+    ltEnsureShape(l);
+    if(action==='converted'){l.status='converted';n++;}
+    else if(action==='inactive'){l.status='inactive';n++;}
+    else if(action==='reset'){l.status='pending';l.calls=[{o:'',d:''},{o:'',d:''},{o:'',d:''}];l.emails=[{o:'',d:''},{o:'',d:''},{o:'',d:''}];n++;}
+  });
+  ltSelected.clear();
+  ltSave();ltRenderTable();
+  toast(n+' lead'+(n!==1?'s':'')+' updated');
+}
+function ltBulkClear(){ltSelected.clear();ltRenderTable();}
+
+// ── Add / import / export / timeline / settings ───────────────
 function ltOpenAdd(){
   ['lt-f-name','lt-f-email','lt-f-company','lt-f-phone','lt-f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const d=document.getElementById('lt-f-date');if(d)d.value=ltToday();
@@ -11403,18 +11682,14 @@ function ltSaveLead(){
     phone:(document.getElementById('lt-f-phone')?.value||'').trim(),
     formDate:document.getElementById('lt-f-date')?.value||ltToday(),
     source:document.getElementById('lt-f-source')?.value||'manual',
+    sourceRaw:'',trade:'',hsStage:'',hubspot:'',
     notes:(document.getElementById('lt-f-notes')?.value||'').trim(),
-    status:'pending',created:Date.now()
+    status:'pending',calls:[{o:'',d:''},{o:'',d:''},{o:'',d:''}],created:Date.now()
   });
   ltSave();
   document.getElementById('lt-modal-add')?.classList.remove('open');
   ltRenderTable();ltPopulateTlFilter();
   toast('Lead added');
-}
-function ltDelistLead(id){
-  if(!isSuperAdmin()){toast('Super admin access required');return;}
-  const l=ltLeads.find(x=>x.id===id);
-  if(l){l.status='inactive';ltSave();ltRenderTable();}
 }
 function ltOpenLogFor(leadId){
   if(!ltLeads.length){toast('Add a lead first');return;}
@@ -11467,19 +11742,23 @@ function ltDoImport(){
   lines.forEach(line=>{
     const p=line.split(/[,\t]/).map(s=>s.trim());
     if(p.length<2||!p[0]||!p[1]){skipped++;return;}
-    ltLeads.push({id:uid(),name:p[0],email:p[1],company:p[2]||'',phone:p[3]||'',formDate:p[4]||ltToday(),source:src,notes:'',status:'pending',created:Date.now()});
+    ltLeads.push({id:uid(),name:p[0],email:p[1],company:p[2]||'',phone:p[3]||'',formDate:p[4]||ltToday(),source:src,sourceRaw:'',trade:'',hsStage:'',hubspot:'',notes:'',status:'pending',calls:[{o:'',d:''},{o:'',d:''},{o:'',d:''}],created:Date.now()});
     count++;
   });
   if(!count)return fail('Could not parse any leads. Expected: Name, Email, Company, Phone, Date — one per line.');
   ltSave();
   document.getElementById('lt-modal-import')?.classList.remove('open');
   ltRenderTable();ltPopulateTlFilter();
-  toast(`${count} lead${count!==1?'s':''} imported${skipped?` · ${skipped} row${skipped!==1?'s':''} skipped`:''}`);
+  toast(`${count} lead${count!==1?'s':''} imported${skipped?` · ${skipped} skipped`:''}`);
 }
 function ltExport(){
   if(!isSuperAdmin()){toast('Super admin access required');return;}
-  const rows=[['Name','Email','Company','Phone','Form date','Source','Status','Touchpoints']];
-  ltLeads.forEach(l=>rows.push([l.name,l.email,l.company,l.phone,l.formDate,l.source,ltGetStatus(l),ltGetTouches(l.id)]));
+  const rows=[['Name','Email','Company','Phone','Form date','Ad source','Trade','HubSpot URL','HubSpot stage','Status','1st Call','Intro Email','2nd Call','Follow-up Email','3rd Call','Final Email','Notes']];
+  ltLeads.forEach(l=>{
+    ltEnsureShape(l);
+    rows.push([l.name,l.email,l.company,l.phone,l.formDate,l.sourceRaw,l.trade,l.hubspot,l.hsStage,LT_STATUS_LABEL[ltGetStatus(l)],
+      LT_CALL_OUTCOMES[l.calls[0].o]?.label||'',LT_EMAIL_OUTCOMES[l.emails[0].o]?.label||'',LT_CALL_OUTCOMES[l.calls[1].o]?.label||'',LT_EMAIL_OUTCOMES[l.emails[1].o]?.label||'',LT_CALL_OUTCOMES[l.calls[2].o]?.label||'',LT_EMAIL_OUTCOMES[l.emails[2].o]?.label||'',l.notes]);
+  });
   const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
@@ -11514,66 +11793,199 @@ function ltPopulateTlFilter(){
   sel.innerHTML='<option value="">All leads</option>'+ltLeads.map(l=>`<option value="${esc(l.id)}"${l.id===cur?' selected':''}>${esc(l.name)}</option>`).join('');
 }
 function ltInitSettings(){
-  const mt=document.getElementById('lt-max-touch');if(mt)mt.value=ltSettings.maxTouch;
   const fd=document.getElementById('lt-follow-days');if(fd)fd.value=ltSettings.followDays;
   const ad=document.getElementById('lt-auto-delist');if(ad)ad.checked=ltSettings.autoDelist;
 }
 function ltSaveSetting(){
-  ltSettings.maxTouch=Math.min(10,Math.max(1,parseInt(document.getElementById('lt-max-touch')?.value)||4));
   ltSettings.followDays=Math.min(14,Math.max(1,parseInt(document.getElementById('lt-follow-days')?.value)||3));
   ltSettings.autoDelist=!!document.getElementById('lt-auto-delist')?.checked;
   ltSave();ltRenderTable();
 }
-function ltDraftEmail(n){
-  const scripts=['','Warm intro email — reference the form they filled on eracore.com, introduce Eracore\'s BIM/VDC preconstruction services, ask for a short call.','Follow-up email (3 days later) — brief, reference the intro, ask if they had a chance to review.','Phone call / voicemail script — introduce yourself, mention the form, keep it under 30 seconds, leave a callback number.','Break-up message — polite close, keep the door open, mention they can reach out anytime.'];
-  toast(`Draft #${n}: ${scripts[n]||''}`);
+// ── EMAIL / CALL TEMPLATES ────────────────────────────────────
+// Defaults drafted for Eracore's funnel: paid-ads leads who filled a
+// form but were never contacted. Edits persist in ec-lt-templates
+// (saved-wins); Reset restores the default for that touch only.
+const LT_TPL_KEY='ec-lt-templates';
+const LT_DEFAULT_TEMPLATES={
+  1:{title:'Touch 1 — warm intro email',subject:'Your inquiry on electrical BIM — quick question, {{FirstName}}',
+body:`Hi {{FirstName}},
+
+You reached out through our site a little while back about electrical BIM/VDC support, and I wanted to follow up personally — apologies it took us a moment to get to you.
+
+Eracore handles electrical preconstruction engineering for contractors across the US: BIM modeling, coordination, spatial layouts, and shop drawings — with deep experience in mission-critical facilities and data centers. Teams typically bring us in when their in-house drafting capacity is maxed out or a project's coordination demands outgrow the tools on hand.
+
+Is winning back drafting hours still a priority for {{Company}} this quarter? If so, I'd love to set up a quick 15-minute call to hear what you're working on and show you how we plug into a project.
+
+Best regards,
+Daniyal Siddiqui
+Eracore — eracore.com`},
+  2:{title:'Touch 2 — follow-up email (~3 days later)',subject:'Re: Your inquiry on electrical BIM',
+body:`Hi {{FirstName}},
+
+Just floating my last note back to the top of your inbox — I know how quickly things move on active projects.
+
+If it's easier, reply with a project you have coming up and I'll send over a relevant sample: coordination models, spatial layouts, or shop drawings we've delivered for similar electrical scopes.
+
+Either way, happy to work around your schedule for a short call.
+
+Best,
+Daniyal
+Eracore — eracore.com`},
+  3:{title:'Touch 3 — phone call / voicemail script',subject:'(Call script — not an email)',
+body:`LIVE ANSWER (~30 seconds):
+"Hi {{FirstName}}, this is Daniyal from Eracore. You'd filled out a form on our site about electrical BIM services — I'm just following up. We do electrical preconstruction engineering — BIM coordination, layouts, shop drawings — mostly for contractors on commercial and mission-critical work. Do you have 30 seconds for me to ask what prompted the inquiry?"
+
+→ If interested: book a 15-min call on the spot. Confirm email.
+→ If busy: "No problem — when's a better time this week?"
+
+VOICEMAIL (~20 seconds):
+"Hi {{FirstName}}, Daniyal from Eracore. You'd reached out on our site about electrical BIM support. I'll send a quick email so you have my details — if drafting capacity is a bottleneck at {{Company}}, I'd love to connect. Thanks!"
+
+→ After voicemail: mark the call outcome and drop Touch 1 or 2 by email.`},
+  4:{title:'Touch 4 — break-up message (polite close)',subject:'Closing the loop, {{FirstName}}',
+body:`Hi {{FirstName}},
+
+I've reached out a few times about the electrical BIM inquiry from {{Company}} and haven't managed to catch you — completely understandable, priorities shift.
+
+I'll close this out on my end so I'm not cluttering your inbox. If drafting or coordination capacity becomes a bottleneck down the line, my door is always open — just reply to this email and we'll pick it right up.
+
+Wishing you and the team smooth projects ahead.
+
+Best regards,
+Daniyal Siddiqui
+Eracore — eracore.com`}
+};
+let ltActiveTpl=null;
+function ltGetTemplates(){
+  const saved=Store.get(LT_TPL_KEY,{});
+  const out={};
+  for(const n of [1,2,3,4])out[n]=Object.assign({},LT_DEFAULT_TEMPLATES[n],saved[n]||{});
+  return out;
+}
+function ltShowTemplate(n){
+  const tpl=ltGetTemplates()[n];if(!tpl)return;
+  ltActiveTpl=n;
+  const empty=document.getElementById('lt-tpl-empty');if(empty)empty.style.display='none';
+  const ed=document.getElementById('lt-tpl-editor');if(ed)ed.style.display='block';
+  const t=document.getElementById('lt-tpl-title');if(t)t.textContent=tpl.title;
+  const s=document.getElementById('lt-tpl-subject');if(s)s.value=tpl.subject;
+  const b=document.getElementById('lt-tpl-body');if(b)b.value=tpl.body;
+  for(const i of [1,2,3,4]){const btn=document.getElementById('lt-tpl-btn-'+i);if(btn)btn.classList.toggle('btn-primary',i===n);}
+}
+function ltSaveTemplate(){
+  if(!ltActiveTpl)return;
+  const saved=Store.get(LT_TPL_KEY,{});
+  saved[ltActiveTpl]={title:LT_DEFAULT_TEMPLATES[ltActiveTpl].title,
+    subject:document.getElementById('lt-tpl-subject')?.value||'',
+    body:document.getElementById('lt-tpl-body')?.value||''};
+  Store.set(LT_TPL_KEY,saved);
+  const ok=document.getElementById('lt-tpl-saved');
+  if(ok){ok.style.visibility='visible';setTimeout(()=>{ok.style.visibility='hidden';},1500);}
+}
+function ltResetTemplate(){
+  if(!ltActiveTpl)return;
+  if(!confirm('Restore the default draft for this touch? Your edits to it will be lost.'))return;
+  const saved=Store.get(LT_TPL_KEY,{});
+  delete saved[ltActiveTpl];
+  Store.set(LT_TPL_KEY,saved);
+  ltShowTemplate(ltActiveTpl);
+  toast('Template restored to default');
+}
+function ltCopyTemplate(){
+  const s=document.getElementById('lt-tpl-subject')?.value||'';
+  const b=document.getElementById('lt-tpl-body')?.value||'';
+  const text=(ltActiveTpl===3?b:'Subject: '+s+'\n\n'+b);
+  const done=()=>toast('Copied to clipboard');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>{ltCopyFallback(text);done();});
+  }else{ltCopyFallback(text);done();}
+}
+function ltCopyFallback(text){
+  const ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='absolute';ta.style.left='-9999px';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
 }
 
 // ══════════════════════════════════════════════════════════════
-// PRE-SALES MODULE
-// Storage: ec-ps-prospects / ec-ps-activity
-// Stage transitions happen ONLY through psSetStage() so every
-// change is validated and consistent.
+// PRE-SALES MODULE — SDR qualification workflow
+// Stages mirror the HubSpot pipeline: MQL → Urgent Follow Up →
+// Attempted Call → Contacted → Connected → Demo Call → RFP →
+// Closed Contract (+ Not Interested).
+// Every call/email logs an OUTCOME + NEXT STEPS + follow-up date.
+// Outcomes auto-advance the stage but NEVER move it backward.
 // ══════════════════════════════════════════════════════════════
 let psProspects=[],psActivity=[];
 const PS_PROS_KEY='ec-ps-prospects';
 const PS_ACT_KEY='ec-ps-activity';
+// Ordered pipeline — index = progression order
+const PS_STAGE_ORDER=['mql','urgent','attempted','contacted','connected','demo','rfp','won','lost'];
 const PS_STAGES={
+  mql:{label:'MQL',cls:'mql'},
+  urgent:{label:'Urgent Follow Up',cls:'urgent'},
+  attempted:{label:'Attempted Call',cls:'attempted'},
   contacted:{label:'Contacted',cls:'contacted'},
-  proposal:{label:'Proposal Sent',cls:'proposal'},
-  followup:{label:'Follow-up',cls:'followup'},
-  negotiating:{label:'Negotiating',cls:'negotiating'},
-  won:{label:'Closed — Won',cls:'won'},
-  lost:{label:'Closed — Lost',cls:'lost'}
+  connected:{label:'Connected',cls:'connected'},
+  demo:{label:'Demo Call',cls:'demo'},
+  rfp:{label:'RFP',cls:'rfp'},
+  won:{label:'Closed Contract',cls:'won'},
+  lost:{label:'Not Interested',cls:'lost'}
 };
-const PS_ACTIVE_STAGES=['contacted','proposal','followup','negotiating'];
-const PS_OUTCOME_LABEL={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
-// Outcome → stage transition map (single source of truth)
-const PS_OUTCOME_TO_STAGE={proposal:'proposal',negotiating:'negotiating',won:'won',lost:'lost'};
+const PS_ACTIVE_STAGES=['mql','urgent','attempted','contacted','connected','demo','rfp'];
+// Legacy stage names from the first Pre-Sales version → new pipeline
+const PS_LEGACY_STAGE_MAP={proposal:'rfp',followup:'urgent',negotiating:'rfp'};
+// Call/email outcomes (from the SDR call sheet) → label + minimum stage they imply
+const PS_OUTCOMES={
+  none:{label:'No update',minStage:null},
+  no_answer:{label:'No Answer',minStage:'attempted'},
+  voicemail:{label:'Voicemail',minStage:'contacted'},
+  callback:{label:'Call Back Requested',minStage:'connected'},
+  replied:{label:'Replied',minStage:'connected'},
+  meeting_set:{label:'Meeting Set',minStage:'demo'},
+  demo_done:{label:'Demo Completed',minStage:'demo'},
+  rfp_sent:{label:'RFP Sent',minStage:'rfp'},
+  won:{label:'Contract Signed',minStage:'won'},
+  not_interested:{label:'Not Interested',minStage:'lost'}
+};
 let psStageFilter='';
 
 function psToday(){return new Date().toISOString().split('T')[0];}
+function psStageIdx(stage){return PS_STAGE_ORDER.indexOf(stage);}
 
 function psLoad(){
   psProspects=Store.get(PS_PROS_KEY,[]);
   if(!Array.isArray(psProspects))psProspects=[];
-  // Repair any prospect with an unknown stage
-  psProspects.forEach(p=>{if(!PS_STAGES[p.stage])p.stage='contacted';});
+  // Migrate legacy stages, repair unknown ones
+  let migrated=false;
+  psProspects.forEach(p=>{
+    if(PS_LEGACY_STAGE_MAP[p.stage]){p.stage=PS_LEGACY_STAGE_MAP[p.stage];migrated=true;}
+    if(!PS_STAGES[p.stage]){p.stage='mql';migrated=true;}
+  });
   psActivity=Store.get(PS_ACT_KEY,[]);
   if(!Array.isArray(psActivity))psActivity=[];
+  if(migrated)psSave();
 }
 function psSave(){
   Store.set(PS_PROS_KEY,psProspects);
   Store.set(PS_ACT_KEY,psActivity);
 }
-// The ONLY function allowed to change a prospect's stage
-function psSetStage(prospectId,stage){
+// The ONLY function allowed to change a prospect's stage.
+// forward-only unless force=true (manual dropdown override) or terminal (won/lost).
+function psSetStage(prospectId,stage,force){
   if(!PS_STAGES[stage])return false;
   const p=psProspects.find(x=>x.id===prospectId);
   if(!p)return false;
+  const terminal=(stage==='won'||stage==='lost');
+  if(!force&&!terminal&&psStageIdx(stage)<=psStageIdx(p.stage))return false; // never demote via outcomes
   p.stage=stage;
   p.updatedAt=Date.now();
   return true;
+}
+// Latest activity that carries next steps — powers the "Next:" line on cards
+function psNextStep(prospectId){
+  const acts=psActivity.filter(a=>a.prospectId===prospectId&&(a.nextSteps||a.nextDate)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  return acts[0]||null;
 }
 
 function psSwitchTab(t,el){
@@ -11596,7 +12008,8 @@ function psUpdateStats(){
   const pipeValue=active.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
   const setNum=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   setNum('ps-s-active',active.length);
-  setNum('ps-s-proposal',psProspects.filter(p=>p.stage==='proposal').length);
+  setNum('ps-s-demo',psProspects.filter(p=>p.stage==='demo').length);
+  setNum('ps-s-rfp',psProspects.filter(p=>p.stage==='rfp').length);
   setNum('ps-s-won',won.length);
   setNum('ps-s-value','$'+pipeValue.toLocaleString());
 }
@@ -11611,7 +12024,7 @@ function psRenderPipeline(){
   const activeProspects=psProspects.filter(p=>PS_ACTIVE_STAGES.includes(p.stage));
   const filtered=psStageFilter?activeProspects.filter(p=>p.stage===psStageFilter):activeProspects;
   if(!filtered.length){
-    el.innerHTML='<div class="empty">No active prospects'+(psStageFilter?' in this stage':'')+'.<br><button class="btn btn-primary" onclick="psOpenAdd()" style="margin-top:1rem"><i class="ti ti-plus"></i> Add first prospect</button></div>';
+    el.innerHTML='<div class="empty">No active prospects'+(psStageFilter?' in this stage':'')+'.<br><button class="btn btn-primary" onclick="psOpenAdd()" style="margin-top:1rem"><i class="ti ti-plus"></i> Add prospect</button></div>';
     return;
   }
   if(!psStageFilter){
@@ -11632,9 +12045,13 @@ function psRenderPipeline(){
   }
 }
 function psCardHtml(p){
-  const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
-  const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
-  const lastActText=lastAct?`Last: ${esc(lastAct.date)} · ${esc(lastAct.type)}`:'No activity yet';
+  const sc=PS_STAGES[p.stage]||PS_STAGES.mql;
+  const acts=psActivity.filter(a=>a.prospectId===p.id);
+  const lastAct=[...acts].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+  const lastActText=lastAct?`${esc(lastAct.date)} · ${esc(lastAct.type)}${lastAct.outcome&&lastAct.outcome!=='none'?' → '+(PS_OUTCOMES[lastAct.outcome]?.label||''):''}`:'No touches yet';
+  const nxt=psNextStep(p.id);
+  const nxtOverdue=nxt&&nxt.nextDate&&nxt.nextDate<psToday();
+  const nextLine=nxt?`<div style="display:flex;gap:6px;align-items:center;margin-top:.5rem;padding:.375rem .625rem;background:${nxtOverdue?'var(--red-l)':'var(--blue-l)'};border-radius:var(--r);font-size:12px;color:${nxtOverdue?'var(--red)':'var(--blue-d)'}"><i class="ti ti-arrow-big-right-line" style="font-size:12px;flex-shrink:0"></i><span style="flex:1">${esc(nxt.nextSteps||'Follow up')}</span>${nxt.nextDate?`<strong style="white-space:nowrap">${nxtOverdue?'⚠ ':''}${esc(nxt.nextDate)}</strong>`:''}</div>`:'';
   const valueStr=p.value?`<span style="font-size:12px;color:var(--green);font-weight:600">$${(parseFloat(p.value)||0).toLocaleString()}</span>`:'';
   return`<div class="ps-card stage-${p.stage}" onclick="psOpenDetail('${esc(p.id)}')">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:.5rem">
@@ -11650,15 +12067,16 @@ function psCardHtml(p){
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <span style="font-size:11px;color:var(--text3)">${esc(p.source||'Unknown')}</span>
       <span style="font-size:11px;color:var(--text3)">·</span>
-      <span style="font-size:11px;color:var(--text3)">${lastActText}</span>
+      <span style="font-size:11px;color:var(--text3)">${acts.length} touch${acts.length!==1?'es':''} · ${lastActText}</span>
       <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();psOpenLogFor('${esc(p.id)}')"><i class="ti ti-notes"></i> Log</button>
     </div>
+    ${nextLine}
   </div>`;
 }
 function psOpenAdd(){
   ['ps-f-name','ps-f-company','ps-f-email','ps-f-phone','ps-f-notes','ps-f-value'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const d=document.getElementById('ps-f-date');if(d)d.value=psToday();
-  const s=document.getElementById('ps-f-stage');if(s)s.value='contacted';
+  const s=document.getElementById('ps-f-stage');if(s)s.value='mql';
   const e=document.getElementById('ps-f-err');if(e)e.style.display='none';
   document.getElementById('ps-modal-add')?.classList.add('open');
 }
@@ -11667,14 +12085,14 @@ function psSaveProspect(){
   const company=(document.getElementById('ps-f-company')?.value||'').trim();
   const errEl=document.getElementById('ps-f-err');
   if(!name||!company){if(errEl)errEl.style.display='block';return;}
-  const stage=document.getElementById('ps-f-stage')?.value||'contacted';
+  const stage=document.getElementById('ps-f-stage')?.value||'mql';
   psProspects.push({
     id:uid(),name,company,
     email:(document.getElementById('ps-f-email')?.value||'').trim(),
     phone:(document.getElementById('ps-f-phone')?.value||'').trim(),
     source:document.getElementById('ps-f-source')?.value||'Direct',
     value:(document.getElementById('ps-f-value')?.value||'').trim(),
-    stage:PS_STAGES[stage]?stage:'contacted',
+    stage:PS_STAGES[stage]?stage:'mql',
     mqlDate:document.getElementById('ps-f-date')?.value||psToday(),
     notes:(document.getElementById('ps-f-notes')?.value||'').trim(),
     created:Date.now(),updatedAt:Date.now()
@@ -11690,12 +12108,9 @@ function psOpenLogFor(prospectId){
   sel.innerHTML=psProspects.map(p=>`<option value="${esc(p.id)}"${p.id===prospectId?' selected':''}>${esc(p.name)} — ${esc(p.company)}</option>`).join('');
   if(prospectId)sel.value=prospectId;
   const d=document.getElementById('ps-l-date');if(d)d.value=psToday();
-  const n=document.getElementById('ps-l-notes');if(n)n.value='';
-  const r=document.getElementById('ps-l-reason');if(r)r.value='';
-  const o=document.getElementById('ps-l-outcome');
-  const rw=document.getElementById('ps-l-reason-wrap');if(rw)rw.style.display='none';
+  ['ps-l-notes','ps-l-nextsteps','ps-l-nextdate'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const o=document.getElementById('ps-l-outcome');if(o)o.value='none';
   const e=document.getElementById('ps-l-err');if(e)e.style.display='none';
-  if(o){o.value='none';o.onchange=()=>{if(rw)rw.style.display=(o.value==='won'||o.value==='lost')?'block':'none';};}
   document.getElementById('ps-modal-log')?.classList.add('open');
 }
 function psOpenLog(){psOpenLogFor(null);}
@@ -11710,9 +12125,12 @@ function psSaveActivity(){
     date:document.getElementById('ps-l-date')?.value||psToday(),
     notes:(document.getElementById('ps-l-notes')?.value||'').trim(),
     outcome,
-    reason:(document.getElementById('ps-l-reason')?.value||'').trim()
+    nextSteps:(document.getElementById('ps-l-nextsteps')?.value||'').trim(),
+    nextDate:document.getElementById('ps-l-nextdate')?.value||''
   });
-  if(PS_OUTCOME_TO_STAGE[outcome])psSetStage(prospectId,PS_OUTCOME_TO_STAGE[outcome]);
+  // Outcome auto-advances stage — forward only, never demotes
+  const minStage=PS_OUTCOMES[outcome]?.minStage;
+  if(minStage)psSetStage(prospectId,minStage,false);
   psSave();
   document.getElementById('ps-modal-log')?.classList.remove('open');
   psRender();
@@ -11726,16 +12144,17 @@ function psRenderTimeline(){
   if(filter)acts=acts.filter(a=>a.prospectId===filter);
   if(!acts.length){el.innerHTML='<div class="empty">No activity logged yet.</div>';return;}
   const prospectById=new Map(psProspects.map(p=>[p.id,p]));
-  const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
+  const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',note:'<i class="ti ti-notes"></i>'};
   el.innerHTML=acts.map(a=>{
     const p=prospectById.get(a.prospectId);
-    const iconCls={call:'call',meeting:'meeting',email:'email',proposal:'proposal',note:'note'}[a.type]||'note';
+    const iconCls={call:'call',meeting:'meeting',email:'email',note:'note'}[a.type]||'note';
+    const outcomeLabel=PS_OUTCOMES[a.outcome]?.label||'—';
     return`<div class="ps-tl-item">
       <div class="ps-tl-icon ${iconCls}">${icons[a.type]||icons.note}</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:500;color:var(--text)">${p?esc(p.name)+' — '+esc(p.company):'Unknown'} · ${esc(a.type)}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${esc(a.date)} · ${PS_OUTCOME_LABEL[a.outcome]||'—'}${a.notes?' · '+esc(a.notes):''}</div>
-        ${a.reason?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Reason: ${esc(a.reason)}</div>`:''}
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${p?esc(p.name)+' — '+esc(p.company):'Unknown'} · ${esc(a.type)}${a.outcome!=='none'?` <span style="font-weight:600;color:var(--blue)">→ ${outcomeLabel}</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${esc(a.date)}${a.notes?' · '+esc(a.notes):''}</div>
+        ${a.nextSteps||a.nextDate?`<div style="font-size:11px;color:var(--blue-d);margin-top:3px;background:var(--blue-l);display:inline-flex;gap:4px;align-items:center;padding:2px 8px;border-radius:10px"><i class="ti ti-arrow-big-right-line" style="font-size:10px"></i>${esc(a.nextSteps||'Follow up')}${a.nextDate?' · '+esc(a.nextDate):''}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -11753,8 +12172,8 @@ function psRenderClosed(){
   const closedCount=won.length+lost.length;
   const winRate=closedCount?Math.round(won.length/closedCount*100):0;
   let html=`<div class="counters" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
-    <div class="counter"><div class="counter-val" style="color:var(--green)">${won.length}</div><div class="counter-lbl">Won</div></div>
-    <div class="counter"><div class="counter-val" style="color:var(--red)">${lost.length}</div><div class="counter-lbl">Lost</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--green)">${won.length}</div><div class="counter-lbl">Closed contracts</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--red)">${lost.length}</div><div class="counter-lbl">Not interested</div></div>
     <div class="counter"><div class="counter-val" style="color:var(--blue)">${winRate}%</div><div class="counter-lbl">Win rate</div></div>
     <div class="counter"><div class="counter-val" style="color:var(--green)">$${wonValue.toLocaleString()}</div><div class="counter-lbl">Revenue closed</div></div>
   </div>`;
@@ -11762,7 +12181,7 @@ function psRenderClosed(){
   const mkRow=p=>{
     const sc=PS_STAGES[p.stage];
     const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
-    return`<div class="ps-card stage-${p.stage}" style="margin-bottom:8px">
+    return`<div class="ps-card stage-${p.stage}" style="margin-bottom:8px" onclick="psOpenDetail('${esc(p.id)}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
         <div>
           <div style="font-weight:600">${esc(p.name)}</div>
@@ -11773,25 +12192,27 @@ function psRenderClosed(){
           ${p.value?`<div style="font-size:12px;color:var(--text2);margin-top:3px">$${(parseFloat(p.value)||0).toLocaleString()}</div>`:''}
         </div>
       </div>
-      ${lastAct&&lastAct.reason?`<div style="font-size:12px;color:var(--text2);margin-top:.5rem">Reason: ${esc(lastAct.reason)}</div>`:''}
+      ${lastAct&&lastAct.notes?`<div style="font-size:12px;color:var(--text2);margin-top:.5rem">${esc(lastAct.notes)}</div>`:''}
     </div>`;
   };
-  if(won.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Won (${won.length})</div>${won.map(mkRow).join('')}`;
-  if(lost.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .75rem">Lost (${lost.length})</div>${lost.map(mkRow).join('')}`;
+  if(won.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Closed Contracts (${won.length})</div>${won.map(mkRow).join('')}`;
+  if(lost.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .75rem">Not Interested (${lost.length})</div>${lost.map(mkRow).join('')}`;
   el.innerHTML=html;
 }
 function psOpenDetail(id){
   const p=psProspects.find(x=>x.id===id);if(!p)return;
-  const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
+  const sc=PS_STAGES[p.stage]||PS_STAGES.mql;
   const acts=psActivity.filter(a=>a.prospectId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const nameEl=document.getElementById('ps-panel-name');if(nameEl)nameEl.textContent=p.name;
   const bodyEl=document.getElementById('ps-panel-body');if(!bodyEl)return;
+  const nxt=psNextStep(id);
   bodyEl.innerHTML=`
     <div class="panel-section">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
         <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
         ${p.value?`<span style="font-size:13px;font-weight:600;color:var(--green)">$${(parseFloat(p.value)||0).toLocaleString()}</span>`:''}
       </div>
+      ${nxt?`<div style="display:flex;gap:6px;align-items:center;margin-bottom:.75rem;padding:.5rem .75rem;background:var(--blue-l);border-radius:var(--r);font-size:12px;color:var(--blue-d)"><i class="ti ti-arrow-big-right-line"></i><span style="flex:1">${esc(nxt.nextSteps||'Follow up')}</span>${nxt.nextDate?`<strong>${esc(nxt.nextDate)}</strong>`:''}</div>`:''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
         <div><span style="color:var(--text2)">Company</span><div style="font-weight:500;margin-top:2px">${esc(p.company)||'—'}</div></div>
         <div><span style="color:var(--text2)">Source</span><div style="font-weight:500;margin-top:2px">${esc(p.source)||'—'}</div></div>
@@ -11803,25 +12224,25 @@ function psOpenDetail(id){
     </div>
     <div class="panel-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-        <div class="panel-section-title">Stage</div>
+        <div class="panel-section-title">Stage — manual override</div>
         <select onchange="psUpdateStage('${esc(p.id)}',this.value)" style="font-size:12px;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)">
-          ${Object.entries(PS_STAGES).map(([k,v])=>`<option value="${k}"${p.stage===k?' selected':''}>${v.label}</option>`).join('')}
+          ${PS_STAGE_ORDER.map(k=>`<option value="${k}"${p.stage===k?' selected':''}>${PS_STAGES[k].label}</option>`).join('')}
         </select>
       </div>
     </div>
     <div class="panel-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-        <div class="panel-section-title">Activity (${acts.length})</div>
+        <div class="panel-section-title">Call & email log (${acts.length})</div>
         <button class="btn btn-sm" onclick="closePsPanel();psOpenLogFor('${esc(p.id)}')"><i class="ti ti-plus"></i> Log</button>
       </div>
       ${acts.length?acts.map(a=>`<div style="display:flex;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--border)">
         <div style="font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px">${esc(a.date)}</div>
         <div style="flex:1">
-          <div style="font-size:12px;font-weight:500">${esc(a.type)}${a.outcome&&a.outcome!=='none'?' → '+(PS_OUTCOME_LABEL[a.outcome]||''):''}</div>
+          <div style="font-size:12px;font-weight:500">${esc(a.type)}${a.outcome&&a.outcome!=='none'?` <span style="color:var(--blue)">→ ${PS_OUTCOMES[a.outcome]?.label||''}</span>`:''}</div>
           ${a.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:2px">${esc(a.notes)}</div>`:''}
-          ${a.reason?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Reason: ${esc(a.reason)}</div>`:''}
+          ${a.nextSteps||a.nextDate?`<div style="font-size:11px;color:var(--blue-d);margin-top:2px">Next: ${esc(a.nextSteps||'Follow up')}${a.nextDate?' · '+esc(a.nextDate):''}</div>`:''}
         </div>
-      </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:.375rem 0">No activity yet.</div>'}
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:.375rem 0">No calls or emails logged yet.</div>'}
     </div>`;
   document.getElementById('ps-detail-panel')?.classList.add('open');
   document.getElementById('ps-panel-overlay')?.classList.add('open');
@@ -11831,7 +12252,7 @@ function closePsPanel(){
   document.getElementById('ps-panel-overlay')?.classList.remove('open');
 }
 function psUpdateStage(id,stage){
-  if(psSetStage(id,stage)){psSave();psRender();toast('Stage updated');}
+  if(psSetStage(id,stage,true)){psSave();psRender();toast('Stage updated');}
 }
 
 // Clear any keys from older versions that could corrupt this version
