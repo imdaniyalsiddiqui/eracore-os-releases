@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Eracore — Marketing OS</title>
+<title>Eracore — Marketing OS 3.2</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-:root{--bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F1F0ED;--border:#E2E1DC;--border2:#CCCBC5;--text:#1A1A18;--text2:#6B6B67;--text3:#9B9B96;--blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;--green:#3B6D11;--green-l:#EAF3DE;--red:#A32D2D;--red-l:#FCEBEB;--amber:#854F0B;--amber-l:#FAEEDA;--purple:#3C3489;--purple-l:#EEEDFE;--teal:#085041;--teal-l:#E1F5EE;--r:8px;--rl:12px}
+:root{--bg:#F7F7F5;--surface:#FFFFFF;--surface2:#F1F0ED;--border:#E2E1DC;--border2:#CCCBC5;--text:#1A1A18;--text2:#6B6B67;--text3:#9B9B96;--blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;--green:#3B6D11;--green-l:#EAF3DE;--red:#A32D2D;--red-l:#FCEBEB;--amber:#854F0B;--amber-l:#FAEEDA;--purple:#3C3489;--purple-l:#EEEDFE;--teal:#085041;--teal-l:#E1F5EE;--r:8px;--rl:12px;--text-primary:var(--text);--text-secondary:var(--text2);--text-muted:var(--text3);--text-accent:var(--blue);--text-success:var(--green);--text-warning:var(--amber);--text-danger:var(--red);--surface-1:var(--surface);--surface-2:var(--surface2);--border-strong:var(--border2);--border-accent:var(--blue);--fill-accent:var(--text);--fill-accent-hover:#333;--fill-success:var(--green);--bg-accent:var(--blue-l);--bg-success:var(--green-l);--bg-warning:var(--amber-l);--on-accent:#fff;--font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--radius:var(--r)}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
 .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
@@ -162,10 +162,6 @@ select.sm:focus{border-color:var(--blue)}
 .principle-card:hover{border-color:var(--border2)}
 .p-tag{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:var(--purple-l);color:var(--purple)}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-.page.active{animation:fadeIn .18s ease}
-.ti-spin{animation:spin 1s linear infinite}
-.overlay.open .modal{animation:fadeIn .15s ease}
 /* Strategy styles */
 .strategy-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px;transition:border-color .12s}
 .strategy-card:hover{border-color:var(--border2)}
@@ -257,8 +253,102 @@ select.sm:focus{border-color:var(--blue)}
 
 </style>
 
+<style>
+/* ── AUTH / LOGIN ─────────────────────────────────────────── */
+#login-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:2.5rem;width:360px;box-shadow:0 8px 40px rgba(0,0,0,.1)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:2rem}
+.login-logo-mark{width:36px;height:36px;background:var(--text);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;font-weight:700;flex-shrink:0}
+.login-logo-name{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.login-logo-sub{font-size:12px;color:var(--text3)}
+.login-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px}
+.login-input{width:100%;height:40px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r);font-size:14px;background:var(--surface);color:var(--text);outline:none;font-family:inherit;margin-bottom:1rem}
+.login-input:focus{border-color:var(--blue)}
+.login-btn{width:100%;height:40px;background:var(--text);color:white;border:none;border-radius:var(--r);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.login-btn:hover{background:#333}
+.login-error{font-size:12px;color:var(--red);margin-top:.625rem;min-height:16px}
+/* ── USER CHIP (sidebar footer) ─────────────────────────── */
+.user-chip{display:flex;align-items:center;gap:8px;padding:.5rem .625rem;border-radius:var(--r);font-size:12px;color:var(--text2);cursor:default;flex-wrap:wrap}
+.user-chip-role{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600}
+/* ── LEAD TRACKER MODULE ─────────────────────────────────── */
+.lt-tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
+.lt-tab{height:36px;padding:0 16px;font-size:13px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .12s}
+.lt-tab:hover{color:var(--text)}.lt-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.lt-view{display:none}.lt-view.active{display:block}
+.lt-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
+.lt-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem}
+.lt-stat-label{font-size:12px;color:var(--text2);margin-bottom:5px}
+.lt-stat-num{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.lt-stat-num.accent{color:var(--blue)}.lt-stat-num.success{color:var(--green)}.lt-stat-num.warn{color:var(--amber)}.lt-stat-num.muted{color:var(--text3)}
+.lt-table{width:100%;border-collapse:collapse}
+.lt-table th{font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+.lt-table td{font-size:13px;color:var(--text);padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.lt-table tr:hover td{background:var(--surface2)}
+.lt-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px}
+.lt-badge.new{background:var(--blue-l);color:var(--blue)}.lt-badge.active{background:var(--amber-l);color:var(--amber)}.lt-badge.overdue{background:var(--red-l);color:var(--red)}.lt-badge.inactive{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}.lt-badge.converted{background:var(--green-l);color:var(--green)}
+.lt-touch-dots{display:flex;gap:4px}
+.lt-dot{width:10px;height:10px;border-radius:50%}
+.lt-dot.done{background:var(--green)}.lt-dot.pending{background:var(--border2)}.lt-dot.next{background:var(--blue);animation:lt-pulse 1.5s infinite}
+@keyframes lt-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.lt-action-btn{font-size:12px;padding:3px 10px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer}
+.lt-action-btn:hover{background:var(--surface2);color:var(--text)}
+.lt-action-btn.log{color:var(--blue);border-color:var(--blue)30}
+.lt-src{font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-block}
+.lt-src.src-hs{background:var(--amber-l);color:var(--amber)}.lt-src.src-xl{background:var(--blue-l);color:var(--blue)}.lt-src.src-manual{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}
+.lt-tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.lt-tl-item:last-child{border-bottom:none}
+.lt-tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.lt-tl-icon.email{background:var(--blue-l);color:var(--blue)}.lt-tl-icon.call{background:var(--green-l);color:var(--green)}.lt-tl-icon.note{background:var(--surface2);color:var(--text2)}
+.lt-setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+.lt-setting-row:last-child{border-bottom:none}
+.lt-toggle{position:relative;width:34px;height:20px;cursor:pointer}
+.lt-toggle input{opacity:0;width:0;height:0;position:absolute}
+.lt-slider{position:absolute;inset:0;background:var(--border2);border-radius:10px;transition:.2s}
+.lt-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+.lt-toggle input:checked+.lt-slider{background:var(--blue)}
+.lt-toggle input:checked+.lt-slider:before{transform:translateX(14px)}
+.lt-num-input{width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center}
+/* ── PRE-SALES MODULE ───────────────────────────────────── */
+.ps-pipeline{display:grid;gap:10px}
+.ps-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;cursor:pointer;transition:border-color .12s}
+.ps-card:hover{border-color:var(--border2)}
+.ps-card.stage-contacted{border-left:3px solid var(--blue)}
+.ps-card.stage-proposal{border-left:3px solid var(--amber)}
+.ps-card.stage-followup{border-left:3px solid var(--purple)}
+.ps-card.stage-negotiating{border-left:3px solid var(--teal)}
+.ps-card.stage-won{border-left:3px solid var(--green)}
+.ps-card.stage-lost{border-left:3px solid var(--red);opacity:.7}
+.ps-stage-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px}
+.ps-stage-badge.contacted{background:var(--blue-l);color:var(--blue)}.ps-stage-badge.proposal{background:var(--amber-l);color:var(--amber)}.ps-stage-badge.followup{background:var(--purple-l);color:var(--purple)}.ps-stage-badge.negotiating{background:var(--teal-l);color:var(--teal)}.ps-stage-badge.won{background:var(--green-l);color:var(--green)}.ps-stage-badge.lost{background:var(--red-l);color:var(--red)}
+.ps-tl-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.ps-tl-item:last-child{border-bottom:none}
+.ps-tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.ps-tl-icon.meeting{background:var(--blue-l);color:var(--blue)}.ps-tl-icon.call{background:var(--green-l);color:var(--green)}.ps-tl-icon.email{background:var(--purple-l);color:var(--purple)}.ps-tl-icon.note{background:var(--surface2);color:var(--text2)}.ps-tl-icon.proposal{background:var(--amber-l);color:var(--amber)}
+/* ── USER MANAGEMENT ────────────────────────────────────── */
+.um-user-row{display:flex;align-items:center;gap:10px;padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:13px}
+.um-user-row:last-child{border-bottom:none}
+.um-avatar{width:32px;height:32px;border-radius:50%;background:var(--blue);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.um-role-badge{font-size:10px;padding:1px 8px;border-radius:10px;font-weight:600}
+.um-role-badge.superadmin{background:var(--blue);color:white}.um-role-badge.admin{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+</style>
 </head>
 <body>
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-mark">E</div>
+      <div><div class="login-logo-name">Eracore</div><div class="login-logo-sub">Marketing OS</div></div>
+    </div>
+    <label class="login-label" for="login-username">Username</label>
+    <input class="login-input" type="text" id="login-username" placeholder="username" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-password').focus()">
+    <label class="login-label" for="login-password">Password</label>
+    <input class="login-input" type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
 <div class="app">
 <aside class="sidebar">
   <div class="logo">
@@ -294,6 +384,10 @@ select.sm:focus{border-color:var(--blue)}
   <div class="nav-item" id="nav-strategy" onclick="navTo('strategy',this)"><i class="ti ti-chess"></i> Strategy <span class="nav-badge" id="nb-strategy">0</span></div>
   <div class="nav-item" id="nav-principles" onclick="navTo('principles',this)"><i class="ti ti-bookmark"></i> Principles <span class="nav-badge" id="nb-principles">0</span></div>
 
+  <div class="nav-lbl" style="margin-top:.5rem">Sales</div>
+  <div class="nav-item" id="nav-outreach" onclick="navTo('outreach',this)"><i class="ti ti-funnel"></i> Outreach</div>
+  <div class="nav-item" id="nav-presales" onclick="navTo('presales',this)"><i class="ti ti-rocket"></i> Pre-Sales</div>
+
   <div class="nav-lbl" style="margin-top:.5rem">Performance</div>
 
   <div class="nav-item" id="nav-marketingperf" onclick="navTo('marketingperf',this)"><i class="ti ti-chart-dots"></i> Marketing Performance</div>
@@ -314,10 +408,12 @@ select.sm:focus{border-color:var(--blue)}
   </div>
 
   <div class="nav-lbl" style="margin-top:.5rem">System</div>
-  <div class="nav-item" id="nav-activity" onclick="navTo('activity',this)"><i class="ti ti-history"></i> Activity Log <span class="nav-badge" id="nb-activity">0</span></div>
   <div class="nav-item" id="nav-settings" onclick="navTo('settings',this)"><i class="ti ti-settings"></i> Settings</div>
 
   <div style="margin-top:auto;padding-top:1rem;border-top:1px solid var(--border);position:relative">
+    <div id="user-chip" class="user-chip"></div>
+    <div id="nav-usermgmt-link" class="nav-item" onclick="openUserMgmt()" style="display:none"><i class="ti ti-users"></i> Manage users</div>
+    <div class="nav-item" onclick="doLogout()" style="color:var(--text3)"><i class="ti ti-logout"></i> Sign out</div>
     <div class="nav-item" onclick="toggleBell()" id="bell-btn" style="cursor:pointer;justify-content:space-between">
       <div style="display:flex;align-items:center;gap:8px"><i class="ti ti-bell"></i> Notifications</div>
       <span id="bell-count" style="display:none;background:var(--red);color:white;font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px"></span>
@@ -1009,29 +1105,6 @@ select.sm:focus{border-color:var(--blue)}
 </div>
 
 <!-- SETTINGS -->
-<!-- ACTIVITY LOG -->
-<div id="page-activity" class="page">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">Activity Log</div><div class="ps">Master audit trail — every change to tasks, stages, strategies, principles and integrations</div></div>
-    <button class="btn" onclick="clearActivityLog()"><i class="ti ti-trash"></i> Clear log</button>
-  </div>
-  <div class="toolbar">
-    <input type="text" id="act-search" placeholder="Search activity…" oninput="renderActivityLog()">
-    <select class="sm" id="act-entity" onchange="renderActivityLog()">
-      <option value="">All types</option>
-      <option value="task">Tasks</option>
-      <option value="stage">Stages</option>
-      <option value="strategy">Strategies</option>
-      <option value="principle">Principles</option>
-      <option value="integration">Integrations</option>
-      <option value="asana">Asana</option>
-      <option value="data">Data</option>
-    </select>
-    <span id="act-count" style="font-size:12px;color:var(--text3);white-space:nowrap"></span>
-  </div>
-  <div id="activity-list" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem"></div>
-</div>
-
 <div id="page-settings" class="page">
   <!-- HubSpot CRM sync -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:620px;margin-bottom:1.5rem">
@@ -1485,12 +1558,6 @@ select.sm:focus{border-color:var(--blue)}
       </select>
     </div>
   </div>
-  <div class="field"><label>Strategy link <span>— Auto uses channel + keywords; set None to unlink completely</span></label>
-    <select id="et-strategy" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
-      <option value="auto">Auto (keyword + channel matching)</option>
-      <option value="none">None — no strategy link</option>
-    </select>
-  </div>
   <div class="g2">
     <div class="field"><label>Contingency <span>— blocker detail</span></label><textarea id="et-contingency" rows="2" placeholder="What's blocking this…"></textarea></div>
     <div class="field"><label>Contingency owner</label><input type="text" id="et-contingency-owner" placeholder="Muhamed, Kasun…"></div>
@@ -1596,6 +1663,394 @@ select.sm:focus{border-color:var(--blue)}
     <button class="btn btn-primary" onclick="saveGSCToken()"><i class="ti ti-check"></i> Connect</button>
   </div>
 </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LEAD OUTREACH TRACKER
+     ═══════════════════════════════════════════════════════════ -->
+<div id="page-outreach" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <div><div class="pt">Outreach</div><div class="ps">Lead outreach tracker — 3–4 touchpoints then mark inactive</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="lt-import-btn" onclick="ltOpenImport()"><i class="ti ti-file-import"></i> Import</button>
+      <button class="btn" id="lt-export-btn" onclick="ltExport()" style="display:none"><i class="ti ti-download"></i> Export</button>
+      <button class="btn" onclick="ltOpenLog()"><i class="ti ti-notes"></i> Log activity</button>
+      <button class="btn btn-primary" onclick="ltOpenAdd()"><i class="ti ti-plus"></i> Add lead</button>
+    </div>
+  </div>
+
+  <!-- inner tabs -->
+  <div class="lt-tab-bar">
+    <button class="lt-tab active" onclick="ltSwitchTab('leads',this)"><i class="ti ti-users"></i> Leads</button>
+    <button class="lt-tab" onclick="ltSwitchTab('activity',this)"><i class="ti ti-timeline"></i> Activity</button>
+    <button class="lt-tab" onclick="ltSwitchTab('ltsettings',this)"><i class="ti ti-settings"></i> Settings</button>
+  </div>
+
+  <!-- LEADS VIEW -->
+  <div id="lt-view-leads" class="lt-view active">
+    <div class="lt-stat-grid">
+      <div class="lt-stat"><div class="lt-stat-label">Total leads</div><div class="lt-stat-num" id="lt-s-total">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Pending contact</div><div class="lt-stat-num accent" id="lt-s-new">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">In progress</div><div class="lt-stat-num warn" id="lt-s-active">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Overdue</div><div class="lt-stat-num" style="color:var(--red)" id="lt-s-overdue">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Converted</div><div class="lt-stat-num success" id="lt-s-conv">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Delisted</div><div class="lt-stat-num muted" id="lt-s-dead">0</div></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="lt-search" placeholder="Search name, email, company…" oninput="ltRenderTable()">
+      <select class="sm" id="lt-filter-status" onchange="ltRenderTable()">
+        <option value="">All statuses</option>
+        <option value="new">Pending</option>
+        <option value="active">In progress</option>
+        <option value="overdue">Overdue</option>
+        <option value="converted">Converted</option>
+        <option value="inactive">Delisted</option>
+      </select>
+      <select class="sm" id="lt-filter-source" onchange="ltRenderTable()">
+        <option value="">All sources</option>
+        <option value="hubspot">HubSpot</option>
+        <option value="excel">Excel sheet</option>
+        <option value="manual">Manual</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="lt-table">
+        <thead><tr>
+          <th>Name / Contact</th><th>Source</th><th>Form date</th>
+          <th>Status</th><th>Touchpoints</th><th>Next action</th><th></th>
+        </tr></thead>
+        <tbody id="lt-lead-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ACTIVITY VIEW -->
+  <div id="lt-view-activity" class="lt-view">
+    <div class="toolbar">
+      <select class="sm" id="lt-tl-filter" onchange="ltRenderTimeline()"><option value="">All leads</option></select>
+      <button class="btn btn-primary" onclick="ltOpenLog()"><i class="ti ti-plus"></i> Log activity</button>
+    </div>
+    <div id="lt-timeline-list"></div>
+  </div>
+
+  <!-- SETTINGS VIEW -->
+  <div id="lt-view-ltsettings" class="lt-view">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Outreach rules</div>
+      <div class="lt-setting-row">
+        <div>Max touchpoints before delisting</div>
+        <input type="number" class="lt-num-input" id="lt-max-touch" value="4" min="1" max="10" onchange="ltSaveSetting()">
+      </div>
+      <div class="lt-setting-row">
+        <div>Days between follow-ups</div>
+        <input type="number" class="lt-num-input" id="lt-follow-days" value="3" min="1" max="14" onchange="ltSaveSetting()">
+      </div>
+      <div class="lt-setting-row">
+        <div>Auto-delist after max attempts</div>
+        <label class="lt-toggle"><input type="checkbox" id="lt-auto-delist" checked onchange="ltSaveSetting()"><span class="lt-slider"></span></label>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Email sequence templates</div>
+      <div class="lt-setting-row"><div>Touch 1 — warm intro email (referencing the form)</div><button class="btn btn-sm" onclick="ltDraftEmail(1)">Draft</button></div>
+      <div class="lt-setting-row"><div>Touch 2 — follow-up email (~3 days later)</div><button class="btn btn-sm" onclick="ltDraftEmail(2)">Draft</button></div>
+      <div class="lt-setting-row"><div>Touch 3 — phone call / voicemail script</div><button class="btn btn-sm" onclick="ltDraftEmail(3)">Draft</button></div>
+      <div class="lt-setting-row"><div>Touch 4 — break-up message (polite close)</div><button class="btn btn-sm" onclick="ltDraftEmail(4)">Draft</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PRE-SALES MODULE
+     ═══════════════════════════════════════════════════════════ -->
+<div id="page-presales" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <div><div class="pt">Pre-Sales</div><div class="ps">MQL → Contacted → Proposal → Negotiating → Close</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="psOpenLog()"><i class="ti ti-notes"></i> Log touchpoint</button>
+      <button class="btn btn-primary" onclick="psOpenAdd()"><i class="ti ti-plus"></i> Add prospect</button>
+    </div>
+  </div>
+
+  <!-- inner tabs -->
+  <div class="lt-tab-bar">
+    <button class="lt-tab active" onclick="psSwitchTab('pipeline',this)"><i class="ti ti-layout-kanban"></i> Pipeline</button>
+    <button class="lt-tab" onclick="psSwitchTab('psactivity',this)"><i class="ti ti-timeline"></i> Activity</button>
+    <button class="lt-tab" onclick="psSwitchTab('closed',this)"><i class="ti ti-trophy"></i> Won / Lost</button>
+  </div>
+
+  <!-- PIPELINE VIEW -->
+  <div id="ps-view-pipeline" class="lt-view active">
+    <!-- Stage filter bar -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
+      <span style="font-size:12px;color:var(--text2);font-weight:600">Stage:</span>
+      <button class="btn btn-sm" id="ps-stg-all" onclick="psFilterStage('',this)" style="background:var(--text);color:white;border-color:var(--text)">All</button>
+      <button class="btn btn-sm" id="ps-stg-contacted" onclick="psFilterStage('contacted',this)">Contacted</button>
+      <button class="btn btn-sm" id="ps-stg-proposal" onclick="psFilterStage('proposal',this)">Proposal Sent</button>
+      <button class="btn btn-sm" id="ps-stg-followup" onclick="psFilterStage('followup',this)">Follow-up</button>
+      <button class="btn btn-sm" id="ps-stg-negotiating" onclick="psFilterStage('negotiating',this)">Negotiating</button>
+    </div>
+    <!-- Stats -->
+    <div class="lt-stat-grid" style="margin-bottom:1.5rem">
+      <div class="lt-stat"><div class="lt-stat-label">Active prospects</div><div class="lt-stat-num accent" id="ps-s-active">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Proposals out</div><div class="lt-stat-num warn" id="ps-s-proposal">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Won (all time)</div><div class="lt-stat-num success" id="ps-s-won">0</div></div>
+      <div class="lt-stat"><div class="lt-stat-label">Est. pipeline value</div><div class="lt-stat-num" id="ps-s-value" style="color:var(--blue)">$0</div></div>
+    </div>
+    <div id="ps-pipeline-list"></div>
+  </div>
+
+  <!-- ACTIVITY VIEW -->
+  <div id="ps-view-psactivity" class="lt-view">
+    <div class="toolbar">
+      <select class="sm" id="ps-tl-filter" onchange="psRenderTimeline()"><option value="">All prospects</option></select>
+      <button class="btn btn-primary" onclick="psOpenLog()"><i class="ti ti-plus"></i> Log touchpoint</button>
+    </div>
+    <div id="ps-timeline-list"></div>
+  </div>
+
+  <!-- WON / LOST VIEW -->
+  <div id="ps-view-closed" class="lt-view">
+    <div id="ps-closed-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LEAD TRACKER MODALS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Add lead -->
+<div class="overlay" id="lt-modal-add" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="modal-title">Add lead <button class="btn-icon btn" onclick="document.getElementById('lt-modal-add').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div class="g2">
+      <div class="field"><label>Full name</label><input id="lt-f-name"></div>
+      <div class="field"><label>Email</label><input id="lt-f-email" type="email"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Company</label><input id="lt-f-company"></div>
+      <div class="field"><label>Phone</label><input id="lt-f-phone"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Form date</label><input id="lt-f-date" type="date"></div>
+      <div class="field"><label>Source</label>
+        <select id="lt-f-source" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="manual">Manual</option>
+          <option value="hubspot">HubSpot</option>
+          <option value="excel">Excel sheet</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="lt-f-notes"></textarea></div>
+    <p id="lt-f-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem">Name and email required.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('lt-modal-add').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="ltSaveLead()"><i class="ti ti-check"></i> Add lead</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log activity -->
+<div class="overlay" id="lt-modal-log" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:440px">
+    <div class="modal-title">Log touchpoint <button class="btn-icon btn" onclick="document.getElementById('lt-modal-log').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div class="field"><label>Lead</label>
+      <select id="lt-l-lead" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px"></select>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Type</label>
+        <select id="lt-l-type" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="email">Email sent</option>
+          <option value="call">Phone call</option>
+          <option value="note">Note</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="lt-l-date" type="date"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="lt-l-notes"></textarea></div>
+    <div class="field"><label>Response</label>
+      <select id="lt-l-response" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+        <option value="none">No response</option>
+        <option value="positive">Positive</option>
+        <option value="negative">Not interested</option>
+        <option value="converted">Converted</option>
+      </select>
+    </div>
+    <p id="lt-l-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem">Select a lead.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('lt-modal-log').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="ltSaveActivity()"><i class="ti ti-check"></i> Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import leads -->
+<div class="overlay" id="lt-modal-import" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:480px">
+    <div class="modal-title">Import leads <button class="btn-icon btn" onclick="document.getElementById('lt-modal-import').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Paste CSV or tab-separated data: <strong>Name, Email, Company, Phone, Date</strong> — one lead per line.</div>
+    <div class="field"><textarea id="lt-import-text" style="min-height:120px;font-family:monospace;font-size:12px" placeholder="John Smith, john@company.com, Acme Corp, +1 555 0100, 2026-08-01"></textarea></div>
+    <div class="field"><label>Source</label>
+      <select id="lt-import-source" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+        <option value="excel">Excel (paid marketing)</option>
+        <option value="hubspot">HubSpot export</option>
+        <option value="manual">Manual</option>
+      </select>
+    </div>
+    <p id="lt-import-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('lt-modal-import').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="ltDoImport()"><i class="ti ti-check"></i> Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     PRE-SALES MODALS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Add prospect -->
+<div class="overlay" id="ps-modal-add" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <div class="modal-title">Add prospect <button class="btn-icon btn" onclick="document.getElementById('ps-modal-add').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div class="g2">
+      <div class="field"><label>Full name</label><input id="ps-f-name"></div>
+      <div class="field"><label>Company</label><input id="ps-f-company"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Email</label><input id="ps-f-email" type="email"></div>
+      <div class="field"><label>Phone</label><input id="ps-f-phone"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>MQL source</label>
+        <select id="ps-f-source" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="Google Ads">Google Ads</option>
+          <option value="Meta Ads">Meta Ads</option>
+          <option value="LinkedIn Ads">LinkedIn Ads</option>
+          <option value="Microsoft Ads">Microsoft Ads</option>
+          <option value="Organic">Organic</option>
+          <option value="Referral">Referral</option>
+          <option value="Direct">Direct</option>
+        </select>
+      </div>
+      <div class="field"><label>Est. project value ($)</label><input id="ps-f-value" type="number" placeholder="0"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Stage</label>
+        <select id="ps-f-stage" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="contacted">Contacted</option>
+          <option value="proposal">Proposal Sent</option>
+          <option value="followup">Follow-up</option>
+          <option value="negotiating">Negotiating</option>
+        </select>
+      </div>
+      <div class="field"><label>MQL date</label><input id="ps-f-date" type="date"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="ps-f-notes" placeholder="Trade, project type, any context from the lead…"></textarea></div>
+    <p id="ps-f-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem">Name and company required.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('ps-modal-add').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="psSaveProspect()"><i class="ti ti-check"></i> Add prospect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log touchpoint -->
+<div class="overlay" id="ps-modal-log" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:460px">
+    <div class="modal-title">Log touchpoint <button class="btn-icon btn" onclick="document.getElementById('ps-modal-log').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div class="field"><label>Prospect</label>
+      <select id="ps-l-prospect" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px"></select>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Type</label>
+        <select id="ps-l-type" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="call">Phone call</option>
+          <option value="meeting">Meeting</option>
+          <option value="email">Email</option>
+          <option value="proposal">Proposal sent</option>
+          <option value="note">Internal note</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="ps-l-date" type="date"></div>
+    </div>
+    <div class="field"><label>Notes / summary</label><textarea id="ps-l-notes" placeholder="What was discussed, what was their feedback…"></textarea></div>
+    <div class="field"><label>Outcome</label>
+      <select id="ps-l-outcome" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+        <option value="none">No update</option>
+        <option value="interested">Still interested</option>
+        <option value="proposal">Ready for proposal</option>
+        <option value="negotiating">Negotiating</option>
+        <option value="won">Closed — Won</option>
+        <option value="lost">Closed — Lost</option>
+      </select>
+    </div>
+    <div class="field" id="ps-l-reason-wrap" style="display:none"><label>Win / loss reason</label><input id="ps-l-reason" placeholder="e.g. Chose competitor, budget constraint, project cancelled…"></div>
+    <p id="ps-l-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem">Select a prospect.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('ps-modal-log').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="psSaveActivity()"><i class="ti ti-check"></i> Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- Prospect detail panel -->
+<div class="side-panel" id="ps-detail-panel">
+  <div class="panel-hdr">
+    <div class="panel-hdr-title" id="ps-panel-name">Prospect</div>
+    <button class="btn-icon btn" onclick="closePsPanel()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="panel-body" id="ps-panel-body"></div>
+</div>
+<div class="panel-overlay" id="ps-panel-overlay" onclick="closePsPanel()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     USER MANAGEMENT OVERLAY
+     ═══════════════════════════════════════════════════════════ -->
+<div class="overlay" id="um-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:560px">
+    <div class="modal-title">User management <button class="btn-icon btn" onclick="document.getElementById('um-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+
+    <!-- Super admins (read-only) -->
+    <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem">Super admins (fixed)</div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1.25rem">
+      <div class="um-user-row">
+        <div class="um-avatar">D</div>
+        <div style="flex:1"><div style="font-weight:600">Daniyal</div><div style="font-size:12px;color:var(--text2)">daniyal</div></div>
+        <span class="um-role-badge superadmin">Super admin</span>
+      </div>
+      <div class="um-user-row">
+        <div class="um-avatar" style="background:var(--amber)">M</div>
+        <div style="flex:1"><div style="font-weight:600">Muhamed Zekic</div><div style="font-size:12px;color:var(--text2)">mz</div></div>
+        <span class="um-role-badge superadmin">Super admin</span>
+      </div>
+    </div>
+
+    <!-- Admin users (editable) -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Admin users</div>
+      <button class="btn btn-sm" onclick="umToggleAddForm()"><i class="ti ti-plus"></i> Add user</button>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1.25rem">
+      <div id="um-user-list"></div>
+    </div>
+
+    <!-- Add user form -->
+    <div id="um-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:1rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.75rem">New admin user</div>
+      <div class="g2">
+        <div class="field"><label>Display name</label><input id="um-new-name" placeholder="Jane Doe"></div>
+        <div class="field"><label>Username</label><input id="um-new-username" placeholder="jane"></div>
+      </div>
+      <div class="field"><label>Password</label><input id="um-new-password" type="password" placeholder="••••••••"></div>
+      <p id="um-add-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem"></p>
+      <button class="btn btn-primary" onclick="umAddUser()"><i class="ti ti-check"></i> Create user</button>
+    </div>
+
+    <div class="modal-actions" style="border:none;padding:0;margin:0">
+      <button class="btn" onclick="document.getElementById('um-overlay').classList.remove('open')">Done</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -3937,71 +4392,6 @@ function saveData(){
   localStorage.setItem('ec-strategies-v2',JSON.stringify(strategies));
   localStorage.setItem('ec-standup-v1',JSON.stringify(standupHistory));
 }
-
-// ── GLOBAL ACTIVITY LOG ───────────────────────────────────────────────────
-// Every mutation across the app is recorded here — tasks, strategies,
-// principles, integrations. Separate from per-task history; this is the
-// master audit trail viewable in the Activity Log page.
-let activityLog=[];
-const ACTIVITY_MAX=800;
-const ACT_META={
-  task:{icon:'ti-checklist',color:'var(--blue)'},
-  stage:{icon:'ti-route',color:'var(--green)'},
-  strategy:{icon:'ti-chess',color:'var(--purple)'},
-  principle:{icon:'ti-bookmark',color:'var(--purple)'},
-  integration:{icon:'ti-plug',color:'var(--teal)'},
-  asana:{icon:'ti-layout-kanban',color:'var(--amber)'},
-  data:{icon:'ti-database',color:'var(--text2)'},
-};
-function loadActivity(){try{const d=localStorage.getItem('ec-activity-v1');if(d)activityLog=JSON.parse(d);}catch(e){activityLog=[];}}
-function logActivity(entity,action,name,detail){
-  try{
-    activityLog.unshift({id:uid(),entity,action,name:(name||'').slice(0,120),detail:(detail||'').slice(0,300),ts:Date.now()});
-    if(activityLog.length>ACTIVITY_MAX)activityLog.length=ACTIVITY_MAX;
-    localStorage.setItem('ec-activity-v1',JSON.stringify(activityLog));
-    const badge=document.getElementById('nb-activity');if(badge)badge.textContent=activityLog.length;
-  }catch(e){console.warn('[Activity]',e);}
-}
-function clearActivityLog(){
-  if(!confirm('Clear the entire activity log? Task-level history is not affected.'))return;
-  activityLog=[];localStorage.setItem('ec-activity-v1','[]');
-  renderActivityLog();toast('Activity log cleared');
-}
-function renderActivityLog(){
-  const el=document.getElementById('activity-list');if(!el)return;
-  const q=(document.getElementById('act-search')?.value||'').toLowerCase().trim();
-  const fEnt=document.getElementById('act-entity')?.value||'';
-  let list=activityLog.filter(a=>{
-    if(fEnt&&a.entity!==fEnt)return false;
-    if(q&&!(a.name||'').toLowerCase().includes(q)&&!(a.detail||'').toLowerCase().includes(q)&&!(a.action||'').toLowerCase().includes(q))return false;
-    return true;
-  });
-  const cEl=document.getElementById('act-count');if(cEl)cEl.textContent=list.length+' event'+(list.length!==1?'s':'');
-  if(!list.length){el.innerHTML='<div class="empty"><i class="ti ti-history" style="font-size:32px;display:block;margin-bottom:.5rem;opacity:.3"></i>No activity yet — changes to tasks, strategies and integrations will appear here.</div>';return;}
-  // Group by day
-  let html='';let lastDay='';
-  list.forEach(a=>{
-    const d=new Date(a.ts);
-    const dayKey=d.toDateString();
-    if(dayKey!==lastDay){
-      const today=new Date().toDateString();
-      const yesterday=new Date(Date.now()-86400000).toDateString();
-      const label=dayKey===today?'Today':dayKey===yesterday?'Yesterday':d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .5rem;padding-bottom:.375rem;border-bottom:1px solid var(--border)">${label}</div>`;
-      lastDay=dayKey;
-    }
-    const meta=ACT_META[a.entity]||ACT_META.data;
-    html+=`<div style="display:flex;gap:10px;align-items:flex-start;padding:.5rem .625rem;border-radius:var(--r);transition:background .12s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-      <div style="width:28px;height:28px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px"><i class="ti ${meta.icon}" style="font-size:14px;color:${meta.color}"></i></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;line-height:1.4"><strong>${a.action}</strong>${a.name?' — '+a.name:''}</div>
-        ${a.detail?`<div style="font-size:12px;color:var(--text2);line-height:1.4;margin-top:1px">${a.detail}</div>`:''}
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} · ${{task:'Task',stage:'Stage',strategy:'Strategy',principle:'Principle',integration:'Integration',asana:'Asana',data:'Data'}[a.entity]||a.entity}</div>
-      </div>
-    </div>`;
-  });
-  el.innerHTML=html;
-}
 function mergeSeedById(saved,seed){
   const seedIds=new Set(seed.map(x=>x.id));
   const extras=saved.filter(x=>!seedIds.has(x.id));
@@ -4094,7 +4484,7 @@ function loadData(){
   try{const s=localStorage.getItem('ec-strategies-v2');strategies=s?mergeSeedById(JSON.parse(s),SEED_STRATEGIES):SEED_STRATEGIES;}catch(e){strategies=SEED_STRATEGIES;}
   try{const sd=localStorage.getItem('ec-standup-v1');standupHistory=sd?mergeSeedById(JSON.parse(sd),SEED_STANDUP):SEED_STANDUP;}catch(e){standupHistory=SEED_STANDUP;}
   standupHistory.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.created||0)-(a.created||0));
-  try{loadPaid();loadSEO();loadSocial();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();loadActivity();}catch(e){console.warn('[OS] secondary load error',e);}
+  try{loadPaid();loadSEO();loadSocial();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();}catch(e){console.warn('[OS] secondary load error',e);}
   // Final safety — force-seed any array that is still empty
   if(!tasks.length)tasks=JSON.parse(JSON.stringify(SEED_TASKS));
   if(!strategies.length)strategies=JSON.parse(JSON.stringify(SEED_STRATEGIES));
@@ -4103,7 +4493,6 @@ function loadData(){
   if(!videoProjects.length)videoProjects=JSON.parse(JSON.stringify(SEED_VIDEOS));
   if(!mqls.length)mqls=JSON.parse(JSON.stringify(SEED_MQLS));
   renderAll();
-  try{initBucketDropTargets();}catch(e){console.warn('[DnD]',e);}
   try{document.getElementById('standup-date').value=todayStr();}catch(e){}
 }
 
@@ -4112,10 +4501,11 @@ const PAGE_MAP={
   dashboard:'page-dashboard', mktmgmt:'page-mktmgmt', strategy:'page-strategy',
   principles:'page-principles', marketingperf:'page-marketingperf',
   reporting:'page-mzreport',  // reporting redirects to mzreport
-  settings:'page-settings',activity:'page-activity',
+  settings:'page-settings',
   tasks:'page-tasks',seodash:'page-seodash',paiddash:'page-paiddash',
   socialdash:'page-socialdash',mktdash:'page-mktdash',
-  standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview'
+  standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview',
+  outreach:'page-outreach', presales:'page-presales'
 };
 const REPORTING_PAGES=new Set(['mzreport','asanaview','standup','reporting']);
 
@@ -4163,7 +4553,6 @@ function onNavTo(id){
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
   if(id==='settings')initSettings();
-  if(id==='activity')renderActivityLog();
   if(id==='tasks')renderTasks();
   if(id==='seodash'){loadSEO();loadBingData();loadCalls();updateSEOTopCounters();renderSEODash();
     // Auto-fetch if credentials already saved
@@ -4189,6 +4578,8 @@ function onNavTo(id){
   if(id==='standup')renderStandupHistory();
   if(id==='mzreport')renderMZReport();
   if(id==='asanaview')loadAsanaOverview();
+  if(id==='outreach'){ltLoad();ltRender();}
+  if(id==='presales'){psLoad();psRender();}
 }
 
 // ── DASHBOARD SUBVIEWS ────────────────────────────────────────────────────
@@ -4548,91 +4939,17 @@ function quickMoveChannel(tid,e){
   const btn=e?.target?.closest('button');
   if(btn){const r=btn.getBoundingClientRect();pop.style.top=(r.bottom+6)+'px';pop.style.right=(window.innerWidth-r.right)+'px';}
   pop.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;padding:.25rem .5rem;margin-bottom:3px">Move to channel</div>`+
-    channels.map(([ch,lbl])=>`<div onclick="doMoveChannel('${tid}','${ch}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${t.channel===ch?700:400};color:${t.channel===ch?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${lbl}${t.channel===ch?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`).join('')+
-    `<div style="border-top:1px solid var(--border);margin:4px 0"></div>
-    <div onclick="doMoveToBranding('${tid}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${getAutoStrategyLinks(t).includes('hr-branding')?700:400};color:${getAutoStrategyLinks(t).includes('hr-branding')?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span><i class="ti ti-palette" style="font-size:12px;margin-right:4px"></i>Branding bucket</span>${getAutoStrategyLinks(t).includes('hr-branding')?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`;
+    channels.map(([ch,lbl])=>`<div onclick="doMoveChannel('${tid}','${ch}')" style="padding:.35rem .625rem;border-radius:var(--r);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:space-between;font-weight:${t.channel===ch?700:400};color:${t.channel===ch?'var(--blue)':'var(--text)'}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">${lbl}${t.channel===ch?'<i class="ti ti-check" style="font-size:11px;color:var(--blue)"></i>':''}</div>`).join('');
   document.body.appendChild(pop);
   setTimeout(()=>document.addEventListener('click',()=>pop.remove(),{once:true}),50);
 }
 function doMoveChannel(tid,ch){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   const prev=t.channel;t.channel=ch;t.updatedAt=Date.now();
-  // Bucket semantics: explicitly placing a task in a channel bucket removes it
-  // from the keyword-matched Branding bucket (a task lives where you put it).
-  let brandingNote='';
-  if(getAutoStrategyLinks(t).includes('hr-branding')){
-    t.brandingExcluded=true;
-    t.strategyLinks=(t.strategyLinks||[]).filter(sid=>sid!=='hr-branding');
-    brandingNote=' · removed from Branding';
-  }
-  t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}${brandingNote}`,dot:'h-stage',ts:Date.now()});
-  logActivity('task','Channel moved',t.translation,(CH_LABEL[prev]||prev)+' → '+(CH_LABEL[ch]||ch)+brandingNote);
+  t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}`,dot:'h-stage',ts:Date.now()});
   saveData();renderMmTaskList();renderAll();
   document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
-  toast(`Moved to ${CH_LABEL[ch]||ch}${brandingNote?' — removed from Branding':''}`);
-}
-function doMoveToBranding(tid){
-  const t=tasks.find(x=>x.id===tid);if(!t)return;
-  t.brandingExcluded=false;
-  if(!(t.strategyLinks||[]).includes('hr-branding'))t.strategyLinks=[...(t.strategyLinks||[]),'hr-branding'];
-  if(t.strategyMode==='none')t.strategyMode='auto'; // un-suppress so the link shows
-  t.updatedAt=Date.now();
-  t.history.push({event:'stage',detail:'Added to Branding bucket',dot:'h-classify',ts:Date.now()});
-  logActivity('task','Added to Branding',t.translation,'');
-  saveData();renderMmTaskList();renderAll();
-  document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
-  toast('Added to Branding');
-}
-
-// ── DRAG & DROP — drag task cards onto bucket tabs to move them ──────────
-let _dragTid=null;
-// Which Marketing Management tabs accept drops, and what they mean
-const MM_DROP_TARGETS={seo:'seo',paid:'paid',social:'social',video:'video',ops:'ops',branding:'__branding__'};
-function taskDragStart(e,tid){
-  _dragTid=tid;
-  e.dataTransfer.effectAllowed='move';
-  try{e.dataTransfer.setData('text/plain',tid);}catch(err){}
-  e.currentTarget.style.opacity='.45';
-  // Light up valid drop targets
-  Object.keys(MM_DROP_TARGETS).forEach(k=>{
-    const btn=document.getElementById('mmt-'+k);
-    if(btn)btn.style.boxShadow='inset 0 -2px 0 var(--blue)';
-  });
-}
-function taskDragEnd(e){
-  e.currentTarget.style.opacity='';
-  _dragTid=null;
-  Object.keys(MM_DROP_TARGETS).forEach(k=>{
-    const btn=document.getElementById('mmt-'+k);
-    if(btn){btn.style.boxShadow='';btn.style.background='';}
-  });
-}
-function bucketDragOver(e){
-  if(!_dragTid)return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect='move';
-  e.currentTarget.style.background='var(--blue-l)';
-}
-function bucketDragLeave(e){e.currentTarget.style.background='';}
-function bucketDrop(e,key){
-  e.preventDefault();
-  e.currentTarget.style.background='';
-  const tid=_dragTid||e.dataTransfer.getData('text/plain');
-  if(!tid)return;
-  const target=MM_DROP_TARGETS[key];
-  if(target==='__branding__')doMoveToBranding(tid);
-  else doMoveChannel(tid,target);
-}
-// Attach drop handlers to the Marketing Management tabs once the DOM is ready
-function initBucketDropTargets(){
-  Object.keys(MM_DROP_TARGETS).forEach(k=>{
-    const btn=document.getElementById('mmt-'+k);
-    if(!btn||btn._dropWired)return;
-    btn._dropWired=true;
-    btn.addEventListener('dragover',bucketDragOver);
-    btn.addEventListener('dragleave',bucketDragLeave);
-    btn.addEventListener('drop',e=>bucketDrop(e,k));
-  });
+  toast(`Moved to ${CH_LABEL[ch]||ch}`);
 }
 
 
@@ -5416,7 +5733,7 @@ function saveTask(){
   const stages=stageDataArr.map(s=>({...s}));
   if(stages.length)stages[0].status='active';
   tasks.unshift({id:uid(),raw,translation:document.getElementById('f-translation').value.trim()||raw,type:selTypeVal,status:'open',priority:selPrioVal,template:selTplVal,channel:document.getElementById('f-ch-new').value,via:document.getElementById('f-via').value,infoNeeded:document.getElementById('f-info-needed').value.trim(),infoFrom:document.getElementById('f-info-from').value.trim(),contingency:document.getElementById('f-contingency').value.trim(),contingencyOwner:document.getElementById('f-contingency-owner').value.trim(),stages,brief:'',history:[{event:'created',detail:'Logged from Muhamed via '+document.getElementById('f-via').value,dot:'h-create',ts:now2},{event:'classified',detail:'Classified as '+TYPE_LABEL[selTypeVal]+' · '+PRIO_LABEL[selPrioVal]+' · '+(TPL_LABEL[selTplVal]||'Custom'),dot:'h-classify',ts:now2}],created:now2,updatedAt:now2});
-  saveData();logActivity('task','Task created',document.getElementById('f-translation').value.trim()||raw,TYPE_LABEL[selTypeVal]+' · '+PRIO_LABEL[selPrioVal]+' · via '+document.getElementById('f-via').value);renderAll();closeTaskOverlay();toast('Task saved');
+  saveData();renderAll();closeTaskOverlay();toast('Task saved');
 }
 
 function openStageUpdate(taskId,idx){
@@ -5456,8 +5773,6 @@ function saveStageUpdate(){
   else if(a==='move-deadline'){const newDue=document.getElementById('so-new-due').value;const reason=document.getElementById('so-deadline-reason').value.trim();if(!newDue){toast('Pick a new date first');return;}const oldDue=s.due||'no date';s.due=newDue;t.history.push({event:'stage',detail:`Deadline moved: ${s.name} from ${oldDue} → ${newDue}${reason?' — '+reason:''}`,dot:'h-stage',ts:now2});}
   else if(a==='reclassify'){const newType=document.getElementById('so-new-type').value;const reason=document.getElementById('so-reclassify-reason').value.trim();t.history.push({event:'back',detail:'Reclassified: '+TYPE_LABEL[t.type]+' → '+TYPE_LABEL[newType]+(reason?' — '+reason:''),dot:'h-back',ts:now2});t.type=newType;}
   t.updatedAt=now2;
-  const actLabel={complete:'Stage completed','mz-approve':'MZ approved','mz-reject':'MZ rejected — sent back',note:'Note added','move-deadline':'Deadline moved',reclassify:'Task reclassified'}[a]||'Stage updated';
-  logActivity('stage',actLabel,t.translation,'Stage '+(idx+1)+': '+s.name);
   saveData();renderAll();closeStageOverlay();toast('Updated');
 }
 
@@ -5470,7 +5785,7 @@ function toggleHistory(id,btn){
   }
   document.getElementById('hist-'+id)?.classList.toggle('open');
 }
-function deleteTask(id){if(confirm('Delete this task?')){const dt=tasks.find(t=>t.id===id);tasks=tasks.filter(t=>t.id!==id);logActivity('task','Task deleted',dt?dt.translation:id,'');saveData();renderAll();toast('Deleted');}}
+function deleteTask(id){if(confirm('Delete this task?')){tasks=tasks.filter(t=>t.id!==id);saveData();renderAll();toast('Deleted');}}
 
 function prioTag(p){const dots={urgent:'var(--red)',high:'var(--amber)',normal:'var(--text3)',low:'var(--green)'};return`<span class="prio-tag prio-${p}"><span class="prio-dot" style="background:${dots[p]}"></span>${PRIO_LABEL[p]}</span>`;}
 
@@ -5504,16 +5819,9 @@ function personChipsHtml(ownerStr,taskId){
 // ── STRATEGY AUTO-LINKING ─────────────────────────────────────────────────
 const BRANDING_KEYWORDS=['banner','bio','t-shirt','tshirt','merch','photoshoot','headshot','appraisal','linkedin bio','company page','culture'];
 function getAutoStrategyLinks(t){
-  // Manual override wins over all keyword/channel auto-linking.
-  // strategyMode: 'auto' (default) | 'none' | '<strategy-id>'
-  if(t.strategyMode==='none')return[];
-  if(t.strategyMode&&t.strategyMode!=='auto'){
-    const chosen=strategies.find(s=>s.id===t.strategyMode);
-    return chosen?[t.strategyMode]:[];
-  }
   const links=[];
   const trans=(t.translation||t.raw||'').toLowerCase();
-  const brandingMatch=(BRANDING_KEYWORDS.some(kw=>trans.includes(kw))||t.id==='li1')&&!t.brandingExcluded;
+  const brandingMatch=BRANDING_KEYWORDS.some(kw=>trans.includes(kw))||t.id==='li1';
   if(brandingMatch)links.push('hr-branding');
   if(t.channel==='paid')links.push('paid-strategy');
   if(t.channel==='seo'||t.channel==='web')links.push('seo-strategy-2026');
@@ -5558,8 +5866,6 @@ function saveFileLinks(){
   });
   if(!added){toast('Add at least one URL');return;}
   t.updatedAt=Date.now();
-  t.history.push({event:'stage',detail:added+' file link'+(added!==1?'s':'')+' added',dot:'h-stage',ts:Date.now()});
-  logActivity('task','File links added',t.translation,added+' link'+(added!==1?'s':''));
   document.getElementById('file-link-overlay').classList.remove('open');
   saveData();renderTasks();
   toast(`${added} file link${added!==1?'s':''} added`);
@@ -5641,23 +5947,11 @@ function openStrategyPanel(sid,e){
       </div>`).join('')}
     </div>`:''}
     ${linkedTasks.length?`<div class="panel-section">
-      <div class="panel-section-title"><i class="ti ti-link" style="font-size:12px"></i> Linked tasks (${linkedTasks.filter(t=>t.status==='approved').length}/${linkedTasks.length} complete)</div>
-      ${linkedTasks.map(t=>{
-        const done=t.stages.filter(st=>st.status==='done').length;
-        const pct=t.stages.length?Math.round(done/t.stages.length*100):0;
-        const activeIdx=t.stages.findIndex(st=>st.status==='active');
-        const activeStage=activeIdx>=0?t.stages[activeIdx]:null;
-        const isComplete=t.status==='approved';
-        return`<div class="panel-task-item" style="${isComplete?'opacity:.6':''}">
-        <div style="display:flex;align-items:flex-start;gap:8px">
-          <div style="flex:1;min-width:0">
-            <div class="panel-task-name" style="${isComplete?'text-decoration:line-through':''}">${t.translation}</div>
-            <div class="panel-task-meta">${isComplete?'✓ Complete':(STATUS_LABEL[t.status]||t.status)+(activeStage?' · '+activeStage.name:'')} · ${pct}%</div>
-            <div class="prog-bar" style="margin-top:4px"><div class="prog-fill" style="width:${pct}%;${isComplete?'background:var(--green)':''}"></div></div>
-          </div>
-          ${!isComplete&&activeIdx>=0?`<button class="btn-icon btn" onclick="event.stopPropagation();closeAllPanels();openStageUpdate('${t.id}',${activeIdx})" title="Update current stage" style="flex-shrink:0"><i class="ti ti-player-track-next"></i></button>`:''}
-        </div>
-      </div>`;}).join('')}
+      <div class="panel-section-title"><i class="ti ti-link" style="font-size:12px"></i> Linked tasks (${linkedTasks.length})</div>
+      ${linkedTasks.map(t=>`<div class="panel-task-item">
+        <div class="panel-task-name">${t.translation}</div>
+        <div class="panel-task-meta">${STATUS_LABEL[t.status]||t.status}</div>
+      </div>`).join('')}
     </div>`:''}`;
   document.getElementById('strategy-drawer').classList.add('open');
   document.getElementById('panel-overlay').classList.add('open');
@@ -5758,7 +6052,7 @@ function buildTaskCard(t){
   // Person chips (active stage owner)
   const chipsHtml=personChipsHtml(activeOwner,t.id);
 
-  return`<div class="tc t-${t.type}" draggable="true" ondragstart="taskDragStart(event,'${t.id}')" ondragend="taskDragEnd(event)">
+  return`<div class="tc t-${t.type}">
   <div class="card-main">
     <div class="card-top">
       <div class="card-body" style="flex:1;min-width:0">
@@ -5822,13 +6116,6 @@ function openEditTask(tid,e){
   if(stageNameEl)stageNameEl.textContent=activeStage?`— ${activeStage.name}`:'— no active stage';
   document.getElementById('et-due').value=activeStage?.due||'';
   document.getElementById('et-due-reason').value='';
-  // Strategy link override selector — rebuild options from live strategies
-  const stratSel=document.getElementById('et-strategy');
-  if(stratSel){
-    stratSel.innerHTML='<option value="auto">Auto (keyword + channel matching)</option><option value="none">None — no strategy link</option>'+
-      strategies.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-    stratSel.value=t.strategyMode||'auto';
-  }
   document.getElementById('edit-task-title').textContent='Edit — '+t.translation.slice(0,40)+(t.translation.length>40?'…':'');
   document.getElementById('edit-task-overlay').classList.add('open');
 }
@@ -5848,14 +6135,6 @@ function saveEditTask(){
   t.contingencyOwner=g('et-contingency-owner');
   t.infoNeeded=g('et-info-needed');
   t.infoFrom=g('et-info-from');
-  // Strategy link override
-  const prevStratMode=t.strategyMode||'auto';
-  const newStratMode=g('et-strategy')||'auto';
-  if(newStratMode!==prevStratMode){
-    t.strategyMode=newStratMode;
-    const label=newStratMode==='auto'?'Auto':newStratMode==='none'?'None':(strategies.find(s=>s.id===newStratMode)?.name||newStratMode);
-    t.history.push({event:'stage',detail:'Strategy link changed → '+label,dot:'h-classify',ts:Date.now()});
-  }
   t.updatedAt=Date.now();
   // Update active stage due date if changed
   const activeStage=t.stages.find(s=>s.status==='active')||t.stages.find(s=>s.status!=='done');
@@ -5866,14 +6145,7 @@ function saveEditTask(){
     t.history.push({event:'stage',detail:`Deadline moved: ${activeStage.name} ${oldDue} → ${newDue}${dueReason?' — '+dueReason:''}`,dot:'h-stage',ts:Date.now()});
   }
   const note=prevChannel!==t.channel?` (moved from ${CH_LABEL[prevChannel]||prevChannel} → ${CH_LABEL[t.channel]||t.channel})`:'';
-  // Bucket semantics: changing channel pulls the task out of keyword-matched
-  // Branding, unless the user explicitly picked Branding in the strategy select.
-  if(prevChannel!==t.channel&&newStratMode==='auto'&&getAutoStrategyLinks(t).includes('hr-branding')&&!(t.strategyLinks||[]).includes('hr-branding')){
-    t.brandingExcluded=true;
-    t.history.push({event:'stage',detail:'Removed from Branding bucket (channel changed)',dot:'h-classify',ts:Date.now()});
-  }
   t.history.push({event:'stage',detail:'Task edited manually'+note,dot:'h-stage',ts:Date.now()});
-  logActivity('task','Task edited',t.translation,note?('Channel moved: '+(CH_LABEL[prevChannel]||prevChannel)+' → '+(CH_LABEL[t.channel]||t.channel)):'Fields updated');
   saveData();
   document.getElementById('edit-task-overlay').classList.remove('open');
   renderAll();
@@ -5911,7 +6183,6 @@ function saveNewStrategy(){
   strategies.unshift({id:uid(),name,brief:document.getElementById('sm-brief').value.trim(),owner:document.getElementById('sm-owner').value.trim(),status:document.getElementById('sm-status').value,created:Date.now(),gate:{exists:false,text:''},tracks:[],depChain:[],missing:[],journal:[{type:'note',text:'Strategy created',ts:Date.now()}]});
   ['sm-name','sm-brief','sm-owner'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('strategy-modal').classList.remove('open');
-  logActivity('strategy','Strategy created',name,'');
   saveData();renderStrategies();toast('Strategy saved');
 }
 function openJournalModal(sid){document.getElementById('jm-sid').value=sid;document.getElementById('jm-text').value='';document.getElementById('jm-type').value='note';document.getElementById('journal-modal').classList.add('open');}
@@ -5922,10 +6193,9 @@ function saveJournalEntry(){
   const s=strategies.find(i=>i.id===sid);if(!s)return;
   s.journal.unshift({type,text,ts:Date.now()});
   document.getElementById('journal-modal').classList.remove('open');
-  logActivity('strategy','Journal entry added',s.name,text.slice(0,120));
   saveData();renderStrategies();toast('Entry saved');
 }
-function deleteStrategy(id){if(confirm('Delete this strategy?')){const ds=strategies.find(s=>s.id===id);strategies=strategies.filter(s=>s.id!==id);logActivity('strategy','Strategy deleted',ds?ds.name:id,'');saveData();renderStrategies();toast('Deleted');}}
+function deleteStrategy(id){if(confirm('Delete this strategy?')){strategies=strategies.filter(s=>s.id!==id);saveData();renderStrategies();toast('Deleted');}}
 
 function renderStrategies(){
   document.getElementById('nb-strategy').textContent=strategies.length;
@@ -5938,38 +6208,7 @@ function renderStrategies(){
     const missingHtml=s.missing&&s.missing.length?`<div class="missing-section"><div class="missing-title">Missing pieces</div>${s.missing.map(m=>`<div class="missing-item"><i class="ti ti-alert-circle" style="font-size:13px;flex-shrink:0;margin-top:1px"></i>${m}</div>`).join('')}</div>`:'';
     const journalHtml=s.journal&&s.journal.length?`<div class="journal-section"><div class="journal-title"><span>Journal</span><button class="btn btn-sm" onclick="openJournalModal('${s.id}')"><i class="ti ti-plus"></i> Add entry</button></div>${s.journal.map((j,i)=>`<div class="j-item"><div style="display:flex;flex-direction:column;align-items:center"><div class="j-dot ${j.type}"></div>${i<s.journal.length-1?`<div class="j-vline"></div>`:''}</div><div class="j-body"><div class="j-type">${J_LABEL[j.type]||j.type}</div><div class="j-text">${j.text}</div><div class="j-time">${fmtTs(j.ts)}</div></div></div>`).join('')}</div>`:'';
     const filesHtml=s.files&&s.files.length?`<div style="padding:.625rem 1rem;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:4px"><i class="ti ti-paperclip" style="font-size:11px"></i>Files</span>${s.files.map(f=>`<a href="${f.url}" target="_blank" class="file-chip" onclick="event.stopPropagation()"><i class="ti ti-external-link" style="font-size:10px"></i>${f.label}</a>`).join('')}</div>`:'';
-    // ── LIVE LINKED TASKS — derived from actual task data, updates in real time ──
-    const linked=tasks.filter(t=>getAutoStrategyLinks(t).includes(s.id));
-    const linkedDone=linked.filter(t=>t.status==='approved').length;
-    const linkedHtml=linked.length?`<div style="margin-bottom:1.25rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.625rem">
-        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Linked tasks — live (${linkedDone}/${linked.length} complete)</div>
-      </div>
-      ${linked.map(t=>{
-        const done=t.stages.filter(st=>st.status==='done').length;
-        const pct=t.stages.length?Math.round(done/t.stages.length*100):0;
-        const activeIdx=t.stages.findIndex(st=>st.status==='active');
-        const activeStage=activeIdx>=0?t.stages[activeIdx]:null;
-        const isComplete=t.status==='approved';
-        const statusPill=isComplete?'<span class="pill pill-approved">✓ Complete</span>':`<span class="pill pill-${t.status}">${STATUS_LABEL[t.status]||t.status}</span>`;
-        return`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem .875rem;margin-bottom:6px;display:flex;align-items:center;gap:10px;${isComplete?'opacity:.65':''}">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;margin-bottom:3px;${isComplete?'text-decoration:line-through;color:var(--text2)':''}">${t.translation}</div>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              ${statusPill}
-              <span style="font-size:11px;color:var(--text3)">${activeStage?'Now: '+activeStage.name+(activeStage.owner?' · '+activeStage.owner:''):(isComplete?'All stages done':done+'/'+t.stages.length+' stages')}</span>
-            </div>
-            <div class="prog-bar" style="margin-top:6px;max-width:220px"><div class="prog-fill" style="width:${pct}%;${isComplete?'background:var(--green)':''}"></div></div>
-          </div>
-          <div style="display:flex;gap:2px;flex-shrink:0">
-            ${!isComplete&&activeIdx>=0?`<button class="btn-icon btn" onclick="event.stopPropagation();openStageUpdate('${t.id}',${activeIdx})" title="Update current stage"><i class="ti ti-player-track-next"></i></button>`:''}
-            <button class="btn-icon btn" onclick="event.stopPropagation();openAddFileLink('${t.id}')" title="Add file link"><i class="ti ti-paperclip"></i></button>
-            <button class="btn-icon btn" onclick="event.stopPropagation();openEditTask('${t.id}',event)" title="Edit task"><i class="ti ti-pencil"></i></button>
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`:'';
-    return`<div class="strategy-card ${s.status}-s"><div class="s-header" onclick="toggleStratBody('${s.id}')"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div class="s-name">${s.name}</div><div class="s-brief">${s.brief}</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="pill pill-${s.status==='active'?'reviewed':s.status==='stalled'?'pending':'approved'}">${STRAT_STATUS[s.status]}</span>${s.gate&&s.gate.exists?'<span class="pill pill-blocker" style="font-size:10px">🔒 Gate active</span>':''}${linked.length?`<span style="font-size:12px;color:var(--blue);font-weight:600">${linkedDone}/${linked.length} tasks complete</span>`:''}<span style="font-size:12px;color:var(--text2)">Started ${fmtDate(s.created)}</span>${s.owner?`<span style="font-size:12px;color:var(--text2)">${s.owner}</span>`:''}<span style="font-size:12px;color:var(--text2)">${s.journal?s.journal.length:0} journal entries</span>${s.files&&s.files.length?`<span style="font-size:12px;color:var(--blue)"><i class="ti ti-paperclip" style="font-size:11px"></i> ${s.files.length} file${s.files.length!==1?'s':''}</span>`:''}</div></div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn-icon btn" onclick="event.stopPropagation();openJournalModal('${s.id}')" title="Add journal entry"><i class="ti ti-pencil"></i></button><button class="btn-icon btn" onclick="event.stopPropagation();deleteStrategy('${s.id}')" title="Delete"><i class="ti ti-trash"></i></button></div></div></div><div class="s-body" id="sb-${s.id}">${gateHtml}${linkedHtml}${tracksHtml}${depHtml}${missingHtml}${journalHtml}</div>${filesHtml}</div>`;
+    return`<div class="strategy-card ${s.status}-s"><div class="s-header" onclick="toggleStratBody('${s.id}')"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div class="s-name">${s.name}</div><div class="s-brief">${s.brief}</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span class="pill pill-${s.status==='active'?'reviewed':s.status==='stalled'?'pending':'approved'}">${STRAT_STATUS[s.status]}</span>${s.gate&&s.gate.exists?'<span class="pill pill-blocker" style="font-size:10px">🔒 Gate active</span>':''}<span style="font-size:12px;color:var(--text2)">Started ${fmtDate(s.created)}</span>${s.owner?`<span style="font-size:12px;color:var(--text2)">${s.owner}</span>`:''}<span style="font-size:12px;color:var(--text2)">${s.journal?s.journal.length:0} journal entries</span>${s.files&&s.files.length?`<span style="font-size:12px;color:var(--blue)"><i class="ti ti-paperclip" style="font-size:11px"></i> ${s.files.length} file${s.files.length!==1?'s':''}</span>`:''}</div></div><div style="display:flex;gap:4px;flex-shrink:0"><button class="btn-icon btn" onclick="event.stopPropagation();openJournalModal('${s.id}')" title="Add journal entry"><i class="ti ti-pencil"></i></button><button class="btn-icon btn" onclick="event.stopPropagation();deleteStrategy('${s.id}')" title="Delete"><i class="ti ti-trash"></i></button></div></div></div><div class="s-body" id="sb-${s.id}">${gateHtml}${tracksHtml}${depHtml}${missingHtml}${journalHtml}</div>${filesHtml}</div>`;
   }).join('');
 }
 
@@ -5982,8 +6221,8 @@ function renderPrinciples(){
   if(!list.length){el.innerHTML='<div class="empty"><i class="ti ti-bookmark" style="font-size:32px;display:block;margin-bottom:.5rem;opacity:.3"></i>No principles yet.</div>';return;}
   el.innerHTML=list.map(p=>`<div class="principle-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text2);font-style:italic;margin-bottom:6px">"${p.raw}"</div>${p.meaning?`<div style="font-size:14px;font-weight:600;line-height:1.4;margin-bottom:6px">${p.meaning}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="p-tag">Principle</span>${p.applies?`<span style="font-size:12px;color:var(--text2)">Applies to: ${p.applies}</span>`:''}<span style="font-size:12px;color:var(--text2)">Via ${p.via}</span></div></div><button class="btn-icon btn" onclick="deletePrinciple('${p.id}')" title="Remove"><i class="ti ti-trash"></i></button></div></div>`).join('');
 }
-function savePrinciple(){const raw=document.getElementById('p-raw').value.trim();if(!raw)return;principles.unshift({id:uid(),raw,meaning:document.getElementById('p-meaning').value.trim(),applies:document.getElementById('p-applies').value.trim(),via:document.getElementById('p-via').value,created:Date.now()});['p-raw','p-meaning','p-applies'].forEach(id=>document.getElementById(id).value='');document.getElementById('principle-overlay').classList.remove('open');logActivity('principle','Principle saved',raw.slice(0,80),'');saveData();renderPrinciples();toast('Principle saved');}
-function deletePrinciple(id){const dp=principles.find(p=>p.id===id);principles=principles.filter(p=>p.id!==id);logActivity('principle','Principle removed',dp?dp.raw.slice(0,80):id,'');saveData();renderPrinciples();}
+function savePrinciple(){const raw=document.getElementById('p-raw').value.trim();if(!raw)return;principles.unshift({id:uid(),raw,meaning:document.getElementById('p-meaning').value.trim(),applies:document.getElementById('p-applies').value.trim(),via:document.getElementById('p-via').value,created:Date.now()});['p-raw','p-meaning','p-applies'].forEach(id=>document.getElementById(id).value='');document.getElementById('principle-overlay').classList.remove('open');saveData();renderPrinciples();toast('Principle saved');}
+function deletePrinciple(id){principles=principles.filter(p=>p.id!==id);saveData();renderPrinciples();}
 
 // ── STANDUP ────────────────────────────────────────────────────────────────
 const TEAM_ORDER=['Sauleh','Javeria','Anas','Bilal','Haider','Kasun','Praneeth','Muskan','Hamna','Sheeza'];
@@ -6344,38 +6583,27 @@ async function getGAdsAccessToken(){
   if(data.access_token){gAdsToken=data.access_token;return data.access_token;}
   throw new Error('Token refresh failed: '+(data.error||JSON.stringify(data)));
 }
-// Shared Google Ads query helper — ALWAYS routes through the main.js /gads-query
-// proxy. Direct browser calls to googleads.googleapis.com fail on CORS.
-async function gadsQuery(query){
-  const creds=getGAdsCreds();
-  if(!creds?.devToken||!creds?.customerId)throw new Error('Save credentials first');
-  const token=await getGAdsAccessToken();
-  const custId=creds.customerId.replace(/-/g,'');
-  const res=await fetch('http://127.0.0.1:8742/gads-query',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({customerId:custId,devToken:creds.devToken,accessToken:token,query})
-  });
-  const text=await res.text();
-  let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error('Proxy response ('+res.status+'): '+text.slice(0,200));}
-  if(!res.ok)throw new Error(data?.error?.message||data?.error||'HTTP '+res.status);
-  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
-  return data;
-}
 async function testGAdsConnection(){
   const statusEl=document.getElementById('gads-status');
   if(statusEl){statusEl.textContent='Testing…';statusEl.style.color='var(--text3)';}
   try{
-    const data=await gadsQuery('SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1');
+    const creds=getGAdsCreds();
+    if(!creds?.devToken||!creds?.customerId){throw new Error('Save credentials first');}
+    const token=await getGAdsAccessToken();
+    const custId=creds.customerId.replace(/-/g,'');
+    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
+      body:JSON.stringify({query:'SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1'})
+    });
+    const data=await res.json();
     if(data.results?.length){
       const name=data.results[0].customer?.descriptiveName||'Connected';
       if(statusEl){statusEl.textContent=`✓ Connected — ${name}`;statusEl.style.color='var(--green)';}
       const badge=document.getElementById('gads-status-badge');if(badge){badge.textContent='Connected ✓';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
-      logActivity('integration','Google Ads connected',name,'Connection test passed');
       toast('Google Ads connected');
-    }else{
-      throw new Error('No customer data returned — check Customer ID');
+    }else if(data.error){
+      throw new Error(data.error.message||JSON.stringify(data.error));
     }
   }catch(e){
     if(statusEl){statusEl.textContent='Failed: '+e.message;statusEl.style.color='var(--red)';}
@@ -6387,7 +6615,15 @@ async function fetchGAdsData(){
   const creds=getGAdsCreds();
   if(!creds?.devToken||!creds?.customerId){toast('Set up Google Ads in Settings first');return null;}
   try{
-    const data=await gadsQuery(`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`);
+    const token=await getGAdsAccessToken();
+    const custId=creds.customerId.replace(/-/g,'');
+    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
+      method:'POST',
+      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
+      body:JSON.stringify({query:`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
     return (data.results||[]).map(r=>({
       name:r.campaign?.name||'',
       status:r.campaign?.status||'',
@@ -6681,7 +6917,6 @@ async function syncAsana(){
   localStorage.setItem('ec-asana-last-sync',String(asanaLastSync));
   saveData();renderAll();
   asanaSyncing=false;
-  logActivity('asana','Asana sync',pushed+' pushed'+(failed?', '+failed+' failed':''),'');
   updateAsanaStatus('Synced — pushed '+pushed+(failed?', '+failed+' failed':''));
   toast('Asana sync complete');
 }
@@ -6694,7 +6929,6 @@ async function pullFromAsana(){
     try{pulled+=await pullAsanaTasksForChannel(cfg);}catch(e){console.log('Asana pull error',e);}
   }
   saveData();renderAll();
-  if(pulled)logActivity('asana','Pulled from Asana',pulled+' new task'+(pulled!==1?'s':''),'');
   toast(pulled?`Pulled ${pulled} new task${pulled!==1?'s':''} from Asana`:'No new tasks in Asana to pull');
 }
 function cleanOrphanedAsanaLinks(){
@@ -7767,24 +8001,21 @@ function renderAll(){
   try{renderStrategies();}catch(e){console.warn('[OS]',e);}
   try{renderPrinciples();}catch(e){console.warn('[OS]',e);}
   try{buildNotifications();}catch(e){}
-  // Re-render the dashboard skeleton only if dashboard is the currently active page —
-  // never navigate away from whatever tab the user is on.
-  var _activePage=document.querySelector('.page.active');
-  var _isDash=_activePage&&_activePage.id==='page-dashboard';
-  if(_isDash){
-    var _dsv=document.getElementById('dash-sv-main');
-    if(_dsv){
-      var _o=tasks.filter(function(t){return t.status!=='approved';}).length;
-      var _p=tasks.filter(function(t){return t.status==='pending';}).length;
-      var _b=tasks.filter(function(t){return t.type==='blocker'&&t.status!=='approved';}).length;
-      _dsv.innerHTML='<div style="padding:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--blue)">'+_o+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Open tasks</div></div>'+
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--amber)">'+_p+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Pending MZ</div></div>'+
-        '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--red)">'+_b+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Blockers</div></div>'+
-      '</div>';
-    }
-    setTimeout(function(){try{renderDashboardMain();}catch(e){console.warn('[OS]',e);}},80);
+  navTo('dashboard',document.getElementById('nav-dashboard'));
+  // Immediate skeleton so dashboard is never blank
+  var _dsv=document.getElementById('dash-sv-main');
+  if(_dsv){
+    var _o=tasks.filter(function(t){return t.status!=='approved';}).length;
+    var _p=tasks.filter(function(t){return t.status==='pending';}).length;
+    var _b=tasks.filter(function(t){return t.type==='blocker'&&t.status!=='approved';}).length;
+    _dsv.innerHTML='<div style="padding:1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'+
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--blue)">'+_o+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Open tasks</div></div>'+
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--amber)">'+_p+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Pending MZ</div></div>'+
+      '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center"><div style="font-size:40px;font-weight:800;color:var(--red)">'+_b+'</div><div style="font-size:12px;color:var(--text2);margin-top:4px">Blockers</div></div>'+
+    '</div>';
   }
+  // Defer heavy SVG charts
+  setTimeout(function(){try{renderDashboardMain();}catch(e){console.warn('[OS]',e);}},80);
   _updateNavBadges();
 }
 function _updateNavBadges(){
@@ -7792,7 +8023,6 @@ function _updateNavBadges(){
   const el=document.getElementById('nb-tasks');if(el)el.textContent=nonApproved||tasks.length;
   const sel=document.getElementById('nb-strategy');if(sel)sel.textContent=strategies.length;
   const pel=document.getElementById('nb-principles');if(pel)pel.textContent=principles.length;
-  const ael=document.getElementById('nb-activity');if(ael)ael.textContent=activityLog.length;
 }
 
 // ── NOTIFICATION BELL ────────────────────────────────────────────────────
@@ -9266,7 +9496,7 @@ function renderPaidLinkedInTab(){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-linkedin" style="font-size:2rem;display:block;margin-bottom:.75rem;color:#0A66C2"></i>
       <div style="font-weight:600;margin-bottom:.5rem">LinkedIn Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem;line-height:1.6">Needs a LinkedIn Marketing API OAuth token and Campaign Manager Account ID.<br>Add both in Settings → LinkedIn Ads, then connect here.</div>
+      <div style="font-size:13px;margin-bottom:1rem">You'll need a LinkedIn OAuth token and Campaign Manager Account ID</div>
       <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchLinkedInAds()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
     </div>`;return;
   }
@@ -9288,7 +9518,7 @@ function renderPaidMicrosoftTab(){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-bing" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--purple)"></i>
       <div style="font-weight:600;margin-bottom:.5rem">Microsoft Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem;line-height:1.6">Requires Azure admin consent from the Nexera Design tenant admin before OAuth can complete.<br>Once consent is granted: Settings → Microsoft Ads → Generate token → Save & connect.</div>
+      <div style="font-size:13px;margin-bottom:1rem">Add your credentials in Settings → Microsoft Ads, then connect.</div>
       <button class="btn btn-primary" onclick="fetchMsAds()"><i class="ti ti-plug"></i> Connect Microsoft Ads</button>
     </div>`;return;
   }
@@ -9342,8 +9572,21 @@ async function fetchGoogleAdsLive(){
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   const range=getPaidDateRange();
   try{
+    // Get a fresh access token using the adwords-scoped refresh token
+    const accessToken=await getGAdsAccessToken();
     const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
-    const data=await gadsQuery(query);
+    // Route through main.js /gads-query proxy (required to bypass CORS)
+    const res=await fetch('http://127.0.0.1:8742/gads-query',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customerId:cid,devToken,accessToken,query})
+    });
+    const text=await res.text();
+    let data;
+    console.log('[GAds] Raw response:', text.slice(0,500));
+    try{data=JSON.parse(text);}catch(e){throw new Error('Server response ('+res.status+'): '+text.slice(0,200));}
+    if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const rows=data.results||[];
     gadsData={
       spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
@@ -9360,7 +9603,6 @@ async function fetchGoogleAdsLive(){
       dateRange:range.gads,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
-    logActivity('integration','Google Ads refreshed','$'+Math.round(gadsData.spend)+' spend · '+gadsData.clicks.toLocaleString()+' clicks',gadsData.campaigns.length+' campaigns · '+range.gads);
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
     toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks · ${rows.length} campaigns`);
@@ -9414,15 +9656,12 @@ async function fetchMetaAds(){
     }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
     metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,fetched:Date.now()};
     localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
-    logActivity('integration','Meta Ads refreshed','$'+Math.round(metaAdsData.spend)+' spend · '+metaAdsData.clicks.toLocaleString()+' clicks','Last 7 days');
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
     toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
-    const expired=/expired|invalid.*token|OAuthException|Session has expired/i.test(e.message);
-    toast(expired?'Meta token expired — paste a fresh System User token in Settings → Meta Ads':'Meta Ads error: '+e.message);
-    console.error('[Meta Ads]',e);
+    toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
   }
 }
 
@@ -9444,7 +9683,6 @@ async function fetchLinkedInAds(){
     const el=data.elements?.[0]||{};
     liAdsData={spend:el.spend?.amount?parseFloat(el.spend.amount):0,impressions:el.impressions||0,clicks:el.clicks||0,leads:el.leadGenerationMailContactInfoShares||0,fetched:Date.now()};
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
-    logActivity('integration','LinkedIn Ads refreshed','$'+Math.round(liAdsData.spend)+' spend · '+liAdsData.clicks.toLocaleString()+' clicks','Last 7 days');
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
     toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
@@ -10844,6 +11082,672 @@ function renderSEOFunnel(){
   `;
 }
 
+// ══════════════════════════════════════════════════════════════
+// AUTH SYSTEM
+// ══════════════════════════════════════════════════════════════
+const SUPER_ADMINS=['daniyal','mz'];
+const SUPER_ADMIN_CREDS={
+  daniyal:{name:'Daniyal',password:'eracore2026'},
+  mz:{name:'Muhamed Zekic',password:'mz2026'}
+};
+function getSession(){try{return JSON.parse(localStorage.getItem('ec-session-v1')||'null');}catch(e){return null;}}
+function saveSession(s){localStorage.setItem('ec-session-v1',JSON.stringify(s));}
+function clearSession(){localStorage.removeItem('ec-session-v1');}
+function isSuperAdmin(){const s=getSession();return s&&SUPER_ADMINS.includes(s.username);}
+function getCurrentUser(){return getSession();}
+function getAdminUsers(){try{return JSON.parse(localStorage.getItem('ec-users-v1')||'[]');}catch(e){return[];}}
+function saveAdminUsers(u){localStorage.setItem('ec-users-v1',JSON.stringify(u));}
+
+function checkAndShowLogin(){
+  const s=getSession();
+  const loginEl=document.getElementById('login-screen');
+  if(!s||!s.username||(Date.now()-s.ts>7*24*60*60*1000)){
+    clearSession();
+    loginEl.style.display='flex';
+    return false;
+  }
+  loginEl.style.display='none';
+  updateUserChip();
+  return true;
+}
+function doLogin(){
+  const username=document.getElementById('login-username').value.trim().toLowerCase();
+  const password=document.getElementById('login-password').value;
+  const errEl=document.getElementById('login-error');
+  if(!username||!password){errEl.textContent='Please enter your username and password.';return;}
+  // Super admin check
+  if(SUPER_ADMINS.includes(username)){
+    const creds=SUPER_ADMIN_CREDS[username];
+    if(creds&&creds.password===password){
+      saveSession({username,name:creds.name,role:'superadmin',ts:Date.now()});
+      document.getElementById('login-screen').style.display='none';
+      errEl.textContent='';
+      updateUserChip();
+      return;
+    }
+  }
+  // Admin user check
+  const users=getAdminUsers();
+  const user=users.find(u=>u.username===username&&u.password===password);
+  if(user){
+    saveSession({username,name:user.name,role:'admin',ts:Date.now()});
+    document.getElementById('login-screen').style.display='none';
+    errEl.textContent='';
+    updateUserChip();
+    return;
+  }
+  errEl.textContent='Incorrect username or password.';
+}
+function doLogout(){
+  clearSession();
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-username').value='';
+  document.getElementById('login-password').value='';
+  document.getElementById('login-error').textContent='';
+}
+function updateUserChip(){
+  const s=getSession();if(!s)return;
+  const el=document.getElementById('user-chip');
+  const mgrLink=document.getElementById('nav-usermgmt-link');
+  const exportBtn=document.getElementById('lt-export-btn');
+  if(el){
+    const roleColor=s.role==='superadmin'?'var(--blue)':'var(--surface2)';
+    const roleTextColor=s.role==='superadmin'?'white':'var(--text2)';
+    const roleBorder=s.role==='superadmin'?'none':'1px solid var(--border)';
+    el.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${s.role==='superadmin'?'var(--blue)':'var(--text2)'};color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${s.name.charAt(0).toUpperCase()}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</div><span style="font-size:10px;background:${roleColor};color:${roleTextColor};padding:1px 6px;border-radius:10px;border:${roleBorder};font-weight:600">${s.role==='superadmin'?'Super admin':'Admin'}</span></div>`;
+  }
+  if(mgrLink)mgrLink.style.display=isSuperAdmin()?'flex':'none';
+  if(exportBtn)exportBtn.style.display=isSuperAdmin()?'inline-flex':'none';
+}
+
+// ── USER MANAGEMENT ────────────────────────────────────────────
+function openUserMgmt(){
+  umRenderList();
+  document.getElementById('um-overlay').classList.add('open');
+}
+function umToggleAddForm(){
+  const f=document.getElementById('um-add-form');
+  f.style.display=f.style.display==='none'?'block':'none';
+  if(f.style.display==='block'){
+    ['um-new-name','um-new-username','um-new-password'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('um-add-err').style.display='none';
+  }
+}
+function umRenderList(){
+  const users=getAdminUsers();
+  const el=document.getElementById('um-user-list');
+  if(!users.length){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text3);text-align:center">No admin users yet.</div>';return;}
+  el.innerHTML=users.map((u,i)=>`<div class="um-user-row">
+    <div class="um-avatar" style="background:var(--green)">${u.name.charAt(0).toUpperCase()}</div>
+    <div style="flex:1"><div style="font-weight:600">${u.name}</div><div style="font-size:12px;color:var(--text2)">${u.username}</div></div>
+    <span class="um-role-badge admin">Admin</span>
+    <button class="btn-icon btn" onclick="umDeleteUser(${i})" title="Remove user"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+  </div>`).join('');
+}
+function umAddUser(){
+  const name=document.getElementById('um-new-name').value.trim();
+  const username=document.getElementById('um-new-username').value.trim().toLowerCase();
+  const password=document.getElementById('um-new-password').value;
+  const errEl=document.getElementById('um-add-err');
+  if(!name||!username||!password){errEl.textContent='All fields required.';errEl.style.display='block';return;}
+  if(SUPER_ADMINS.includes(username)){errEl.textContent='That username is reserved.';errEl.style.display='block';return;}
+  const users=getAdminUsers();
+  if(users.find(u=>u.username===username)){errEl.textContent='Username already exists.';errEl.style.display='block';return;}
+  users.push({name,username,password});
+  saveAdminUsers(users);
+  toast(`Admin user "${name}" created`);
+  umToggleAddForm();
+  umRenderList();
+}
+function umDeleteUser(idx){
+  if(!confirm('Remove this user?'))return;
+  const users=getAdminUsers();
+  users.splice(idx,1);
+  saveAdminUsers(users);
+  umRenderList();
+  toast('User removed');
+}
+
+// ══════════════════════════════════════════════════════════════
+// LEAD OUTREACH TRACKER
+// ══════════════════════════════════════════════════════════════
+let ltLeads=[],ltActivities=[],ltSettings={maxTouch:4,followDays:3,autoDelist:true};
+const LT_LEADS_KEY='ec-lt-leads';
+const LT_ACT_KEY='ec-lt-activities';
+const LT_SETS_KEY='ec-lt-settings';
+
+function ltUid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function ltToday(){return new Date().toISOString().split('T')[0];}
+function ltDaysSince(d){if(!d)return 999;return Math.floor((Date.now()-new Date(d))/86400000);}
+
+function ltLoad(){
+  try{const r=localStorage.getItem(LT_LEADS_KEY);ltLeads=r?JSON.parse(r):[];}catch(e){ltLeads=[];}
+  try{const r=localStorage.getItem(LT_ACT_KEY);ltActivities=r?JSON.parse(r):[];}catch(e){ltActivities=[];}
+  try{
+    const r=localStorage.getItem(LT_SETS_KEY);
+    ltSettings=Object.assign({maxTouch:4,followDays:3,autoDelist:true},r?JSON.parse(r):{});
+  }catch(e){}
+}
+function ltSave(){
+  localStorage.setItem(LT_LEADS_KEY,JSON.stringify(ltLeads));
+  localStorage.setItem(LT_ACT_KEY,JSON.stringify(ltActivities));
+  localStorage.setItem(LT_SETS_KEY,JSON.stringify(ltSettings));
+}
+
+function ltGetStatus(lead){
+  if(lead.status==='converted')return'converted';
+  if(lead.status==='inactive')return'inactive';
+  const touches=ltActivities.filter(a=>a.leadId===lead.id&&a.type!=='note').length;
+  if(touches===0)return'new';
+  if(touches>=ltSettings.maxTouch&&ltSettings.autoDelist)return'inactive';
+  const last=ltActivities.filter(a=>a.leadId===lead.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(last&&ltDaysSince(last.date)>ltSettings.followDays)return'overdue';
+  return'active';
+}
+function ltGetTouches(id){return ltActivities.filter(a=>a.leadId===id&&a.type!=='note').length;}
+
+function ltSwitchTab(t,el){
+  document.querySelectorAll('.lt-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-outreach .lt-view').forEach(v=>v.classList.remove('active'));
+  if(el)el.classList.add('active');
+  const view=document.getElementById('lt-view-'+t);if(view)view.classList.add('active');
+  if(t==='activity')ltRenderTimeline();
+  if(t==='ltsettings')ltInitSettings();
+}
+
+function ltRender(){
+  ltRenderTable();
+  ltUpdateStats();
+  ltPopulateTlFilter();
+  ltInitSettings();
+  // Show/hide export for super admins
+  const exportBtn=document.getElementById('lt-export-btn');
+  if(exportBtn)exportBtn.style.display=isSuperAdmin()?'inline-flex':'none';
+}
+
+function ltUpdateStats(){
+  const s=ltLeads.map(l=>ltGetStatus(l));
+  const safe=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  safe('lt-s-total',ltLeads.length);
+  safe('lt-s-new',s.filter(x=>x==='new').length);
+  safe('lt-s-active',s.filter(x=>x==='active').length);
+  safe('lt-s-overdue',s.filter(x=>x==='overdue').length);
+  safe('lt-s-conv',s.filter(x=>x==='converted').length);
+  safe('lt-s-dead',s.filter(x=>x==='inactive').length);
+}
+
+function ltRenderTable(){
+  const q=(document.getElementById('lt-search')||{}).value?.toLowerCase()||'';
+  const fs=(document.getElementById('lt-filter-status')||{}).value||'';
+  const fsrc=(document.getElementById('lt-filter-source')||{}).value||'';
+  const max=ltSettings.maxTouch;
+  const superAdmin=isSuperAdmin();
+  let rows=ltLeads.filter(l=>{
+    const st=ltGetStatus(l);
+    if(fs&&st!==fs)return false;
+    if(fsrc&&l.source!==fsrc)return false;
+    if(q&&!`${l.name}${l.email}${l.company}`.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const stLbl={new:'Pending',active:'In progress',overdue:'Overdue',converted:'Converted',inactive:'Delisted'};
+  const srcLbl={hubspot:'HubSpot',excel:'Excel',manual:'Manual'};
+  const srcCls={hubspot:'src-hs',excel:'src-xl',manual:'src-manual'};
+  const nextActions=['Send intro email','Follow-up email','Try a call','Break-up message'];
+  const tbody=document.getElementById('lt-lead-body');
+  if(!tbody)return;
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">No leads match this filter</div></td></tr>';ltUpdateStats();return;}
+  tbody.innerHTML=rows.map(l=>{
+    const st=ltGetStatus(l);
+    const t=ltGetTouches(l.id);
+    const dots=Array.from({length:max},(_,i)=>{
+      if(i<t)return'<div class="lt-dot done"></div>';
+      if(i===t&&t<max)return'<div class="lt-dot next"></div>';
+      return'<div class="lt-dot pending"></div>';
+    }).join('');
+    const nextAction=st==='inactive'||st==='converted'?'—':nextActions[Math.min(t,3)];
+    const delistBtn=(st!=='inactive'&&st!=='converted'&&superAdmin)?`<button class="lt-action-btn" onclick="ltDelistLead('${l.id}')">Delist</button>`:'';
+    return`<tr>
+      <td><div style="font-weight:600">${l.name}</div><div style="font-size:11px;color:var(--text3)">${l.email}</div>${l.company?`<div style="font-size:11px;color:var(--text3)">${l.company}</div>`:''}</td>
+      <td><span class="lt-src ${srcCls[l.source]||'src-manual'}">${srcLbl[l.source]||l.source}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${l.formDate||'—'}</td>
+      <td><span class="lt-badge ${st}">${stLbl[st]}</span></td>
+      <td><div class="lt-touch-dots">${dots}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}/${max}</div></td>
+      <td style="font-size:12px;color:var(--text2)">${nextAction}</td>
+      <td><div style="display:flex;gap:6px">
+        <button class="lt-action-btn log" onclick="ltOpenLogFor('${l.id}')">Log</button>
+        ${delistBtn}
+      </div></td>
+    </tr>`;
+  }).join('');
+  ltUpdateStats();
+}
+
+function ltOpenAdd(){
+  ['lt-f-name','lt-f-email','lt-f-company','lt-f-phone','lt-f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const d=document.getElementById('lt-f-date');if(d)d.value=ltToday();
+  const s=document.getElementById('lt-f-source');if(s)s.value='manual';
+  const e=document.getElementById('lt-f-err');if(e)e.style.display='none';
+  document.getElementById('lt-modal-add').classList.add('open');
+}
+function ltSaveLead(){
+  const name=(document.getElementById('lt-f-name').value||'').trim();
+  const email=(document.getElementById('lt-f-email').value||'').trim();
+  if(!name||!email){document.getElementById('lt-f-err').style.display='block';return;}
+  ltLeads.push({
+    id:ltUid(),name,email,
+    company:(document.getElementById('lt-f-company').value||'').trim(),
+    phone:(document.getElementById('lt-f-phone').value||'').trim(),
+    formDate:document.getElementById('lt-f-date').value,
+    source:document.getElementById('lt-f-source').value,
+    notes:(document.getElementById('lt-f-notes').value||'').trim(),
+    status:'pending'
+  });
+  ltSave();document.getElementById('lt-modal-add').classList.remove('open');ltRenderTable();ltPopulateTlFilter();
+  toast('Lead added');
+}
+function ltDelistLead(id){
+  if(!isSuperAdmin()){toast('Super admin access required');return;}
+  const l=ltLeads.find(x=>x.id===id);if(l){l.status='inactive';ltSave();ltRenderTable();}
+}
+function ltOpenLogFor(leadId){
+  const sel=document.getElementById('lt-l-lead');
+  sel.innerHTML=ltLeads.map(l=>`<option value="${l.id}"${l.id===leadId?' selected':''}>${l.name}</option>`).join('');
+  const d=document.getElementById('lt-l-date');if(d)d.value=ltToday();
+  const n=document.getElementById('lt-l-notes');if(n)n.value='';
+  const e=document.getElementById('lt-l-err');if(e)e.style.display='none';
+  const r=document.getElementById('lt-l-response');if(r)r.value='none';
+  document.getElementById('lt-modal-log').classList.add('open');
+}
+function ltOpenLog(){ltOpenLogFor(null);}
+function ltSaveActivity(){
+  const leadId=document.getElementById('lt-l-lead').value;
+  if(!leadId){document.getElementById('lt-l-err').style.display='block';return;}
+  const response=document.getElementById('lt-l-response').value;
+  ltActivities.push({
+    id:ltUid(),leadId,
+    type:document.getElementById('lt-l-type').value,
+    date:document.getElementById('lt-l-date').value,
+    notes:(document.getElementById('lt-l-notes').value||'').trim(),
+    response
+  });
+  if(response==='converted'){const l=ltLeads.find(x=>x.id===leadId);if(l)l.status='converted';}
+  if(response==='negative'){const l=ltLeads.find(x=>x.id===leadId);if(l)l.status='inactive';}
+  ltSave();document.getElementById('lt-modal-log').classList.remove('open');ltRenderTable();
+  if(document.getElementById('lt-view-activity')?.classList.contains('active'))ltRenderTimeline();
+  toast('Activity logged');
+}
+function ltOpenImport(){
+  const t=document.getElementById('lt-import-text');if(t)t.value='';
+  const e=document.getElementById('lt-import-err');if(e)e.style.display='none';
+  document.getElementById('lt-modal-import').classList.add('open');
+}
+function ltDoImport(){
+  const raw=(document.getElementById('lt-import-text').value||'').trim();
+  const errEl=document.getElementById('lt-import-err');
+  if(!raw){errEl.textContent='Paste some data first.';errEl.style.display='block';return;}
+  const src=document.getElementById('lt-import-source').value;
+  const lines=raw.split('\n').filter(l=>l.trim());
+  let count=0;
+  lines.forEach(line=>{
+    const p=line.split(/[,\t]/).map(s=>s.trim());
+    if(p.length<2)return;
+    ltLeads.push({id:ltUid(),name:p[0]||'Unknown',email:p[1]||'',company:p[2]||'',phone:p[3]||'',formDate:p[4]||ltToday(),source:src,notes:'',status:'pending'});
+    count++;
+  });
+  if(!count){errEl.textContent='Could not parse leads. Check format.';errEl.style.display='block';return;}
+  ltSave();document.getElementById('lt-modal-import').classList.remove('open');ltRenderTable();ltPopulateTlFilter();
+  toast(`${count} lead${count!==1?'s':''} imported`);
+}
+function ltExport(){
+  if(!isSuperAdmin()){toast('Super admin access required');return;}
+  const rows=[['Name','Email','Company','Phone','Form date','Source','Status','Touchpoints']];
+  ltLeads.forEach(l=>{
+    rows.push([l.name,l.email,l.company,l.phone,l.formDate,l.source,ltGetStatus(l),ltGetTouches(l.id)]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='leads-export-'+ltToday()+'.csv';a.click();
+  toast('Exported');
+}
+function ltRenderTimeline(){
+  const filter=(document.getElementById('lt-tl-filter')||{}).value||'';
+  let acts=[...ltActivities].sort((a,b)=>b.date.localeCompare(a.date));
+  if(filter)acts=acts.filter(a=>a.leadId===filter);
+  const rLabels={none:'No response',positive:'Positive',negative:'Not interested',converted:'Converted'};
+  const el=document.getElementById('lt-timeline-list');if(!el)return;
+  if(!acts.length){el.innerHTML='<div class="empty">No activity logged yet.</div>';return;}
+  el.innerHTML=acts.map(a=>{
+    const lead=ltLeads.find(l=>l.id===a.leadId);
+    const iconCls=a.type==='email'?'email':a.type==='call'?'call':'note';
+    const icon=a.type==='email'?'<i class="ti ti-mail"></i>':a.type==='call'?'<i class="ti ti-phone"></i>':'<i class="ti ti-notes"></i>';
+    return`<div class="lt-tl-item">
+      <div class="lt-tl-icon ${iconCls}">${icon}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${lead?lead.name:'Unknown'} — ${a.type}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.date} · ${rLabels[a.response]||'—'}${a.notes?' · '+a.notes:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function ltPopulateTlFilter(){
+  const sel=document.getElementById('lt-tl-filter');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All leads</option>'+ltLeads.map(l=>`<option value="${l.id}"${l.id===cur?' selected':''}>${l.name}</option>`).join('');
+}
+function ltInitSettings(){
+  const mt=document.getElementById('lt-max-touch');if(mt)mt.value=ltSettings.maxTouch;
+  const fd=document.getElementById('lt-follow-days');if(fd)fd.value=ltSettings.followDays;
+  const ad=document.getElementById('lt-auto-delist');if(ad)ad.checked=ltSettings.autoDelist;
+}
+function ltSaveSetting(){
+  ltSettings.maxTouch=parseInt(document.getElementById('lt-max-touch').value)||4;
+  ltSettings.followDays=parseInt(document.getElementById('lt-follow-days').value)||3;
+  ltSettings.autoDelist=document.getElementById('lt-auto-delist').checked;
+  ltSave();ltRenderTable();
+}
+function ltDraftEmail(n){
+  const scripts=['','Warm intro email — reference the form they filled on eracore.com, introduce Eracore\'s BIM/VDC preconstruction services, ask for a short call.','Follow-up email (3 days later) — brief, reference the intro, ask if they had a chance to review.','Phone call / voicemail script — introduce yourself, mention the form, keep it under 30 seconds, leave a callback number.','Break-up message — polite close, keep the door open, mention they can reach out anytime.'];
+  toast(`Draft #${n}: ${scripts[n]}`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PRE-SALES MODULE
+// ══════════════════════════════════════════════════════════════
+let psProspects=[],psActivity=[];
+const PS_PROS_KEY='ec-ps-prospects';
+const PS_ACT_KEY='ec-ps-activity';
+const PS_STAGES={
+  contacted:{label:'Contacted',cls:'contacted'},
+  proposal:{label:'Proposal Sent',cls:'proposal'},
+  followup:{label:'Follow-up',cls:'followup'},
+  negotiating:{label:'Negotiating',cls:'negotiating'},
+  won:{label:'Closed — Won',cls:'won'},
+  lost:{label:'Closed — Lost',cls:'lost'}
+};
+let psStageFilter='';
+
+function psUid(){return 'ps'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function psToday(){return new Date().toISOString().split('T')[0];}
+
+function psLoad(){
+  try{const r=localStorage.getItem(PS_PROS_KEY);psProspects=r?JSON.parse(r):[];}catch(e){psProspects=[];}
+  try{const r=localStorage.getItem(PS_ACT_KEY);psActivity=r?JSON.parse(r):[];}catch(e){psActivity=[];}
+}
+function psSave(){
+  localStorage.setItem(PS_PROS_KEY,JSON.stringify(psProspects));
+  localStorage.setItem(PS_ACT_KEY,JSON.stringify(psActivity));
+}
+
+function psSwitchTab(t,el){
+  document.querySelectorAll('#page-presales .lt-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-presales .lt-view').forEach(v=>v.classList.remove('active'));
+  if(el)el.classList.add('active');
+  const view=document.getElementById('ps-view-'+t);if(view)view.classList.add('active');
+  if(t==='psactivity')psRenderTimeline();
+  if(t==='closed')psRenderClosed();
+}
+
+function psRender(){
+  psUpdateStats();
+  psRenderPipeline();
+  psPoplFilter();
+}
+function psUpdateStats(){
+  const active=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
+  const proposals=psProspects.filter(p=>p.stage==='proposal');
+  const won=psProspects.filter(p=>p.stage==='won');
+  const pipeValue=active.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const safe=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  safe('ps-s-active',active.length);
+  safe('ps-s-proposal',proposals.length);
+  safe('ps-s-won',won.length);
+  safe('ps-s-value','$'+pipeValue.toLocaleString());
+}
+function psFilterStage(stage,btn){
+  psStageFilter=stage;
+  document.querySelectorAll('#page-presales button[id^="ps-stg-"]').forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';});
+  if(btn){btn.style.background='var(--text)';btn.style.color='white';btn.style.borderColor='var(--text)';}
+  psRenderPipeline();
+}
+function psRenderPipeline(){
+  const el=document.getElementById('ps-pipeline-list');if(!el)return;
+  const activeProspects=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
+  let filtered=psStageFilter?activeProspects.filter(p=>p.stage===psStageFilter):activeProspects;
+  if(!filtered.length){
+    el.innerHTML='<div class="empty">No active prospects'+(psStageFilter?' in this stage':'')+'.<br><button class="btn btn-primary" onclick="psOpenAdd()" style="margin-top:1rem"><i class="ti ti-plus"></i> Add first prospect</button></div>';
+    return;
+  }
+  // Group by stage
+  const stageOrder=['contacted','proposal','followup','negotiating'];
+  let html='';
+  if(!psStageFilter){
+    stageOrder.forEach(stg=>{
+      const group=filtered.filter(p=>p.stage===stg);
+      if(!group.length)return;
+      const sc=PS_STAGES[stg];
+      html+=`<div style="margin-bottom:1.5rem">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;display:flex;align-items:center;gap:8px">
+          <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
+          <span style="font-size:12px;color:var(--text3)">${group.length} prospect${group.length!==1?'s':''}</span>
+        </div>
+        <div class="ps-pipeline">${group.map(p=>psCardHtml(p)).join('')}</div>
+      </div>`;
+    });
+  } else {
+    html=`<div class="ps-pipeline">${filtered.map(p=>psCardHtml(p)).join('')}</div>`;
+  }
+  el.innerHTML=html;
+}
+function psCardHtml(p){
+  const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
+  const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const lastActText=lastAct?`Last: ${lastAct.date} · ${lastAct.type}`:'No activity yet';
+  const valueStr=p.value?`<span style="font-size:12px;color:var(--green);font-weight:600">$${parseFloat(p.value).toLocaleString()}</span>`:'';
+  return`<div class="ps-card stage-${p.stage}" onclick="psOpenDetail('${p.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:.5rem">
+      <div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:2px">${p.name}</div>
+        <div style="font-size:12px;color:var(--text2)">${p.company}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        ${valueStr}
+        <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;color:var(--text3)"><i class="ti ti-source-code" style="font-size:11px"></i> ${p.source||'Unknown'}</span>
+      <span style="font-size:11px;color:var(--text3)">·</span>
+      <span style="font-size:11px;color:var(--text3)">${lastActText}</span>
+      <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();psOpenLogFor('${p.id}')"><i class="ti ti-notes"></i> Log</button>
+    </div>
+  </div>`;
+}
+function psOpenAdd(){
+  ['ps-f-name','ps-f-company','ps-f-email','ps-f-phone','ps-f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const v=document.getElementById('ps-f-value');if(v)v.value='';
+  const d=document.getElementById('ps-f-date');if(d)d.value=psToday();
+  const s=document.getElementById('ps-f-stage');if(s)s.value='contacted';
+  const e=document.getElementById('ps-f-err');if(e)e.style.display='none';
+  document.getElementById('ps-modal-add').classList.add('open');
+}
+function psSaveProspect(){
+  const name=(document.getElementById('ps-f-name').value||'').trim();
+  const company=(document.getElementById('ps-f-company').value||'').trim();
+  if(!name||!company){document.getElementById('ps-f-err').style.display='block';return;}
+  psProspects.push({
+    id:psUid(),name,company,
+    email:(document.getElementById('ps-f-email').value||'').trim(),
+    phone:(document.getElementById('ps-f-phone').value||'').trim(),
+    source:document.getElementById('ps-f-source').value,
+    value:(document.getElementById('ps-f-value').value||'').trim(),
+    stage:document.getElementById('ps-f-stage').value,
+    mqlDate:document.getElementById('ps-f-date').value,
+    notes:(document.getElementById('ps-f-notes').value||'').trim(),
+    created:Date.now()
+  });
+  psSave();document.getElementById('ps-modal-add').classList.remove('open');psRender();
+  toast('Prospect added');
+}
+function psOpenLogFor(prospectId){
+  const sel=document.getElementById('ps-l-prospect');
+  const active=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
+  sel.innerHTML=psProspects.map(p=>`<option value="${p.id}"${p.id===prospectId?' selected':''}>${p.name} — ${p.company}</option>`).join('');
+  if(prospectId)sel.value=prospectId;
+  const d=document.getElementById('ps-l-date');if(d)d.value=psToday();
+  const n=document.getElementById('ps-l-notes');if(n)n.value='';
+  const o=document.getElementById('ps-l-outcome');if(o)o.value='none';
+  const rw=document.getElementById('ps-l-reason-wrap');if(rw)rw.style.display='none';
+  const e=document.getElementById('ps-l-err');if(e)e.style.display='none';
+  // watch outcome change
+  if(o)o.onchange=()=>{const rw=document.getElementById('ps-l-reason-wrap');if(rw)rw.style.display=(o.value==='won'||o.value==='lost')?'block':'none';};
+  document.getElementById('ps-modal-log').classList.add('open');
+}
+function psOpenLog(){psOpenLogFor(null);}
+function psSaveActivity(){
+  const prospectId=document.getElementById('ps-l-prospect').value;
+  if(!prospectId){document.getElementById('ps-l-err').style.display='block';return;}
+  const outcome=document.getElementById('ps-l-outcome').value;
+  const reason=(document.getElementById('ps-l-reason').value||'').trim();
+  psActivity.push({
+    id:psUid(),prospectId,
+    type:document.getElementById('ps-l-type').value,
+    date:document.getElementById('ps-l-date').value,
+    notes:(document.getElementById('ps-l-notes').value||'').trim(),
+    outcome,reason
+  });
+  // Update stage based on outcome
+  const p=psProspects.find(x=>x.id===prospectId);
+  if(p){
+    if(outcome==='won')p.stage='won';
+    else if(outcome==='lost')p.stage='lost';
+    else if(outcome==='proposal')p.stage='proposal';
+    else if(outcome==='negotiating')p.stage='negotiating';
+  }
+  psSave();document.getElementById('ps-modal-log').classList.remove('open');psRender();
+  if(document.getElementById('ps-view-psactivity')?.classList.contains('active'))psRenderTimeline();
+  toast('Touchpoint logged');
+}
+function psRenderTimeline(){
+  const filter=(document.getElementById('ps-tl-filter')||{}).value||'';
+  let acts=[...psActivity].sort((a,b)=>b.date.localeCompare(a.date));
+  if(filter)acts=acts.filter(a=>a.prospectId===filter);
+  const el=document.getElementById('ps-timeline-list');if(!el)return;
+  if(!acts.length){el.innerHTML='<div class="empty">No activity logged yet.</div>';return;}
+  const outcomeLbl={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
+  el.innerHTML=acts.map(a=>{
+    const p=psProspects.find(x=>x.id===a.prospectId);
+    const iconCls={call:'call',meeting:'meeting',email:'email',proposal:'proposal',note:'note'}[a.type]||'note';
+    const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
+    return`<div class="ps-tl-item">
+      <div class="ps-tl-icon ${iconCls}">${icons[a.type]||icons.note}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${p?`${p.name} — ${p.company}`:('Unknown')} · ${a.type}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.date} · ${outcomeLbl[a.outcome]||'—'}${a.notes?' · '+a.notes:''}</div>
+        ${a.reason?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Reason: ${a.reason}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function psPoplFilter(){
+  const sel=document.getElementById('ps-tl-filter');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All prospects</option>'+psProspects.map(p=>`<option value="${p.id}"${p.id===cur?' selected':''}>${p.name} — ${p.company}</option>`).join('');
+}
+function psRenderClosed(){
+  const el=document.getElementById('ps-closed-list');if(!el)return;
+  const won=psProspects.filter(p=>p.stage==='won');
+  const lost=psProspects.filter(p=>p.stage==='lost');
+  const wonValue=won.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
+  const winRate=psProspects.filter(p=>p.stage==='won'||p.stage==='lost').length>0?
+    Math.round(won.length/(won.length+lost.length)*100):0;
+  let html=`<div class="lt-stat-grid" style="margin-bottom:1.5rem">
+    <div class="lt-stat"><div class="lt-stat-label">Won</div><div class="lt-stat-num success">${won.length}</div></div>
+    <div class="lt-stat"><div class="lt-stat-label">Lost</div><div class="lt-stat-num" style="color:var(--red)">${lost.length}</div></div>
+    <div class="lt-stat"><div class="lt-stat-label">Win rate</div><div class="lt-stat-num accent">${winRate}%</div></div>
+    <div class="lt-stat"><div class="lt-stat-label">Revenue closed</div><div class="lt-stat-num success">$${wonValue.toLocaleString()}</div></div>
+  </div>`;
+  if(!won.length&&!lost.length){html+='<div class="empty">No closed deals yet.</div>';el.innerHTML=html;return;}
+  const mkRow=(p,outcome)=>{
+    const sc=PS_STAGES[outcome];
+    const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    return`<div class="ps-card stage-${outcome}" style="margin-bottom:8px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div>
+          <div style="font-weight:600">${p.name}</div>
+          <div style="font-size:12px;color:var(--text2)">${p.company} · ${p.source||'—'}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
+          ${p.value?`<div style="font-size:12px;color:var(--text2);margin-top:3px">$${parseFloat(p.value).toLocaleString()}</div>`:''}
+        </div>
+      </div>
+      ${lastAct&&lastAct.reason?`<div style="font-size:12px;color:var(--text2);margin-top:.5rem">Reason: ${lastAct.reason}</div>`:''}
+    </div>`;
+  };
+  if(won.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Won (${won.length})</div>${won.map(p=>mkRow(p,'won')).join('')}`;
+  if(lost.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .75rem">Lost (${lost.length})</div>${lost.map(p=>mkRow(p,'lost')).join('')}`;
+  el.innerHTML=html;
+}
+function psOpenDetail(id){
+  const p=psProspects.find(x=>x.id===id);if(!p)return;
+  const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
+  const acts=psActivity.filter(a=>a.prospectId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  const outcomeLbl={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
+  const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
+  document.getElementById('ps-panel-name').textContent=p.name;
+  document.getElementById('ps-panel-body').innerHTML=`
+    <div class="panel-section">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
+        <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
+        ${p.value?`<span style="font-size:13px;font-weight:600;color:var(--green)">$${parseFloat(p.value).toLocaleString()}</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+        <div><span style="color:var(--text2)">Company</span><div style="font-weight:500;margin-top:2px">${p.company||'—'}</div></div>
+        <div><span style="color:var(--text2)">Source</span><div style="font-weight:500;margin-top:2px">${p.source||'—'}</div></div>
+        <div><span style="color:var(--text2)">Email</span><div style="font-weight:500;margin-top:2px">${p.email||'—'}</div></div>
+        <div><span style="color:var(--text2)">Phone</span><div style="font-weight:500;margin-top:2px">${p.phone||'—'}</div></div>
+        <div><span style="color:var(--text2)">MQL date</span><div style="font-weight:500;margin-top:2px">${p.mqlDate||'—'}</div></div>
+      </div>
+      ${p.notes?`<div style="margin-top:.75rem;font-size:12px;color:var(--text2);background:var(--surface2);padding:.625rem .75rem;border-radius:var(--r);line-height:1.5">${p.notes}</div>`:''}
+    </div>
+    <div class="panel-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <div class="panel-section-title">Stage</div>
+        <select onchange="psUpdateStage('${p.id}',this.value)" style="font-size:12px;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)">
+          ${Object.entries(PS_STAGES).map(([k,v])=>`<option value="${k}"${p.stage===k?' selected':''}>${v.label}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="panel-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+        <div class="panel-section-title">Activity (${acts.length})</div>
+        <button class="btn btn-sm" onclick="closePsPanel();psOpenLogFor('${p.id}')"><i class="ti ti-plus"></i> Log</button>
+      </div>
+      ${acts.length?acts.map(a=>`<div style="display:flex;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px">${a.date}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:500">${a.type}${a.outcome&&a.outcome!=='none'?' → '+outcomeLbl[a.outcome]:''}</div>
+          ${a.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:2px">${a.notes}</div>`:''}
+          ${a.reason?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Reason: ${a.reason}</div>`:''}
+        </div>
+      </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:.375rem 0">No activity yet.</div>'}
+    </div>`;
+  const panel=document.getElementById('ps-detail-panel');
+  const overlay=document.getElementById('ps-panel-overlay');
+  if(panel){panel.classList.add('open');}
+  if(overlay){overlay.classList.add('open');}
+}
+function closePsPanel(){
+  const panel=document.getElementById('ps-detail-panel');
+  const overlay=document.getElementById('ps-panel-overlay');
+  if(panel)panel.classList.remove('open');
+  if(overlay)overlay.classList.remove('open');
+}
+function psUpdateStage(id,stage){
+  const p=psProspects.find(x=>x.id===id);if(p){p.stage=stage;psSave();psRender();}
+  toast('Stage updated');
+}
+
 // Clear any keys from older versions that could corrupt this version
 (function(){
   const keep=['ec-gsc-token','ec-ga4-creds','ec-hs-crm-token','ec-hs-portal-id','ec-gads-creds','ec-asana-settings','ec-paid-ga4','ec-bing-webmaster'];
@@ -10874,6 +11778,13 @@ function renderSEOFunnel(){
     localStorage.setItem('ec-gads-creds',JSON.stringify({devToken:'b8GV9ZVEJywiqTrH0vXLhw',customerId:'6282124988'}));
 })();
 loadData();
+// Auth gate — run after DOM is ready
+(function(){
+  if(!checkAndShowLogin()){
+    // Not logged in — wait for login
+    return;
+  }
+})();
 </script>
 </body>
 </html>
