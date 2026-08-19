@@ -271,19 +271,6 @@ select.sm:focus{border-color:var(--blue)}
 .user-chip{display:flex;align-items:center;gap:8px;padding:.5rem .625rem;border-radius:var(--r);font-size:12px;color:var(--text2);cursor:default;flex-wrap:wrap}
 .user-chip-role{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:600}
 /* ── LEAD TRACKER MODULE ─────────────────────────────────── */
-.lt-tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem}
-.lt-tab{height:36px;padding:0 16px;font-size:13px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .12s}
-.lt-tab:hover{color:var(--text)}.lt-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
-.lt-view{display:none}.lt-view.active{display:block}
-.lt-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.5rem}
-.lt-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem}
-.lt-stat-label{font-size:12px;color:var(--text2);margin-bottom:5px}
-.lt-stat-num{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
-.lt-stat-num.accent{color:var(--blue)}.lt-stat-num.success{color:var(--green)}.lt-stat-num.warn{color:var(--amber)}.lt-stat-num.muted{color:var(--text3)}
-.lt-table{width:100%;border-collapse:collapse}
-.lt-table th{font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
-.lt-table td{font-size:13px;color:var(--text);padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
-.lt-table tr:hover td{background:var(--surface2)}
 .lt-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:100px}
 .lt-badge.new{background:var(--blue-l);color:var(--blue)}.lt-badge.active{background:var(--amber-l);color:var(--amber)}.lt-badge.overdue{background:var(--red-l);color:var(--red)}.lt-badge.inactive{background:var(--surface2);color:var(--text3);border:1px solid var(--border)}.lt-badge.converted{background:var(--green-l);color:var(--green)}
 .lt-touch-dots{display:flex;gap:4px}
@@ -299,15 +286,12 @@ select.sm:focus{border-color:var(--blue)}
 .lt-tl-item:last-child{border-bottom:none}
 .lt-tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
 .lt-tl-icon.email{background:var(--blue-l);color:var(--blue)}.lt-tl-icon.call{background:var(--green-l);color:var(--green)}.lt-tl-icon.note{background:var(--surface2);color:var(--text2)}
-.lt-setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
-.lt-setting-row:last-child{border-bottom:none}
 .lt-toggle{position:relative;width:34px;height:20px;cursor:pointer}
 .lt-toggle input{opacity:0;width:0;height:0;position:absolute}
 .lt-slider{position:absolute;inset:0;background:var(--border2);border-radius:10px;transition:.2s}
 .lt-slider:before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
 .lt-toggle input:checked+.lt-slider{background:var(--blue)}
 .lt-toggle input:checked+.lt-slider:before{transform:translateX(14px)}
-.lt-num-input{width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center}
 /* ── PRE-SALES MODULE ───────────────────────────────────── */
 .ps-pipeline{display:grid;gap:10px}
 .ps-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;cursor:pointer;transition:border-color .12s}
@@ -1465,6 +1449,124 @@ select.sm:focus{border-color:var(--blue)}
   </div>
 </div>
 
+<!-- LEAD OUTREACH TRACKER PAGE -->
+<div id="page-outreach" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <div><div class="pt">Outreach</div><div class="ps">Lead outreach tracker — 3–4 touchpoints then mark inactive</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="ltOpenImport()"><i class="ti ti-file-import"></i> Import</button>
+      <button class="btn" id="lt-export-btn" onclick="ltExport()" style="display:none"><i class="ti ti-download"></i> Export</button>
+      <button class="btn" onclick="ltOpenLog()"><i class="ti ti-notes"></i> Log activity</button>
+      <button class="btn btn-primary" onclick="ltOpenAdd()"><i class="ti ti-plus"></i> Add lead</button>
+    </div>
+  </div>
+  <div class="itabs">
+    <button class="itab active" id="lt-itab-leads" onclick="ltSwitchTab('leads',this)"><i class="ti ti-users"></i> Leads</button>
+    <button class="itab" id="lt-itab-activity" onclick="ltSwitchTab('activity',this)"><i class="ti ti-timeline"></i> Activity</button>
+    <button class="itab" id="lt-itab-ltsettings" onclick="ltSwitchTab('ltsettings',this)"><i class="ti ti-settings"></i> Settings</button>
+  </div>
+  <div id="lt-view-leads" class="itab-pane active">
+    <div class="counters" style="grid-template-columns:repeat(6,1fr);margin-bottom:1.5rem">
+      <div class="counter"><div class="counter-val" id="lt-s-total">0</div><div class="counter-lbl">Total leads</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="lt-s-new">0</div><div class="counter-lbl">Pending contact</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--amber)" id="lt-s-active">0</div><div class="counter-lbl">In progress</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--red)" id="lt-s-overdue">0</div><div class="counter-lbl">Overdue</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--green)" id="lt-s-conv">0</div><div class="counter-lbl">Converted</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--text3)" id="lt-s-dead">0</div><div class="counter-lbl">Delisted</div></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="lt-search" placeholder="Search name, email, company…" oninput="ltRenderTable()">
+      <select class="sm" id="lt-filter-status" onchange="ltRenderTable()">
+        <option value="">All statuses</option><option value="new">Pending</option><option value="active">In progress</option>
+        <option value="overdue">Overdue</option><option value="converted">Converted</option><option value="inactive">Delisted</option>
+      </select>
+      <select class="sm" id="lt-filter-source" onchange="ltRenderTable()">
+        <option value="">All sources</option><option value="hubspot">HubSpot</option>
+        <option value="excel">Excel sheet</option><option value="manual">Manual</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Name / Contact</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Source</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Form date</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Status</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Touchpoints</th>
+          <th style="font-size:11px;font-weight:600;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em">Next action</th>
+          <th style="border-bottom:1px solid var(--border)"></th>
+        </tr></thead>
+        <tbody id="lt-lead-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="lt-view-activity" class="itab-pane">
+    <div class="toolbar">
+      <select class="sm" id="lt-tl-filter" onchange="ltRenderTimeline()"><option value="">All leads</option></select>
+      <button class="btn btn-primary" onclick="ltOpenLog()"><i class="ti ti-plus"></i> Log activity</button>
+    </div>
+    <div id="lt-timeline-list"></div>
+  </div>
+  <div id="lt-view-ltsettings" class="itab-pane">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px;margin-bottom:1.5rem">
+      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Outreach rules</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Max touchpoints before delisting</div><input type="number" id="lt-max-touch" value="4" min="1" max="10" onchange="ltSaveSetting()" style="width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Days between follow-ups</div><input type="number" id="lt-follow-days" value="3" min="1" max="14" onchange="ltSaveSetting()" style="width:64px;font-size:13px;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div>Auto-delist after max attempts</div><label class="lt-toggle"><input type="checkbox" id="lt-auto-delist" checked onchange="ltSaveSetting()"><span class="lt-slider"></span></label></div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Email sequence templates</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 1 — warm intro email</div><button class="btn btn-sm" onclick="ltDraftEmail(1)">Draft</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 2 — follow-up email (~3 days later)</div><button class="btn btn-sm" onclick="ltDraftEmail(2)">Draft</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px"><div>Touch 3 — phone call / voicemail script</div><button class="btn btn-sm" onclick="ltDraftEmail(3)">Draft</button></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:13px"><div>Touch 4 — break-up message (polite close)</div><button class="btn btn-sm" onclick="ltDraftEmail(4)">Draft</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- PRE-SALES PAGE -->
+<div id="page-presales" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <div><div class="pt">Pre-Sales</div><div class="ps">MQL → Contacted → Proposal → Negotiating → Close</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="psOpenLog()"><i class="ti ti-notes"></i> Log touchpoint</button>
+      <button class="btn btn-primary" onclick="psOpenAdd()"><i class="ti ti-plus"></i> Add prospect</button>
+    </div>
+  </div>
+  <div class="itabs">
+    <button class="itab active" id="ps-itab-pipeline" onclick="psSwitchTab('pipeline',this)"><i class="ti ti-layout-kanban"></i> Pipeline</button>
+    <button class="itab" id="ps-itab-psactivity" onclick="psSwitchTab('psactivity',this)"><i class="ti ti-timeline"></i> Activity</button>
+    <button class="itab" id="ps-itab-closed" onclick="psSwitchTab('closed',this)"><i class="ti ti-trophy"></i> Won / Lost</button>
+  </div>
+  <div id="ps-view-pipeline" class="itab-pane active">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
+      <span style="font-size:12px;color:var(--text2);font-weight:600">Stage:</span>
+      <button class="btn btn-sm" id="ps-stg-all" onclick="psFilterStage('',this)" style="background:var(--text);color:white;border-color:var(--text)">All</button>
+      <button class="btn btn-sm" id="ps-stg-contacted" onclick="psFilterStage('contacted',this)">Contacted</button>
+      <button class="btn btn-sm" id="ps-stg-proposal" onclick="psFilterStage('proposal',this)">Proposal Sent</button>
+      <button class="btn btn-sm" id="ps-stg-followup" onclick="psFilterStage('followup',this)">Follow-up</button>
+      <button class="btn btn-sm" id="ps-stg-negotiating" onclick="psFilterStage('negotiating',this)">Negotiating</button>
+    </div>
+    <div class="counters" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ps-s-active">0</div><div class="counter-lbl">Active prospects</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--amber)" id="ps-s-proposal">0</div><div class="counter-lbl">Proposals out</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--green)" id="ps-s-won">0</div><div class="counter-lbl">Won (all time)</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ps-s-value">$0</div><div class="counter-lbl">Est. pipeline value</div></div>
+    </div>
+    <div id="ps-pipeline-list"></div>
+  </div>
+  <div id="ps-view-psactivity" class="itab-pane">
+    <div class="toolbar">
+      <select class="sm" id="ps-tl-filter" onchange="psRenderTimeline()"><option value="">All prospects</option></select>
+      <button class="btn btn-primary" onclick="psOpenLog()"><i class="ti ti-plus"></i> Log touchpoint</button>
+    </div>
+    <div id="ps-timeline-list"></div>
+  </div>
+  <div id="ps-view-closed" class="itab-pane">
+    <div id="ps-closed-list"></div>
+  </div>
+</div>
+
 </main>
 </div>
 
@@ -1663,156 +1765,6 @@ select.sm:focus{border-color:var(--blue)}
     <button class="btn btn-primary" onclick="saveGSCToken()"><i class="ti ti-check"></i> Connect</button>
   </div>
 </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     LEAD OUTREACH TRACKER
-     ═══════════════════════════════════════════════════════════ -->
-<div id="page-outreach" class="page">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">Outreach</div><div class="ps">Lead outreach tracker — 3–4 touchpoints then mark inactive</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" id="lt-import-btn" onclick="ltOpenImport()"><i class="ti ti-file-import"></i> Import</button>
-      <button class="btn" id="lt-export-btn" onclick="ltExport()" style="display:none"><i class="ti ti-download"></i> Export</button>
-      <button class="btn" onclick="ltOpenLog()"><i class="ti ti-notes"></i> Log activity</button>
-      <button class="btn btn-primary" onclick="ltOpenAdd()"><i class="ti ti-plus"></i> Add lead</button>
-    </div>
-  </div>
-
-  <!-- inner tabs -->
-  <div class="lt-tab-bar">
-    <button class="lt-tab active" onclick="ltSwitchTab('leads',this)"><i class="ti ti-users"></i> Leads</button>
-    <button class="lt-tab" onclick="ltSwitchTab('activity',this)"><i class="ti ti-timeline"></i> Activity</button>
-    <button class="lt-tab" onclick="ltSwitchTab('ltsettings',this)"><i class="ti ti-settings"></i> Settings</button>
-  </div>
-
-  <!-- LEADS VIEW -->
-  <div id="lt-view-leads" class="lt-view active">
-    <div class="lt-stat-grid">
-      <div class="lt-stat"><div class="lt-stat-label">Total leads</div><div class="lt-stat-num" id="lt-s-total">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Pending contact</div><div class="lt-stat-num accent" id="lt-s-new">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">In progress</div><div class="lt-stat-num warn" id="lt-s-active">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Overdue</div><div class="lt-stat-num" style="color:var(--red)" id="lt-s-overdue">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Converted</div><div class="lt-stat-num success" id="lt-s-conv">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Delisted</div><div class="lt-stat-num muted" id="lt-s-dead">0</div></div>
-    </div>
-    <div class="toolbar">
-      <input type="text" id="lt-search" placeholder="Search name, email, company…" oninput="ltRenderTable()">
-      <select class="sm" id="lt-filter-status" onchange="ltRenderTable()">
-        <option value="">All statuses</option>
-        <option value="new">Pending</option>
-        <option value="active">In progress</option>
-        <option value="overdue">Overdue</option>
-        <option value="converted">Converted</option>
-        <option value="inactive">Delisted</option>
-      </select>
-      <select class="sm" id="lt-filter-source" onchange="ltRenderTable()">
-        <option value="">All sources</option>
-        <option value="hubspot">HubSpot</option>
-        <option value="excel">Excel sheet</option>
-        <option value="manual">Manual</option>
-      </select>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="lt-table">
-        <thead><tr>
-          <th>Name / Contact</th><th>Source</th><th>Form date</th>
-          <th>Status</th><th>Touchpoints</th><th>Next action</th><th></th>
-        </tr></thead>
-        <tbody id="lt-lead-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- ACTIVITY VIEW -->
-  <div id="lt-view-activity" class="lt-view">
-    <div class="toolbar">
-      <select class="sm" id="lt-tl-filter" onchange="ltRenderTimeline()"><option value="">All leads</option></select>
-      <button class="btn btn-primary" onclick="ltOpenLog()"><i class="ti ti-plus"></i> Log activity</button>
-    </div>
-    <div id="lt-timeline-list"></div>
-  </div>
-
-  <!-- SETTINGS VIEW -->
-  <div id="lt-view-ltsettings" class="lt-view">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px;margin-bottom:1.5rem">
-      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Outreach rules</div>
-      <div class="lt-setting-row">
-        <div>Max touchpoints before delisting</div>
-        <input type="number" class="lt-num-input" id="lt-max-touch" value="4" min="1" max="10" onchange="ltSaveSetting()">
-      </div>
-      <div class="lt-setting-row">
-        <div>Days between follow-ups</div>
-        <input type="number" class="lt-num-input" id="lt-follow-days" value="3" min="1" max="14" onchange="ltSaveSetting()">
-      </div>
-      <div class="lt-setting-row">
-        <div>Auto-delist after max attempts</div>
-        <label class="lt-toggle"><input type="checkbox" id="lt-auto-delist" checked onchange="ltSaveSetting()"><span class="lt-slider"></span></label>
-      </div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:540px">
-      <div style="font-size:14px;font-weight:600;margin-bottom:1rem">Email sequence templates</div>
-      <div class="lt-setting-row"><div>Touch 1 — warm intro email (referencing the form)</div><button class="btn btn-sm" onclick="ltDraftEmail(1)">Draft</button></div>
-      <div class="lt-setting-row"><div>Touch 2 — follow-up email (~3 days later)</div><button class="btn btn-sm" onclick="ltDraftEmail(2)">Draft</button></div>
-      <div class="lt-setting-row"><div>Touch 3 — phone call / voicemail script</div><button class="btn btn-sm" onclick="ltDraftEmail(3)">Draft</button></div>
-      <div class="lt-setting-row"><div>Touch 4 — break-up message (polite close)</div><button class="btn btn-sm" onclick="ltDraftEmail(4)">Draft</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     PRE-SALES MODULE
-     ═══════════════════════════════════════════════════════════ -->
-<div id="page-presales" class="page">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
-    <div><div class="pt">Pre-Sales</div><div class="ps">MQL → Contacted → Proposal → Negotiating → Close</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" onclick="psOpenLog()"><i class="ti ti-notes"></i> Log touchpoint</button>
-      <button class="btn btn-primary" onclick="psOpenAdd()"><i class="ti ti-plus"></i> Add prospect</button>
-    </div>
-  </div>
-
-  <!-- inner tabs -->
-  <div class="lt-tab-bar">
-    <button class="lt-tab active" onclick="psSwitchTab('pipeline',this)"><i class="ti ti-layout-kanban"></i> Pipeline</button>
-    <button class="lt-tab" onclick="psSwitchTab('psactivity',this)"><i class="ti ti-timeline"></i> Activity</button>
-    <button class="lt-tab" onclick="psSwitchTab('closed',this)"><i class="ti ti-trophy"></i> Won / Lost</button>
-  </div>
-
-  <!-- PIPELINE VIEW -->
-  <div id="ps-view-pipeline" class="lt-view active">
-    <!-- Stage filter bar -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
-      <span style="font-size:12px;color:var(--text2);font-weight:600">Stage:</span>
-      <button class="btn btn-sm" id="ps-stg-all" onclick="psFilterStage('',this)" style="background:var(--text);color:white;border-color:var(--text)">All</button>
-      <button class="btn btn-sm" id="ps-stg-contacted" onclick="psFilterStage('contacted',this)">Contacted</button>
-      <button class="btn btn-sm" id="ps-stg-proposal" onclick="psFilterStage('proposal',this)">Proposal Sent</button>
-      <button class="btn btn-sm" id="ps-stg-followup" onclick="psFilterStage('followup',this)">Follow-up</button>
-      <button class="btn btn-sm" id="ps-stg-negotiating" onclick="psFilterStage('negotiating',this)">Negotiating</button>
-    </div>
-    <!-- Stats -->
-    <div class="lt-stat-grid" style="margin-bottom:1.5rem">
-      <div class="lt-stat"><div class="lt-stat-label">Active prospects</div><div class="lt-stat-num accent" id="ps-s-active">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Proposals out</div><div class="lt-stat-num warn" id="ps-s-proposal">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Won (all time)</div><div class="lt-stat-num success" id="ps-s-won">0</div></div>
-      <div class="lt-stat"><div class="lt-stat-label">Est. pipeline value</div><div class="lt-stat-num" id="ps-s-value" style="color:var(--blue)">$0</div></div>
-    </div>
-    <div id="ps-pipeline-list"></div>
-  </div>
-
-  <!-- ACTIVITY VIEW -->
-  <div id="ps-view-psactivity" class="lt-view">
-    <div class="toolbar">
-      <select class="sm" id="ps-tl-filter" onchange="psRenderTimeline()"><option value="">All prospects</option></select>
-      <button class="btn btn-primary" onclick="psOpenLog()"><i class="ti ti-plus"></i> Log touchpoint</button>
-    </div>
-    <div id="ps-timeline-list"></div>
-  </div>
-
-  <!-- WON / LOST VIEW -->
-  <div id="ps-view-closed" class="lt-view">
-    <div id="ps-closed-list"></div>
-  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -11083,172 +11035,286 @@ function renderSEOFunnel(){
 }
 
 // ══════════════════════════════════════════════════════════════
+// CORE UTILITIES — shared by all new modules
+// ══════════════════════════════════════════════════════════════
+
+// HTML-escape any user-provided string before injecting into innerHTML.
+// Prevents XSS and layout breakage from names/notes containing < > " ' &
+function esc(s){
+  if(s===null||s===undefined)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Safe localStorage JSON access — one place for parse errors and quota errors
+const Store={
+  get(key,fallback){
+    try{const raw=localStorage.getItem(key);return raw===null?fallback:JSON.parse(raw);}
+    catch(e){console.warn('[Store] bad JSON for',key,e);return fallback;}
+  },
+  set(key,value){
+    try{localStorage.setItem(key,JSON.stringify(value));return true;}
+    catch(e){console.error('[Store] write failed for',key,e);toast('Storage write failed — data may not persist');return false;}
+  },
+  remove(key){try{localStorage.removeItem(key);}catch(e){}}
+};
+
+// Guarded module runner — one broken module must never take down the app
+function safeRun(label,fn){
+  try{fn();}catch(e){console.error('[OS] '+label+' failed:',e);}
+}
+
+// ══════════════════════════════════════════════════════════════
 // AUTH SYSTEM
+// Passwords are never stored in plaintext — only salted SHA-256
+// hashes (salt = username). NOTE: this is a local-first desktop
+// app; client-side auth is an access-control convenience, not a
+// cryptographic boundary. Anyone with filesystem access to
+// localStorage can bypass it. Real multi-user security requires
+// a server. Within that constraint, this is as tight as it gets:
+//  - no plaintext credentials anywhere
+//  - role is DERIVED from username on every check, never read
+//    from the (user-editable) session blob
+//  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
 const SUPER_ADMINS=['daniyal','mz'];
-const SUPER_ADMIN_CREDS={
-  daniyal:{name:'Daniyal',password:'eracore2026'},
-  mz:{name:'Muhamed Zekic',password:'mz2026'}
+// sha256(username + ':' + password) — precomputed, no plaintext in file
+const SUPER_ADMIN_HASHES={
+  daniyal:{name:'Daniyal',hash:'81687b67aea9e5ad360605599f629ab35ed45ca6ef8f67c7a3f0c9fa0376ab01'},
+  mz:{name:'Muhamed Zekic',hash:'6961ccc19547ebacf5cb5da7abcebaea4397b25f09ec3bf7e363a0609a61bb5a'}
 };
-function getSession(){try{return JSON.parse(localStorage.getItem('ec-session-v1')||'null');}catch(e){return null;}}
-function saveSession(s){localStorage.setItem('ec-session-v1',JSON.stringify(s));}
-function clearSession(){localStorage.removeItem('ec-session-v1');}
-function isSuperAdmin(){const s=getSession();return s&&SUPER_ADMINS.includes(s.username);}
-function getCurrentUser(){return getSession();}
-function getAdminUsers(){try{return JSON.parse(localStorage.getItem('ec-users-v1')||'[]');}catch(e){return[];}}
-function saveAdminUsers(u){localStorage.setItem('ec-users-v1',JSON.stringify(u));}
+const SESSION_KEY='ec-session-v1';
+const USERS_KEY='ec-users-v2'; // v2 = hashed passwords (v1 was plaintext)
+const SESSION_TTL=7*24*60*60*1000;
+
+// SHA-256 via WebCrypto; deterministic fallback for non-secure contexts
+async function hashPw(username,password){
+  const input=username+':'+password;
+  if(window.crypto&&crypto.subtle){
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(input));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  // FNV-1a fallback (only if crypto.subtle unavailable — still avoids plaintext storage)
+  let h=0x811c9dc5;
+  for(let i=0;i<input.length;i++){h^=input.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}
+  return 'fnv-'+h.toString(16);
+}
+
+function getSession(){return Store.get(SESSION_KEY,null);}
+function clearSession(){Store.remove(SESSION_KEY);}
+
+// Role is ALWAYS derived from the username — the stored session blob
+// is user-editable, so a stored 'role' field is meaningless.
+function isSuperAdmin(){
+  const s=getSession();
+  return !!(s&&s.username&&SUPER_ADMINS.includes(s.username));
+}
+function isAuthenticated(){
+  const s=getSession();
+  if(!s||!s.username||!s.ts)return false;
+  if(Date.now()-s.ts>SESSION_TTL)return false;
+  // A session is only valid if the username still maps to a real account
+  if(SUPER_ADMINS.includes(s.username))return true;
+  return getAdminUsers().some(u=>u.username===s.username);
+}
+function getCurrentUser(){
+  const s=getSession();
+  if(!s)return null;
+  return {username:s.username,name:s.name,role:SUPER_ADMINS.includes(s.username)?'superadmin':'admin'};
+}
+function getAdminUsers(){
+  const users=Store.get(USERS_KEY,[]);
+  return Array.isArray(users)?users.filter(u=>u&&u.username&&u.passwordHash):[];
+}
+function saveAdminUsers(u){Store.set(USERS_KEY,u);}
+
+// One-time migration: ec-users-v1 stored plaintext passwords. Hash them,
+// write to v2, and destroy the plaintext record.
+async function migrateLegacyUsers(){
+  const legacy=Store.get('ec-users-v1',null);
+  if(!legacy||!Array.isArray(legacy))return;
+  const migrated=[];
+  for(const u of legacy){
+    if(!u||!u.username)continue;
+    if(u.passwordHash){migrated.push(u);continue;}
+    if(u.password){migrated.push({name:u.name,username:u.username,passwordHash:await hashPw(u.username,u.password)});}
+  }
+  if(migrated.length){
+    const existing=getAdminUsers();
+    const existingNames=new Set(existing.map(u=>u.username));
+    saveAdminUsers([...existing,...migrated.filter(u=>!existingNames.has(u.username))]);
+  }
+  Store.remove('ec-users-v1'); // destroy plaintext
+}
 
 function checkAndShowLogin(){
-  const s=getSession();
   const loginEl=document.getElementById('login-screen');
-  if(!s||!s.username||(Date.now()-s.ts>7*24*60*60*1000)){
+  if(!loginEl)return true; // fail open only if markup missing entirely
+  if(!isAuthenticated()){
     clearSession();
     loginEl.style.display='flex';
+    const u=document.getElementById('login-username');if(u)u.focus();
     return false;
   }
   loginEl.style.display='none';
   updateUserChip();
   return true;
 }
-function doLogin(){
-  const username=document.getElementById('login-username').value.trim().toLowerCase();
-  const password=document.getElementById('login-password').value;
+
+async function doLogin(){
+  const uEl=document.getElementById('login-username');
+  const pEl=document.getElementById('login-password');
   const errEl=document.getElementById('login-error');
-  if(!username||!password){errEl.textContent='Please enter your username and password.';return;}
-  // Super admin check
-  if(SUPER_ADMINS.includes(username)){
-    const creds=SUPER_ADMIN_CREDS[username];
-    if(creds&&creds.password===password){
-      saveSession({username,name:creds.name,role:'superadmin',ts:Date.now()});
-      document.getElementById('login-screen').style.display='none';
-      errEl.textContent='';
-      updateUserChip();
-      return;
-    }
+  const username=(uEl?.value||'').trim().toLowerCase();
+  const password=pEl?.value||'';
+  if(!username||!password){if(errEl)errEl.textContent='Please enter your username and password.';return;}
+  let attempted;
+  try{attempted=await hashPw(username,password);}
+  catch(e){if(errEl)errEl.textContent='Could not verify credentials — try restarting the app.';return;}
+  let name=null;
+  const sa=SUPER_ADMIN_HASHES[username];
+  if(sa&&sa.hash===attempted)name=sa.name;
+  if(!name){
+    const user=getAdminUsers().find(u=>u.username===username&&u.passwordHash===attempted);
+    if(user)name=user.name;
   }
-  // Admin user check
-  const users=getAdminUsers();
-  const user=users.find(u=>u.username===username&&u.password===password);
-  if(user){
-    saveSession({username,name:user.name,role:'admin',ts:Date.now()});
-    document.getElementById('login-screen').style.display='none';
-    errEl.textContent='';
-    updateUserChip();
-    return;
-  }
-  errEl.textContent='Incorrect username or password.';
+  if(!name){if(errEl)errEl.textContent='Incorrect username or password.';return;}
+  Store.set(SESSION_KEY,{username,name,ts:Date.now()});
+  document.getElementById('login-screen').style.display='none';
+  if(errEl)errEl.textContent='';
+  if(pEl)pEl.value='';
+  updateUserChip();
 }
+
 function doLogout(){
   clearSession();
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-username').value='';
-  document.getElementById('login-password').value='';
-  document.getElementById('login-error').textContent='';
+  const loginEl=document.getElementById('login-screen');
+  if(loginEl)loginEl.style.display='flex';
+  ['login-username','login-password'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const errEl=document.getElementById('login-error');if(errEl)errEl.textContent='';
 }
+
 function updateUserChip(){
-  const s=getSession();if(!s)return;
+  const user=getCurrentUser();if(!user)return;
   const el=document.getElementById('user-chip');
   const mgrLink=document.getElementById('nav-usermgmt-link');
   const exportBtn=document.getElementById('lt-export-btn');
+  const superAdmin=user.role==='superadmin';
   if(el){
-    const roleColor=s.role==='superadmin'?'var(--blue)':'var(--surface2)';
-    const roleTextColor=s.role==='superadmin'?'white':'var(--text2)';
-    const roleBorder=s.role==='superadmin'?'none':'1px solid var(--border)';
-    el.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${s.role==='superadmin'?'var(--blue)':'var(--text2)'};color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${s.name.charAt(0).toUpperCase()}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</div><span style="font-size:10px;background:${roleColor};color:${roleTextColor};padding:1px 6px;border-radius:10px;border:${roleBorder};font-weight:600">${s.role==='superadmin'?'Super admin':'Admin'}</span></div>`;
+    el.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:${superAdmin?'var(--blue)':'var(--text2)'};color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${esc(user.name.charAt(0).toUpperCase())}</div><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(user.name)}</div><span style="font-size:10px;background:${superAdmin?'var(--blue)':'var(--surface2)'};color:${superAdmin?'white':'var(--text2)'};padding:1px 6px;border-radius:10px;border:${superAdmin?'none':'1px solid var(--border)'};font-weight:600">${superAdmin?'Super admin':'Admin'}</span></div>`;
   }
-  if(mgrLink)mgrLink.style.display=isSuperAdmin()?'flex':'none';
-  if(exportBtn)exportBtn.style.display=isSuperAdmin()?'inline-flex':'none';
+  if(mgrLink)mgrLink.style.display=superAdmin?'flex':'none';
+  if(exportBtn)exportBtn.style.display=superAdmin?'inline-flex':'none';
 }
 
-// ── USER MANAGEMENT ────────────────────────────────────────────
+// ── USER MANAGEMENT (every entry point re-verifies super admin) ──
 function openUserMgmt(){
+  if(!isSuperAdmin()){toast('Super admin access required');return;}
   umRenderList();
   document.getElementById('um-overlay').classList.add('open');
 }
 function umToggleAddForm(){
-  const f=document.getElementById('um-add-form');
+  if(!isSuperAdmin())return;
+  const f=document.getElementById('um-add-form');if(!f)return;
   f.style.display=f.style.display==='none'?'block':'none';
   if(f.style.display==='block'){
-    ['um-new-name','um-new-username','um-new-password'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('um-add-err').style.display='none';
+    ['um-new-name','um-new-username','um-new-password'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    const err=document.getElementById('um-add-err');if(err)err.style.display='none';
   }
 }
 function umRenderList(){
   const users=getAdminUsers();
-  const el=document.getElementById('um-user-list');
+  const el=document.getElementById('um-user-list');if(!el)return;
   if(!users.length){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text3);text-align:center">No admin users yet.</div>';return;}
   el.innerHTML=users.map((u,i)=>`<div class="um-user-row">
-    <div class="um-avatar" style="background:var(--green)">${u.name.charAt(0).toUpperCase()}</div>
-    <div style="flex:1"><div style="font-weight:600">${u.name}</div><div style="font-size:12px;color:var(--text2)">${u.username}</div></div>
+    <div class="um-avatar" style="background:var(--green)">${esc(u.name.charAt(0).toUpperCase())}</div>
+    <div style="flex:1"><div style="font-weight:600">${esc(u.name)}</div><div style="font-size:12px;color:var(--text2)">${esc(u.username)}</div></div>
     <span class="um-role-badge admin">Admin</span>
     <button class="btn-icon btn" onclick="umDeleteUser(${i})" title="Remove user"><i class="ti ti-trash" style="color:var(--red)"></i></button>
   </div>`).join('');
 }
-function umAddUser(){
-  const name=document.getElementById('um-new-name').value.trim();
-  const username=document.getElementById('um-new-username').value.trim().toLowerCase();
-  const password=document.getElementById('um-new-password').value;
+async function umAddUser(){
+  if(!isSuperAdmin()){toast('Super admin access required');return;}
+  const name=(document.getElementById('um-new-name')?.value||'').trim();
+  const username=(document.getElementById('um-new-username')?.value||'').trim().toLowerCase();
+  const password=document.getElementById('um-new-password')?.value||'';
   const errEl=document.getElementById('um-add-err');
-  if(!name||!username||!password){errEl.textContent='All fields required.';errEl.style.display='block';return;}
-  if(SUPER_ADMINS.includes(username)){errEl.textContent='That username is reserved.';errEl.style.display='block';return;}
+  const fail=m=>{if(errEl){errEl.textContent=m;errEl.style.display='block';}};
+  if(!name||!username||!password)return fail('All fields required.');
+  if(!/^[a-z0-9._-]{2,32}$/.test(username))return fail('Username: 2–32 chars, letters/numbers/._- only.');
+  if(password.length<6)return fail('Password must be at least 6 characters.');
+  if(SUPER_ADMINS.includes(username))return fail('That username is reserved.');
   const users=getAdminUsers();
-  if(users.find(u=>u.username===username)){errEl.textContent='Username already exists.';errEl.style.display='block';return;}
-  users.push({name,username,password});
+  if(users.some(u=>u.username===username))return fail('Username already exists.');
+  users.push({name,username,passwordHash:await hashPw(username,password)});
   saveAdminUsers(users);
   toast(`Admin user "${name}" created`);
   umToggleAddForm();
   umRenderList();
 }
 function umDeleteUser(idx){
-  if(!confirm('Remove this user?'))return;
+  if(!isSuperAdmin()){toast('Super admin access required');return;}
   const users=getAdminUsers();
-  users.splice(idx,1);
+  if(idx<0||idx>=users.length)return;
+  if(!confirm(`Remove "${users[idx].name}"?`))return;
+  const removed=users.splice(idx,1)[0];
   saveAdminUsers(users);
+  // If the removed user is currently logged in elsewhere, their session
+  // dies on next isAuthenticated() check since the account no longer exists.
   umRenderList();
   toast('User removed');
 }
 
 // ══════════════════════════════════════════════════════════════
 // LEAD OUTREACH TRACKER
+// Storage: ec-lt-leads / ec-lt-activities / ec-lt-settings
+// All user-supplied strings pass through esc() before rendering.
 // ══════════════════════════════════════════════════════════════
 let ltLeads=[],ltActivities=[],ltSettings={maxTouch:4,followDays:3,autoDelist:true};
 const LT_LEADS_KEY='ec-lt-leads';
 const LT_ACT_KEY='ec-lt-activities';
 const LT_SETS_KEY='ec-lt-settings';
+const LT_DEFAULT_SETTINGS={maxTouch:4,followDays:3,autoDelist:true};
+const LT_NEXT_ACTIONS=['Send intro email','Follow-up email','Try a call','Break-up message'];
+const LT_STATUS_LABEL={new:'Pending',active:'In progress',overdue:'Overdue',converted:'Converted',inactive:'Delisted'};
+const LT_SRC_LABEL={hubspot:'HubSpot',excel:'Excel',manual:'Manual'};
+const LT_SRC_CLASS={hubspot:'src-hs',excel:'src-xl',manual:'src-manual'};
 
-function ltUid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function ltToday(){return new Date().toISOString().split('T')[0];}
-function ltDaysSince(d){if(!d)return 999;return Math.floor((Date.now()-new Date(d))/86400000);}
+function ltDaysSince(d){if(!d)return 999;const t=new Date(d).getTime();return isNaN(t)?999:Math.floor((Date.now()-t)/86400000);}
 
 function ltLoad(){
-  try{const r=localStorage.getItem(LT_LEADS_KEY);ltLeads=r?JSON.parse(r):[];}catch(e){ltLeads=[];}
-  try{const r=localStorage.getItem(LT_ACT_KEY);ltActivities=r?JSON.parse(r):[];}catch(e){ltActivities=[];}
-  try{
-    const r=localStorage.getItem(LT_SETS_KEY);
-    ltSettings=Object.assign({maxTouch:4,followDays:3,autoDelist:true},r?JSON.parse(r):{});
-  }catch(e){}
+  ltLeads=Store.get(LT_LEADS_KEY,[]);
+  if(!Array.isArray(ltLeads))ltLeads=[];
+  ltActivities=Store.get(LT_ACT_KEY,[]);
+  if(!Array.isArray(ltActivities))ltActivities=[];
+  ltSettings=Object.assign({},LT_DEFAULT_SETTINGS,Store.get(LT_SETS_KEY,{}));
+  // Clamp settings to sane ranges regardless of what's in storage
+  ltSettings.maxTouch=Math.min(10,Math.max(1,parseInt(ltSettings.maxTouch)||4));
+  ltSettings.followDays=Math.min(14,Math.max(1,parseInt(ltSettings.followDays)||3));
+  ltSettings.autoDelist=!!ltSettings.autoDelist;
 }
 function ltSave(){
-  localStorage.setItem(LT_LEADS_KEY,JSON.stringify(ltLeads));
-  localStorage.setItem(LT_ACT_KEY,JSON.stringify(ltActivities));
-  localStorage.setItem(LT_SETS_KEY,JSON.stringify(ltSettings));
+  Store.set(LT_LEADS_KEY,ltLeads);
+  Store.set(LT_ACT_KEY,ltActivities);
+  Store.set(LT_SETS_KEY,ltSettings);
 }
 
+// Status is derived, never stored (except terminal states converted/inactive)
 function ltGetStatus(lead){
   if(lead.status==='converted')return'converted';
   if(lead.status==='inactive')return'inactive';
-  const touches=ltActivities.filter(a=>a.leadId===lead.id&&a.type!=='note').length;
+  const touches=ltGetTouches(lead.id);
   if(touches===0)return'new';
   if(touches>=ltSettings.maxTouch&&ltSettings.autoDelist)return'inactive';
-  const last=ltActivities.filter(a=>a.leadId===lead.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const last=ltActivities.filter(a=>a.leadId===lead.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
   if(last&&ltDaysSince(last.date)>ltSettings.followDays)return'overdue';
   return'active';
 }
 function ltGetTouches(id){return ltActivities.filter(a=>a.leadId===id&&a.type!=='note').length;}
 
 function ltSwitchTab(t,el){
-  document.querySelectorAll('.lt-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('#page-outreach .lt-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('#page-outreach .itab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-outreach .itab-pane').forEach(v=>v.classList.remove('active'));
   if(el)el.classList.add('active');
   const view=document.getElementById('lt-view-'+t);if(view)view.classList.add('active');
   if(t==='activity')ltRenderTimeline();
@@ -11256,46 +11322,43 @@ function ltSwitchTab(t,el){
 }
 
 function ltRender(){
-  ltRenderTable();
-  ltUpdateStats();
-  ltPopulateTlFilter();
-  ltInitSettings();
-  // Show/hide export for super admins
+  safeRun('lt table',ltRenderTable);
+  safeRun('lt filter',ltPopulateTlFilter);
+  safeRun('lt settings',ltInitSettings);
   const exportBtn=document.getElementById('lt-export-btn');
   if(exportBtn)exportBtn.style.display=isSuperAdmin()?'inline-flex':'none';
 }
 
 function ltUpdateStats(){
-  const s=ltLeads.map(l=>ltGetStatus(l));
-  const safe=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  safe('lt-s-total',ltLeads.length);
-  safe('lt-s-new',s.filter(x=>x==='new').length);
-  safe('lt-s-active',s.filter(x=>x==='active').length);
-  safe('lt-s-overdue',s.filter(x=>x==='overdue').length);
-  safe('lt-s-conv',s.filter(x=>x==='converted').length);
-  safe('lt-s-dead',s.filter(x=>x==='inactive').length);
+  const statuses=ltLeads.map(l=>ltGetStatus(l));
+  const setNum=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setNum('lt-s-total',ltLeads.length);
+  setNum('lt-s-new',statuses.filter(x=>x==='new').length);
+  setNum('lt-s-active',statuses.filter(x=>x==='active').length);
+  setNum('lt-s-overdue',statuses.filter(x=>x==='overdue').length);
+  setNum('lt-s-conv',statuses.filter(x=>x==='converted').length);
+  setNum('lt-s-dead',statuses.filter(x=>x==='inactive').length);
 }
 
 function ltRenderTable(){
-  const q=(document.getElementById('lt-search')||{}).value?.toLowerCase()||'';
-  const fs=(document.getElementById('lt-filter-status')||{}).value||'';
-  const fsrc=(document.getElementById('lt-filter-source')||{}).value||'';
+  const tbody=document.getElementById('lt-lead-body');if(!tbody)return;
+  const q=(document.getElementById('lt-search')?.value||'').toLowerCase();
+  const fs=document.getElementById('lt-filter-status')?.value||'';
+  const fsrc=document.getElementById('lt-filter-source')?.value||'';
   const max=ltSettings.maxTouch;
   const superAdmin=isSuperAdmin();
-  let rows=ltLeads.filter(l=>{
+  const rows=ltLeads.filter(l=>{
     const st=ltGetStatus(l);
     if(fs&&st!==fs)return false;
     if(fsrc&&l.source!==fsrc)return false;
-    if(q&&!`${l.name}${l.email}${l.company}`.toLowerCase().includes(q))return false;
+    if(q&&!`${l.name||''}${l.email||''}${l.company||''}`.toLowerCase().includes(q))return false;
     return true;
   });
-  const stLbl={new:'Pending',active:'In progress',overdue:'Overdue',converted:'Converted',inactive:'Delisted'};
-  const srcLbl={hubspot:'HubSpot',excel:'Excel',manual:'Manual'};
-  const srcCls={hubspot:'src-hs',excel:'src-xl',manual:'src-manual'};
-  const nextActions=['Send intro email','Follow-up email','Try a call','Break-up message'];
-  const tbody=document.getElementById('lt-lead-body');
-  if(!tbody)return;
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">No leads match this filter</div></td></tr>';ltUpdateStats();return;}
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="7"><div class="empty">'+(ltLeads.length?'No leads match this filter':'No leads yet — add one or import from HubSpot / Excel')+'</div></td></tr>';
+    ltUpdateStats();return;
+  }
+  const td='font-size:13px;color:var(--text);padding:10px;border-bottom:1px solid var(--border);vertical-align:middle';
   tbody.innerHTML=rows.map(l=>{
     const st=ltGetStatus(l);
     const t=ltGetTouches(l.id);
@@ -11304,17 +11367,17 @@ function ltRenderTable(){
       if(i===t&&t<max)return'<div class="lt-dot next"></div>';
       return'<div class="lt-dot pending"></div>';
     }).join('');
-    const nextAction=st==='inactive'||st==='converted'?'—':nextActions[Math.min(t,3)];
-    const delistBtn=(st!=='inactive'&&st!=='converted'&&superAdmin)?`<button class="lt-action-btn" onclick="ltDelistLead('${l.id}')">Delist</button>`:'';
+    const nextAction=(st==='inactive'||st==='converted')?'—':LT_NEXT_ACTIONS[Math.min(t,LT_NEXT_ACTIONS.length-1)];
+    const delistBtn=(st!=='inactive'&&st!=='converted'&&superAdmin)?`<button class="lt-action-btn" onclick="ltDelistLead('${esc(l.id)}')">Delist</button>`:'';
     return`<tr>
-      <td><div style="font-weight:600">${l.name}</div><div style="font-size:11px;color:var(--text3)">${l.email}</div>${l.company?`<div style="font-size:11px;color:var(--text3)">${l.company}</div>`:''}</td>
-      <td><span class="lt-src ${srcCls[l.source]||'src-manual'}">${srcLbl[l.source]||l.source}</span></td>
-      <td style="font-size:12px;color:var(--text2)">${l.formDate||'—'}</td>
-      <td><span class="lt-badge ${st}">${stLbl[st]}</span></td>
-      <td><div class="lt-touch-dots">${dots}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}/${max}</div></td>
-      <td style="font-size:12px;color:var(--text2)">${nextAction}</td>
-      <td><div style="display:flex;gap:6px">
-        <button class="lt-action-btn log" onclick="ltOpenLogFor('${l.id}')">Log</button>
+      <td style="${td}"><div style="font-weight:600">${esc(l.name)}</div><div style="font-size:11px;color:var(--text3)">${esc(l.email)}</div>${l.company?`<div style="font-size:11px;color:var(--text3)">${esc(l.company)}</div>`:''}</td>
+      <td style="${td}"><span class="lt-src ${LT_SRC_CLASS[l.source]||'src-manual'}">${esc(LT_SRC_LABEL[l.source]||l.source)}</span></td>
+      <td style="${td};font-size:12px;color:var(--text2)">${esc(l.formDate)||'—'}</td>
+      <td style="${td}"><span class="lt-badge ${st}">${LT_STATUS_LABEL[st]}</span></td>
+      <td style="${td}"><div class="lt-touch-dots">${dots}</div><div style="font-size:11px;color:var(--text3);margin-top:3px">${t}/${max}</div></td>
+      <td style="${td};font-size:12px;color:var(--text2)">${nextAction}</td>
+      <td style="${td}"><div style="display:flex;gap:6px">
+        <button class="lt-action-btn log" onclick="ltOpenLogFor('${esc(l.id)}')">Log</button>
         ${delistBtn}
       </div></td>
     </tr>`;
@@ -11327,104 +11390,120 @@ function ltOpenAdd(){
   const d=document.getElementById('lt-f-date');if(d)d.value=ltToday();
   const s=document.getElementById('lt-f-source');if(s)s.value='manual';
   const e=document.getElementById('lt-f-err');if(e)e.style.display='none';
-  document.getElementById('lt-modal-add').classList.add('open');
+  document.getElementById('lt-modal-add')?.classList.add('open');
 }
 function ltSaveLead(){
-  const name=(document.getElementById('lt-f-name').value||'').trim();
-  const email=(document.getElementById('lt-f-email').value||'').trim();
-  if(!name||!email){document.getElementById('lt-f-err').style.display='block';return;}
+  const name=(document.getElementById('lt-f-name')?.value||'').trim();
+  const email=(document.getElementById('lt-f-email')?.value||'').trim();
+  const errEl=document.getElementById('lt-f-err');
+  if(!name||!email){if(errEl)errEl.style.display='block';return;}
   ltLeads.push({
-    id:ltUid(),name,email,
-    company:(document.getElementById('lt-f-company').value||'').trim(),
-    phone:(document.getElementById('lt-f-phone').value||'').trim(),
-    formDate:document.getElementById('lt-f-date').value,
-    source:document.getElementById('lt-f-source').value,
-    notes:(document.getElementById('lt-f-notes').value||'').trim(),
-    status:'pending'
+    id:uid(),name,email,
+    company:(document.getElementById('lt-f-company')?.value||'').trim(),
+    phone:(document.getElementById('lt-f-phone')?.value||'').trim(),
+    formDate:document.getElementById('lt-f-date')?.value||ltToday(),
+    source:document.getElementById('lt-f-source')?.value||'manual',
+    notes:(document.getElementById('lt-f-notes')?.value||'').trim(),
+    status:'pending',created:Date.now()
   });
-  ltSave();document.getElementById('lt-modal-add').classList.remove('open');ltRenderTable();ltPopulateTlFilter();
+  ltSave();
+  document.getElementById('lt-modal-add')?.classList.remove('open');
+  ltRenderTable();ltPopulateTlFilter();
   toast('Lead added');
 }
 function ltDelistLead(id){
   if(!isSuperAdmin()){toast('Super admin access required');return;}
-  const l=ltLeads.find(x=>x.id===id);if(l){l.status='inactive';ltSave();ltRenderTable();}
+  const l=ltLeads.find(x=>x.id===id);
+  if(l){l.status='inactive';ltSave();ltRenderTable();}
 }
 function ltOpenLogFor(leadId){
-  const sel=document.getElementById('lt-l-lead');
-  sel.innerHTML=ltLeads.map(l=>`<option value="${l.id}"${l.id===leadId?' selected':''}>${l.name}</option>`).join('');
+  if(!ltLeads.length){toast('Add a lead first');return;}
+  const sel=document.getElementById('lt-l-lead');if(!sel)return;
+  sel.innerHTML=ltLeads.map(l=>`<option value="${esc(l.id)}"${l.id===leadId?' selected':''}>${esc(l.name)}</option>`).join('');
   const d=document.getElementById('lt-l-date');if(d)d.value=ltToday();
   const n=document.getElementById('lt-l-notes');if(n)n.value='';
   const e=document.getElementById('lt-l-err');if(e)e.style.display='none';
   const r=document.getElementById('lt-l-response');if(r)r.value='none';
-  document.getElementById('lt-modal-log').classList.add('open');
+  document.getElementById('lt-modal-log')?.classList.add('open');
 }
 function ltOpenLog(){ltOpenLogFor(null);}
 function ltSaveActivity(){
-  const leadId=document.getElementById('lt-l-lead').value;
-  if(!leadId){document.getElementById('lt-l-err').style.display='block';return;}
-  const response=document.getElementById('lt-l-response').value;
+  const leadId=document.getElementById('lt-l-lead')?.value;
+  const errEl=document.getElementById('lt-l-err');
+  if(!leadId||!ltLeads.some(l=>l.id===leadId)){if(errEl)errEl.style.display='block';return;}
+  const response=document.getElementById('lt-l-response')?.value||'none';
   ltActivities.push({
-    id:ltUid(),leadId,
-    type:document.getElementById('lt-l-type').value,
-    date:document.getElementById('lt-l-date').value,
-    notes:(document.getElementById('lt-l-notes').value||'').trim(),
+    id:uid(),leadId,
+    type:document.getElementById('lt-l-type')?.value||'note',
+    date:document.getElementById('lt-l-date')?.value||ltToday(),
+    notes:(document.getElementById('lt-l-notes')?.value||'').trim(),
     response
   });
-  if(response==='converted'){const l=ltLeads.find(x=>x.id===leadId);if(l)l.status='converted';}
-  if(response==='negative'){const l=ltLeads.find(x=>x.id===leadId);if(l)l.status='inactive';}
-  ltSave();document.getElementById('lt-modal-log').classList.remove('open');ltRenderTable();
+  const lead=ltLeads.find(x=>x.id===leadId);
+  if(lead){
+    if(response==='converted')lead.status='converted';
+    if(response==='negative')lead.status='inactive';
+  }
+  ltSave();
+  document.getElementById('lt-modal-log')?.classList.remove('open');
+  ltRenderTable();
   if(document.getElementById('lt-view-activity')?.classList.contains('active'))ltRenderTimeline();
   toast('Activity logged');
 }
 function ltOpenImport(){
   const t=document.getElementById('lt-import-text');if(t)t.value='';
   const e=document.getElementById('lt-import-err');if(e)e.style.display='none';
-  document.getElementById('lt-modal-import').classList.add('open');
+  document.getElementById('lt-modal-import')?.classList.add('open');
 }
 function ltDoImport(){
-  const raw=(document.getElementById('lt-import-text').value||'').trim();
+  const raw=(document.getElementById('lt-import-text')?.value||'').trim();
   const errEl=document.getElementById('lt-import-err');
-  if(!raw){errEl.textContent='Paste some data first.';errEl.style.display='block';return;}
-  const src=document.getElementById('lt-import-source').value;
+  const fail=m=>{if(errEl){errEl.textContent=m;errEl.style.display='block';}};
+  if(!raw)return fail('Paste some data first.');
+  const src=document.getElementById('lt-import-source')?.value||'manual';
   const lines=raw.split('\n').filter(l=>l.trim());
-  let count=0;
+  if(lines.length>2000)return fail('Too many rows at once — import in batches of 2000 or fewer.');
+  let count=0,skipped=0;
   lines.forEach(line=>{
     const p=line.split(/[,\t]/).map(s=>s.trim());
-    if(p.length<2)return;
-    ltLeads.push({id:ltUid(),name:p[0]||'Unknown',email:p[1]||'',company:p[2]||'',phone:p[3]||'',formDate:p[4]||ltToday(),source:src,notes:'',status:'pending'});
+    if(p.length<2||!p[0]||!p[1]){skipped++;return;}
+    ltLeads.push({id:uid(),name:p[0],email:p[1],company:p[2]||'',phone:p[3]||'',formDate:p[4]||ltToday(),source:src,notes:'',status:'pending',created:Date.now()});
     count++;
   });
-  if(!count){errEl.textContent='Could not parse leads. Check format.';errEl.style.display='block';return;}
-  ltSave();document.getElementById('lt-modal-import').classList.remove('open');ltRenderTable();ltPopulateTlFilter();
-  toast(`${count} lead${count!==1?'s':''} imported`);
+  if(!count)return fail('Could not parse any leads. Expected: Name, Email, Company, Phone, Date — one per line.');
+  ltSave();
+  document.getElementById('lt-modal-import')?.classList.remove('open');
+  ltRenderTable();ltPopulateTlFilter();
+  toast(`${count} lead${count!==1?'s':''} imported${skipped?` · ${skipped} row${skipped!==1?'s':''} skipped`:''}`);
 }
 function ltExport(){
   if(!isSuperAdmin()){toast('Super admin access required');return;}
   const rows=[['Name','Email','Company','Phone','Form date','Source','Status','Touchpoints']];
-  ltLeads.forEach(l=>{
-    rows.push([l.name,l.email,l.company,l.phone,l.formDate,l.source,ltGetStatus(l),ltGetTouches(l.id)]);
-  });
-  const csv=rows.map(r=>r.map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download='leads-export-'+ltToday()+'.csv';a.click();
-  toast('Exported');
+  ltLeads.forEach(l=>rows.push([l.name,l.email,l.company,l.phone,l.formDate,l.source,ltGetStatus(l),ltGetTouches(l.id)]));
+  const csv=rows.map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='leads-export-'+ltToday()+'.csv';
+  a.click();
+  toast('Exported '+ltLeads.length+' leads');
 }
 function ltRenderTimeline(){
-  const filter=(document.getElementById('lt-tl-filter')||{}).value||'';
-  let acts=[...ltActivities].sort((a,b)=>b.date.localeCompare(a.date));
-  if(filter)acts=acts.filter(a=>a.leadId===filter);
-  const rLabels={none:'No response',positive:'Positive',negative:'Not interested',converted:'Converted'};
   const el=document.getElementById('lt-timeline-list');if(!el)return;
+  const filter=document.getElementById('lt-tl-filter')?.value||'';
+  let acts=[...ltActivities].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(filter)acts=acts.filter(a=>a.leadId===filter);
   if(!acts.length){el.innerHTML='<div class="empty">No activity logged yet.</div>';return;}
+  const rLabels={none:'No response',positive:'Positive',negative:'Not interested',converted:'Converted'};
+  const leadById=new Map(ltLeads.map(l=>[l.id,l]));
   el.innerHTML=acts.map(a=>{
-    const lead=ltLeads.find(l=>l.id===a.leadId);
+    const lead=leadById.get(a.leadId);
     const iconCls=a.type==='email'?'email':a.type==='call'?'call':'note';
     const icon=a.type==='email'?'<i class="ti ti-mail"></i>':a.type==='call'?'<i class="ti ti-phone"></i>':'<i class="ti ti-notes"></i>';
     return`<div class="lt-tl-item">
       <div class="lt-tl-icon ${iconCls}">${icon}</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:500;color:var(--text)">${lead?lead.name:'Unknown'} — ${a.type}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.date} · ${rLabels[a.response]||'—'}${a.notes?' · '+a.notes:''}</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${lead?esc(lead.name):'Unknown'} — ${esc(a.type)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${esc(a.date)} · ${rLabels[a.response]||'—'}${a.notes?' · '+esc(a.notes):''}</div>
       </div>
     </div>`;
   }).join('');
@@ -11432,7 +11511,7 @@ function ltRenderTimeline(){
 function ltPopulateTlFilter(){
   const sel=document.getElementById('lt-tl-filter');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">All leads</option>'+ltLeads.map(l=>`<option value="${l.id}"${l.id===cur?' selected':''}>${l.name}</option>`).join('');
+  sel.innerHTML='<option value="">All leads</option>'+ltLeads.map(l=>`<option value="${esc(l.id)}"${l.id===cur?' selected':''}>${esc(l.name)}</option>`).join('');
 }
 function ltInitSettings(){
   const mt=document.getElementById('lt-max-touch');if(mt)mt.value=ltSettings.maxTouch;
@@ -11440,18 +11519,21 @@ function ltInitSettings(){
   const ad=document.getElementById('lt-auto-delist');if(ad)ad.checked=ltSettings.autoDelist;
 }
 function ltSaveSetting(){
-  ltSettings.maxTouch=parseInt(document.getElementById('lt-max-touch').value)||4;
-  ltSettings.followDays=parseInt(document.getElementById('lt-follow-days').value)||3;
-  ltSettings.autoDelist=document.getElementById('lt-auto-delist').checked;
+  ltSettings.maxTouch=Math.min(10,Math.max(1,parseInt(document.getElementById('lt-max-touch')?.value)||4));
+  ltSettings.followDays=Math.min(14,Math.max(1,parseInt(document.getElementById('lt-follow-days')?.value)||3));
+  ltSettings.autoDelist=!!document.getElementById('lt-auto-delist')?.checked;
   ltSave();ltRenderTable();
 }
 function ltDraftEmail(n){
   const scripts=['','Warm intro email — reference the form they filled on eracore.com, introduce Eracore\'s BIM/VDC preconstruction services, ask for a short call.','Follow-up email (3 days later) — brief, reference the intro, ask if they had a chance to review.','Phone call / voicemail script — introduce yourself, mention the form, keep it under 30 seconds, leave a callback number.','Break-up message — polite close, keep the door open, mention they can reach out anytime.'];
-  toast(`Draft #${n}: ${scripts[n]}`);
+  toast(`Draft #${n}: ${scripts[n]||''}`);
 }
 
 // ══════════════════════════════════════════════════════════════
 // PRE-SALES MODULE
+// Storage: ec-ps-prospects / ec-ps-activity
+// Stage transitions happen ONLY through psSetStage() so every
+// change is validated and consistent.
 // ══════════════════════════════════════════════════════════════
 let psProspects=[],psActivity=[];
 const PS_PROS_KEY='ec-ps-prospects';
@@ -11464,23 +11546,39 @@ const PS_STAGES={
   won:{label:'Closed — Won',cls:'won'},
   lost:{label:'Closed — Lost',cls:'lost'}
 };
+const PS_ACTIVE_STAGES=['contacted','proposal','followup','negotiating'];
+const PS_OUTCOME_LABEL={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
+// Outcome → stage transition map (single source of truth)
+const PS_OUTCOME_TO_STAGE={proposal:'proposal',negotiating:'negotiating',won:'won',lost:'lost'};
 let psStageFilter='';
 
-function psUid(){return 'ps'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function psToday(){return new Date().toISOString().split('T')[0];}
 
 function psLoad(){
-  try{const r=localStorage.getItem(PS_PROS_KEY);psProspects=r?JSON.parse(r):[];}catch(e){psProspects=[];}
-  try{const r=localStorage.getItem(PS_ACT_KEY);psActivity=r?JSON.parse(r):[];}catch(e){psActivity=[];}
+  psProspects=Store.get(PS_PROS_KEY,[]);
+  if(!Array.isArray(psProspects))psProspects=[];
+  // Repair any prospect with an unknown stage
+  psProspects.forEach(p=>{if(!PS_STAGES[p.stage])p.stage='contacted';});
+  psActivity=Store.get(PS_ACT_KEY,[]);
+  if(!Array.isArray(psActivity))psActivity=[];
 }
 function psSave(){
-  localStorage.setItem(PS_PROS_KEY,JSON.stringify(psProspects));
-  localStorage.setItem(PS_ACT_KEY,JSON.stringify(psActivity));
+  Store.set(PS_PROS_KEY,psProspects);
+  Store.set(PS_ACT_KEY,psActivity);
+}
+// The ONLY function allowed to change a prospect's stage
+function psSetStage(prospectId,stage){
+  if(!PS_STAGES[stage])return false;
+  const p=psProspects.find(x=>x.id===prospectId);
+  if(!p)return false;
+  p.stage=stage;
+  p.updatedAt=Date.now();
+  return true;
 }
 
 function psSwitchTab(t,el){
-  document.querySelectorAll('#page-presales .lt-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('#page-presales .lt-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('#page-presales .itab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-presales .itab-pane').forEach(v=>v.classList.remove('active'));
   if(el)el.classList.add('active');
   const view=document.getElementById('ps-view-'+t);if(view)view.classList.add('active');
   if(t==='psactivity')psRenderTimeline();
@@ -11488,20 +11586,19 @@ function psSwitchTab(t,el){
 }
 
 function psRender(){
-  psUpdateStats();
-  psRenderPipeline();
-  psPoplFilter();
+  safeRun('ps stats',psUpdateStats);
+  safeRun('ps pipeline',psRenderPipeline);
+  safeRun('ps filter',psPoplFilter);
 }
 function psUpdateStats(){
-  const active=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
-  const proposals=psProspects.filter(p=>p.stage==='proposal');
+  const active=psProspects.filter(p=>PS_ACTIVE_STAGES.includes(p.stage));
   const won=psProspects.filter(p=>p.stage==='won');
   const pipeValue=active.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  const safe=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  safe('ps-s-active',active.length);
-  safe('ps-s-proposal',proposals.length);
-  safe('ps-s-won',won.length);
-  safe('ps-s-value','$'+pipeValue.toLocaleString());
+  const setNum=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setNum('ps-s-active',active.length);
+  setNum('ps-s-proposal',psProspects.filter(p=>p.stage==='proposal').length);
+  setNum('ps-s-won',won.length);
+  setNum('ps-s-value','$'+pipeValue.toLocaleString());
 }
 function psFilterStage(stage,btn){
   psStageFilter=stage;
@@ -11511,43 +11608,39 @@ function psFilterStage(stage,btn){
 }
 function psRenderPipeline(){
   const el=document.getElementById('ps-pipeline-list');if(!el)return;
-  const activeProspects=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
-  let filtered=psStageFilter?activeProspects.filter(p=>p.stage===psStageFilter):activeProspects;
+  const activeProspects=psProspects.filter(p=>PS_ACTIVE_STAGES.includes(p.stage));
+  const filtered=psStageFilter?activeProspects.filter(p=>p.stage===psStageFilter):activeProspects;
   if(!filtered.length){
     el.innerHTML='<div class="empty">No active prospects'+(psStageFilter?' in this stage':'')+'.<br><button class="btn btn-primary" onclick="psOpenAdd()" style="margin-top:1rem"><i class="ti ti-plus"></i> Add first prospect</button></div>';
     return;
   }
-  // Group by stage
-  const stageOrder=['contacted','proposal','followup','negotiating'];
-  let html='';
   if(!psStageFilter){
-    stageOrder.forEach(stg=>{
+    el.innerHTML=PS_ACTIVE_STAGES.map(stg=>{
       const group=filtered.filter(p=>p.stage===stg);
-      if(!group.length)return;
+      if(!group.length)return'';
       const sc=PS_STAGES[stg];
-      html+=`<div style="margin-bottom:1.5rem">
+      return`<div style="margin-bottom:1.5rem">
         <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.75rem;display:flex;align-items:center;gap:8px">
           <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
           <span style="font-size:12px;color:var(--text3)">${group.length} prospect${group.length!==1?'s':''}</span>
         </div>
-        <div class="ps-pipeline">${group.map(p=>psCardHtml(p)).join('')}</div>
+        <div class="ps-pipeline">${group.map(psCardHtml).join('')}</div>
       </div>`;
-    });
+    }).join('');
   } else {
-    html=`<div class="ps-pipeline">${filtered.map(p=>psCardHtml(p)).join('')}</div>`;
+    el.innerHTML=`<div class="ps-pipeline">${filtered.map(psCardHtml).join('')}</div>`;
   }
-  el.innerHTML=html;
 }
 function psCardHtml(p){
   const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
-  const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
-  const lastActText=lastAct?`Last: ${lastAct.date} · ${lastAct.type}`:'No activity yet';
-  const valueStr=p.value?`<span style="font-size:12px;color:var(--green);font-weight:600">$${parseFloat(p.value).toLocaleString()}</span>`:'';
-  return`<div class="ps-card stage-${p.stage}" onclick="psOpenDetail('${p.id}')">
+  const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+  const lastActText=lastAct?`Last: ${esc(lastAct.date)} · ${esc(lastAct.type)}`:'No activity yet';
+  const valueStr=p.value?`<span style="font-size:12px;color:var(--green);font-weight:600">$${(parseFloat(p.value)||0).toLocaleString()}</span>`:'';
+  return`<div class="ps-card stage-${p.stage}" onclick="psOpenDetail('${esc(p.id)}')">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:.5rem">
       <div>
-        <div style="font-weight:600;font-size:14px;margin-bottom:2px">${p.name}</div>
-        <div style="font-size:12px;color:var(--text2)">${p.company}</div>
+        <div style="font-weight:600;font-size:14px;margin-bottom:2px">${esc(p.name)}</div>
+        <div style="font-size:12px;color:var(--text2)">${esc(p.company)}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         ${valueStr}
@@ -11555,95 +11648,94 @@ function psCardHtml(p){
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:11px;color:var(--text3)"><i class="ti ti-source-code" style="font-size:11px"></i> ${p.source||'Unknown'}</span>
+      <span style="font-size:11px;color:var(--text3)">${esc(p.source||'Unknown')}</span>
       <span style="font-size:11px;color:var(--text3)">·</span>
       <span style="font-size:11px;color:var(--text3)">${lastActText}</span>
-      <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();psOpenLogFor('${p.id}')"><i class="ti ti-notes"></i> Log</button>
+      <button class="btn btn-sm" style="margin-left:auto;font-size:11px" onclick="event.stopPropagation();psOpenLogFor('${esc(p.id)}')"><i class="ti ti-notes"></i> Log</button>
     </div>
   </div>`;
 }
 function psOpenAdd(){
-  ['ps-f-name','ps-f-company','ps-f-email','ps-f-phone','ps-f-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const v=document.getElementById('ps-f-value');if(v)v.value='';
+  ['ps-f-name','ps-f-company','ps-f-email','ps-f-phone','ps-f-notes','ps-f-value'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const d=document.getElementById('ps-f-date');if(d)d.value=psToday();
   const s=document.getElementById('ps-f-stage');if(s)s.value='contacted';
   const e=document.getElementById('ps-f-err');if(e)e.style.display='none';
-  document.getElementById('ps-modal-add').classList.add('open');
+  document.getElementById('ps-modal-add')?.classList.add('open');
 }
 function psSaveProspect(){
-  const name=(document.getElementById('ps-f-name').value||'').trim();
-  const company=(document.getElementById('ps-f-company').value||'').trim();
-  if(!name||!company){document.getElementById('ps-f-err').style.display='block';return;}
+  const name=(document.getElementById('ps-f-name')?.value||'').trim();
+  const company=(document.getElementById('ps-f-company')?.value||'').trim();
+  const errEl=document.getElementById('ps-f-err');
+  if(!name||!company){if(errEl)errEl.style.display='block';return;}
+  const stage=document.getElementById('ps-f-stage')?.value||'contacted';
   psProspects.push({
-    id:psUid(),name,company,
-    email:(document.getElementById('ps-f-email').value||'').trim(),
-    phone:(document.getElementById('ps-f-phone').value||'').trim(),
-    source:document.getElementById('ps-f-source').value,
-    value:(document.getElementById('ps-f-value').value||'').trim(),
-    stage:document.getElementById('ps-f-stage').value,
-    mqlDate:document.getElementById('ps-f-date').value,
-    notes:(document.getElementById('ps-f-notes').value||'').trim(),
-    created:Date.now()
+    id:uid(),name,company,
+    email:(document.getElementById('ps-f-email')?.value||'').trim(),
+    phone:(document.getElementById('ps-f-phone')?.value||'').trim(),
+    source:document.getElementById('ps-f-source')?.value||'Direct',
+    value:(document.getElementById('ps-f-value')?.value||'').trim(),
+    stage:PS_STAGES[stage]?stage:'contacted',
+    mqlDate:document.getElementById('ps-f-date')?.value||psToday(),
+    notes:(document.getElementById('ps-f-notes')?.value||'').trim(),
+    created:Date.now(),updatedAt:Date.now()
   });
-  psSave();document.getElementById('ps-modal-add').classList.remove('open');psRender();
+  psSave();
+  document.getElementById('ps-modal-add')?.classList.remove('open');
+  psRender();
   toast('Prospect added');
 }
 function psOpenLogFor(prospectId){
-  const sel=document.getElementById('ps-l-prospect');
-  const active=psProspects.filter(p=>p.stage!=='won'&&p.stage!=='lost');
-  sel.innerHTML=psProspects.map(p=>`<option value="${p.id}"${p.id===prospectId?' selected':''}>${p.name} — ${p.company}</option>`).join('');
+  if(!psProspects.length){toast('Add a prospect first');return;}
+  const sel=document.getElementById('ps-l-prospect');if(!sel)return;
+  sel.innerHTML=psProspects.map(p=>`<option value="${esc(p.id)}"${p.id===prospectId?' selected':''}>${esc(p.name)} — ${esc(p.company)}</option>`).join('');
   if(prospectId)sel.value=prospectId;
   const d=document.getElementById('ps-l-date');if(d)d.value=psToday();
   const n=document.getElementById('ps-l-notes');if(n)n.value='';
-  const o=document.getElementById('ps-l-outcome');if(o)o.value='none';
+  const r=document.getElementById('ps-l-reason');if(r)r.value='';
+  const o=document.getElementById('ps-l-outcome');
   const rw=document.getElementById('ps-l-reason-wrap');if(rw)rw.style.display='none';
   const e=document.getElementById('ps-l-err');if(e)e.style.display='none';
-  // watch outcome change
-  if(o)o.onchange=()=>{const rw=document.getElementById('ps-l-reason-wrap');if(rw)rw.style.display=(o.value==='won'||o.value==='lost')?'block':'none';};
-  document.getElementById('ps-modal-log').classList.add('open');
+  if(o){o.value='none';o.onchange=()=>{if(rw)rw.style.display=(o.value==='won'||o.value==='lost')?'block':'none';};}
+  document.getElementById('ps-modal-log')?.classList.add('open');
 }
 function psOpenLog(){psOpenLogFor(null);}
 function psSaveActivity(){
-  const prospectId=document.getElementById('ps-l-prospect').value;
-  if(!prospectId){document.getElementById('ps-l-err').style.display='block';return;}
-  const outcome=document.getElementById('ps-l-outcome').value;
-  const reason=(document.getElementById('ps-l-reason').value||'').trim();
+  const prospectId=document.getElementById('ps-l-prospect')?.value;
+  const errEl=document.getElementById('ps-l-err');
+  if(!prospectId||!psProspects.some(p=>p.id===prospectId)){if(errEl)errEl.style.display='block';return;}
+  const outcome=document.getElementById('ps-l-outcome')?.value||'none';
   psActivity.push({
-    id:psUid(),prospectId,
-    type:document.getElementById('ps-l-type').value,
-    date:document.getElementById('ps-l-date').value,
-    notes:(document.getElementById('ps-l-notes').value||'').trim(),
-    outcome,reason
+    id:uid(),prospectId,
+    type:document.getElementById('ps-l-type')?.value||'note',
+    date:document.getElementById('ps-l-date')?.value||psToday(),
+    notes:(document.getElementById('ps-l-notes')?.value||'').trim(),
+    outcome,
+    reason:(document.getElementById('ps-l-reason')?.value||'').trim()
   });
-  // Update stage based on outcome
-  const p=psProspects.find(x=>x.id===prospectId);
-  if(p){
-    if(outcome==='won')p.stage='won';
-    else if(outcome==='lost')p.stage='lost';
-    else if(outcome==='proposal')p.stage='proposal';
-    else if(outcome==='negotiating')p.stage='negotiating';
-  }
-  psSave();document.getElementById('ps-modal-log').classList.remove('open');psRender();
+  if(PS_OUTCOME_TO_STAGE[outcome])psSetStage(prospectId,PS_OUTCOME_TO_STAGE[outcome]);
+  psSave();
+  document.getElementById('ps-modal-log')?.classList.remove('open');
+  psRender();
   if(document.getElementById('ps-view-psactivity')?.classList.contains('active'))psRenderTimeline();
   toast('Touchpoint logged');
 }
 function psRenderTimeline(){
-  const filter=(document.getElementById('ps-tl-filter')||{}).value||'';
-  let acts=[...psActivity].sort((a,b)=>b.date.localeCompare(a.date));
-  if(filter)acts=acts.filter(a=>a.prospectId===filter);
   const el=document.getElementById('ps-timeline-list');if(!el)return;
+  const filter=document.getElementById('ps-tl-filter')?.value||'';
+  let acts=[...psActivity].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(filter)acts=acts.filter(a=>a.prospectId===filter);
   if(!acts.length){el.innerHTML='<div class="empty">No activity logged yet.</div>';return;}
-  const outcomeLbl={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
+  const prospectById=new Map(psProspects.map(p=>[p.id,p]));
+  const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
   el.innerHTML=acts.map(a=>{
-    const p=psProspects.find(x=>x.id===a.prospectId);
+    const p=prospectById.get(a.prospectId);
     const iconCls={call:'call',meeting:'meeting',email:'email',proposal:'proposal',note:'note'}[a.type]||'note';
-    const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
     return`<div class="ps-tl-item">
       <div class="ps-tl-icon ${iconCls}">${icons[a.type]||icons.note}</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:500;color:var(--text)">${p?`${p.name} — ${p.company}`:('Unknown')} · ${a.type}</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">${a.date} · ${outcomeLbl[a.outcome]||'—'}${a.notes?' · '+a.notes:''}</div>
-        ${a.reason?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Reason: ${a.reason}</div>`:''}
+        <div style="font-size:13px;font-weight:500;color:var(--text)">${p?esc(p.name)+' — '+esc(p.company):'Unknown'} · ${esc(a.type)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${esc(a.date)} · ${PS_OUTCOME_LABEL[a.outcome]||'—'}${a.notes?' · '+esc(a.notes):''}</div>
+        ${a.reason?`<div style="font-size:11px;color:var(--text2);margin-top:2px">Reason: ${esc(a.reason)}</div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -11651,69 +11743,68 @@ function psRenderTimeline(){
 function psPoplFilter(){
   const sel=document.getElementById('ps-tl-filter');if(!sel)return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">All prospects</option>'+psProspects.map(p=>`<option value="${p.id}"${p.id===cur?' selected':''}>${p.name} — ${p.company}</option>`).join('');
+  sel.innerHTML='<option value="">All prospects</option>'+psProspects.map(p=>`<option value="${esc(p.id)}"${p.id===cur?' selected':''}>${esc(p.name)} — ${esc(p.company)}</option>`).join('');
 }
 function psRenderClosed(){
   const el=document.getElementById('ps-closed-list');if(!el)return;
   const won=psProspects.filter(p=>p.stage==='won');
   const lost=psProspects.filter(p=>p.stage==='lost');
   const wonValue=won.reduce((s,p)=>s+(parseFloat(p.value)||0),0);
-  const winRate=psProspects.filter(p=>p.stage==='won'||p.stage==='lost').length>0?
-    Math.round(won.length/(won.length+lost.length)*100):0;
-  let html=`<div class="lt-stat-grid" style="margin-bottom:1.5rem">
-    <div class="lt-stat"><div class="lt-stat-label">Won</div><div class="lt-stat-num success">${won.length}</div></div>
-    <div class="lt-stat"><div class="lt-stat-label">Lost</div><div class="lt-stat-num" style="color:var(--red)">${lost.length}</div></div>
-    <div class="lt-stat"><div class="lt-stat-label">Win rate</div><div class="lt-stat-num accent">${winRate}%</div></div>
-    <div class="lt-stat"><div class="lt-stat-label">Revenue closed</div><div class="lt-stat-num success">$${wonValue.toLocaleString()}</div></div>
+  const closedCount=won.length+lost.length;
+  const winRate=closedCount?Math.round(won.length/closedCount*100):0;
+  let html=`<div class="counters" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem">
+    <div class="counter"><div class="counter-val" style="color:var(--green)">${won.length}</div><div class="counter-lbl">Won</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--red)">${lost.length}</div><div class="counter-lbl">Lost</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--blue)">${winRate}%</div><div class="counter-lbl">Win rate</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--green)">$${wonValue.toLocaleString()}</div><div class="counter-lbl">Revenue closed</div></div>
   </div>`;
-  if(!won.length&&!lost.length){html+='<div class="empty">No closed deals yet.</div>';el.innerHTML=html;return;}
-  const mkRow=(p,outcome)=>{
-    const sc=PS_STAGES[outcome];
-    const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>b.date.localeCompare(a.date))[0];
-    return`<div class="ps-card stage-${outcome}" style="margin-bottom:8px">
+  if(!closedCount){el.innerHTML=html+'<div class="empty">No closed deals yet.</div>';return;}
+  const mkRow=p=>{
+    const sc=PS_STAGES[p.stage];
+    const lastAct=psActivity.filter(a=>a.prospectId===p.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+    return`<div class="ps-card stage-${p.stage}" style="margin-bottom:8px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
         <div>
-          <div style="font-weight:600">${p.name}</div>
-          <div style="font-size:12px;color:var(--text2)">${p.company} · ${p.source||'—'}</div>
+          <div style="font-weight:600">${esc(p.name)}</div>
+          <div style="font-size:12px;color:var(--text2)">${esc(p.company)} · ${esc(p.source||'—')}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
-          ${p.value?`<div style="font-size:12px;color:var(--text2);margin-top:3px">$${parseFloat(p.value).toLocaleString()}</div>`:''}
+          ${p.value?`<div style="font-size:12px;color:var(--text2);margin-top:3px">$${(parseFloat(p.value)||0).toLocaleString()}</div>`:''}
         </div>
       </div>
-      ${lastAct&&lastAct.reason?`<div style="font-size:12px;color:var(--text2);margin-top:.5rem">Reason: ${lastAct.reason}</div>`:''}
+      ${lastAct&&lastAct.reason?`<div style="font-size:12px;color:var(--text2);margin-top:.5rem">Reason: ${esc(lastAct.reason)}</div>`:''}
     </div>`;
   };
-  if(won.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Won (${won.length})</div>${won.map(p=>mkRow(p,'won')).join('')}`;
-  if(lost.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .75rem">Lost (${lost.length})</div>${lost.map(p=>mkRow(p,'lost')).join('')}`;
+  if(won.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Won (${won.length})</div>${won.map(mkRow).join('')}`;
+  if(lost.length)html+=`<div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:1.25rem 0 .75rem">Lost (${lost.length})</div>${lost.map(mkRow).join('')}`;
   el.innerHTML=html;
 }
 function psOpenDetail(id){
   const p=psProspects.find(x=>x.id===id);if(!p)return;
   const sc=PS_STAGES[p.stage]||PS_STAGES.contacted;
-  const acts=psActivity.filter(a=>a.prospectId===id).sort((a,b)=>b.date.localeCompare(a.date));
-  const outcomeLbl={none:'No update',interested:'Still interested',proposal:'Moved to proposal',negotiating:'Negotiating',won:'Closed — Won',lost:'Closed — Lost'};
-  const icons={call:'<i class="ti ti-phone"></i>',meeting:'<i class="ti ti-users"></i>',email:'<i class="ti ti-mail"></i>',proposal:'<i class="ti ti-file-description"></i>',note:'<i class="ti ti-notes"></i>'};
-  document.getElementById('ps-panel-name').textContent=p.name;
-  document.getElementById('ps-panel-body').innerHTML=`
+  const acts=psActivity.filter(a=>a.prospectId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const nameEl=document.getElementById('ps-panel-name');if(nameEl)nameEl.textContent=p.name;
+  const bodyEl=document.getElementById('ps-panel-body');if(!bodyEl)return;
+  bodyEl.innerHTML=`
     <div class="panel-section">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:.75rem;flex-wrap:wrap">
         <span class="ps-stage-badge ${sc.cls}">${sc.label}</span>
-        ${p.value?`<span style="font-size:13px;font-weight:600;color:var(--green)">$${parseFloat(p.value).toLocaleString()}</span>`:''}
+        ${p.value?`<span style="font-size:13px;font-weight:600;color:var(--green)">$${(parseFloat(p.value)||0).toLocaleString()}</span>`:''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
-        <div><span style="color:var(--text2)">Company</span><div style="font-weight:500;margin-top:2px">${p.company||'—'}</div></div>
-        <div><span style="color:var(--text2)">Source</span><div style="font-weight:500;margin-top:2px">${p.source||'—'}</div></div>
-        <div><span style="color:var(--text2)">Email</span><div style="font-weight:500;margin-top:2px">${p.email||'—'}</div></div>
-        <div><span style="color:var(--text2)">Phone</span><div style="font-weight:500;margin-top:2px">${p.phone||'—'}</div></div>
-        <div><span style="color:var(--text2)">MQL date</span><div style="font-weight:500;margin-top:2px">${p.mqlDate||'—'}</div></div>
+        <div><span style="color:var(--text2)">Company</span><div style="font-weight:500;margin-top:2px">${esc(p.company)||'—'}</div></div>
+        <div><span style="color:var(--text2)">Source</span><div style="font-weight:500;margin-top:2px">${esc(p.source)||'—'}</div></div>
+        <div><span style="color:var(--text2)">Email</span><div style="font-weight:500;margin-top:2px">${esc(p.email)||'—'}</div></div>
+        <div><span style="color:var(--text2)">Phone</span><div style="font-weight:500;margin-top:2px">${esc(p.phone)||'—'}</div></div>
+        <div><span style="color:var(--text2)">MQL date</span><div style="font-weight:500;margin-top:2px">${esc(p.mqlDate)||'—'}</div></div>
       </div>
-      ${p.notes?`<div style="margin-top:.75rem;font-size:12px;color:var(--text2);background:var(--surface2);padding:.625rem .75rem;border-radius:var(--r);line-height:1.5">${p.notes}</div>`:''}
+      ${p.notes?`<div style="margin-top:.75rem;font-size:12px;color:var(--text2);background:var(--surface2);padding:.625rem .75rem;border-radius:var(--r);line-height:1.5">${esc(p.notes)}</div>`:''}
     </div>
     <div class="panel-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
         <div class="panel-section-title">Stage</div>
-        <select onchange="psUpdateStage('${p.id}',this.value)" style="font-size:12px;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)">
+        <select onchange="psUpdateStage('${esc(p.id)}',this.value)" style="font-size:12px;height:28px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text)">
           ${Object.entries(PS_STAGES).map(([k,v])=>`<option value="${k}"${p.stage===k?' selected':''}>${v.label}</option>`).join('')}
         </select>
       </div>
@@ -11721,31 +11812,26 @@ function psOpenDetail(id){
     <div class="panel-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
         <div class="panel-section-title">Activity (${acts.length})</div>
-        <button class="btn btn-sm" onclick="closePsPanel();psOpenLogFor('${p.id}')"><i class="ti ti-plus"></i> Log</button>
+        <button class="btn btn-sm" onclick="closePsPanel();psOpenLogFor('${esc(p.id)}')"><i class="ti ti-plus"></i> Log</button>
       </div>
       ${acts.length?acts.map(a=>`<div style="display:flex;gap:10px;padding:.5rem 0;border-bottom:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px">${a.date}</div>
+        <div style="font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px">${esc(a.date)}</div>
         <div style="flex:1">
-          <div style="font-size:12px;font-weight:500">${a.type}${a.outcome&&a.outcome!=='none'?' → '+outcomeLbl[a.outcome]:''}</div>
-          ${a.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:2px">${a.notes}</div>`:''}
-          ${a.reason?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Reason: ${a.reason}</div>`:''}
+          <div style="font-size:12px;font-weight:500">${esc(a.type)}${a.outcome&&a.outcome!=='none'?' → '+(PS_OUTCOME_LABEL[a.outcome]||''):''}</div>
+          ${a.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.4;margin-top:2px">${esc(a.notes)}</div>`:''}
+          ${a.reason?`<div style="font-size:11px;color:var(--text3);margin-top:2px">Reason: ${esc(a.reason)}</div>`:''}
         </div>
       </div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:.375rem 0">No activity yet.</div>'}
     </div>`;
-  const panel=document.getElementById('ps-detail-panel');
-  const overlay=document.getElementById('ps-panel-overlay');
-  if(panel){panel.classList.add('open');}
-  if(overlay){overlay.classList.add('open');}
+  document.getElementById('ps-detail-panel')?.classList.add('open');
+  document.getElementById('ps-panel-overlay')?.classList.add('open');
 }
 function closePsPanel(){
-  const panel=document.getElementById('ps-detail-panel');
-  const overlay=document.getElementById('ps-panel-overlay');
-  if(panel)panel.classList.remove('open');
-  if(overlay)overlay.classList.remove('open');
+  document.getElementById('ps-detail-panel')?.classList.remove('open');
+  document.getElementById('ps-panel-overlay')?.classList.remove('open');
 }
 function psUpdateStage(id,stage){
-  const p=psProspects.find(x=>x.id===id);if(p){p.stage=stage;psSave();psRender();}
-  toast('Stage updated');
+  if(psSetStage(id,stage)){psSave();psRender();toast('Stage updated');}
 }
 
 // Clear any keys from older versions that could corrupt this version
@@ -11778,13 +11864,14 @@ function psUpdateStage(id,stage){
     localStorage.setItem('ec-gads-creds',JSON.stringify({devToken:'b8GV9ZVEJywiqTrH0vXLhw',customerId:'6282124988'}));
 })();
 loadData();
-// Auth gate — run after DOM is ready
-(function(){
-  if(!checkAndShowLogin()){
-    // Not logged in — wait for login
-    return;
-  }
+// ── STARTUP SEQUENCE ─────────────────────────────────────────
+// 1. Migrate any plaintext-password users to hashed storage (v1 → v2)
+// 2. Auth gate — show login if no valid session
+(async function(){
+  await safeRunAsync('user migration',migrateLegacyUsers);
+  checkAndShowLogin();
 })();
+async function safeRunAsync(label,fn){try{await fn();}catch(e){console.error('[OS] '+label+' failed:',e);}}
 </script>
 </body>
 </html>
