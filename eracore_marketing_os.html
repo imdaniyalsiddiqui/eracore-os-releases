@@ -1123,7 +1123,7 @@ select.sm:focus{border-color:var(--blue)}
 </div>
 
 <!-- SETTINGS -->
-<div id="page-settings" class="page">
+<div id="page-settings" class="page" data-html-version>
   <!-- HubSpot CRM sync -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;max-width:620px;margin-bottom:1.5rem">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:.375rem">
@@ -1158,7 +1158,7 @@ select.sm:focus{border-color:var(--blue)}
     <div style="font-size:12px;color:var(--text2);margin-top:.5rem"><strong>Save to file</strong> embeds all your data into a new HTML — works on file:// and localhost identically. Use this after any major sync or data change.</div>
     <div id="import-status" style="font-size:12px;color:var(--green);margin-top:.25rem"></div>
   </div>
-  <div><div class="pt">Settings</div><div class="ps">API key and preferences</div></div>
+  <div><div class="pt">Settings</div><div class="ps">API key and preferences</div><div style="font-size:11px;color:var(--text3);margin-top:2px">App build v<span id="html-version-stamp"></span> — if this doesn't match the version you deployed, the update didn't apply.</div></div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.5rem;max-width:520px;margin-top:1.5rem">
     <div style="font-size:14px;font-weight:600;margin-bottom:.25rem">Anthropic API key</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5">Required for AI brief generation. Get yours at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a>. Stored locally only.</div>
@@ -2087,7 +2087,7 @@ select.sm:focus{border-color:var(--blue)}
 
     <!-- Admin users (editable) -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Admin users</div>
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">Users</div>
       <button class="btn btn-sm" onclick="umToggleAddForm()"><i class="ti ti-plus"></i> Add user</button>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1.25rem">
@@ -2096,14 +2096,17 @@ select.sm:focus{border-color:var(--blue)}
 
     <!-- Add user form -->
     <div id="um-add-form" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:1rem">
-      <div style="font-size:13px;font-weight:600;margin-bottom:.75rem">New admin user</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:.75rem" id="um-form-title">New user</div>
       <div class="g2">
-        <div class="field"><label>Display name</label><input id="um-new-name" placeholder="Jane Doe"></div>
-        <div class="field"><label>Username</label><input id="um-new-username" placeholder="jane"></div>
+        <div class="field"><label>Display name</label><input id="um-new-name" placeholder="Javeria"></div>
+        <div class="field"><label>Username</label><input id="um-new-username" placeholder="javeria"></div>
       </div>
-      <div class="field"><label>Password</label><input id="um-new-password" type="password" placeholder="••••••••"></div>
+      <div class="field"><label>Password</label><input id="um-new-password" type="password" placeholder="Password (min 6 characters)"></div>
+      <div class="field"><label>Can access</label>
+        <div id="um-perm-list" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.5rem .75rem;max-height:220px;overflow-y:auto"></div>
+      </div>
       <p id="um-add-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem"></p>
-      <button class="btn btn-primary" onclick="umAddUser()"><i class="ti ti-check"></i> Create user</button>
+      <button class="btn btn-primary" onclick="umAddUser()"><i class="ti ti-check"></i> Save user</button>
     </div>
 
     <div class="modal-actions" style="border:none;padding:0;margin:0">
@@ -4602,6 +4605,7 @@ const PAGE_MAP={
 const REPORTING_PAGES=new Set(['mzreport','asanaview','standup','reporting']);
 
 function navTo(id, el){
+  if(typeof canAccess==='function'&&!canAccess(id)){toast('You don\'t have access to this view');return;}
   Object.values(PAGE_MAP).forEach(pid=>{const p=document.getElementById(pid);if(p)p.classList.remove('active');});
   document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
   const pageId=PAGE_MAP[id]||('page-'+id);
@@ -4614,7 +4618,10 @@ function navTo(id, el){
   } else {
     const navEl=document.getElementById('nav-'+id);if(navEl)navEl.classList.add('active');
   }
-  onNavTo(id);
+  try{onNavTo(id);}catch(e){
+    console.error('[OS] page "'+id+'" failed to initialise:',e);
+    toast('Part of this page failed to load — press F12 for details');
+  }
 }
 function navToSub(parent, sub, el){
   navTo(parent, null);
@@ -4644,7 +4651,7 @@ function onNavTo(id){
   if(id==='principles')renderPrinciples();
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
-  if(id==='settings')initSettings();
+  if(id==='settings'){initSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
   if(id==='tasks')renderTasks();
   if(id==='seodash'){loadSEO();loadBingData();loadCalls();updateSEOTopCounters();renderSEODash();
     // Auto-fetch if credentials already saved
@@ -11319,6 +11326,8 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
+const APP_HTML_VERSION='7.4';
+console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 const SUPER_ADMINS=['daniyal','mz'];
 // sha256(username + ':' + password) — precomputed, no plaintext in file
 const SUPER_ADMIN_HASHES={
@@ -11358,6 +11367,107 @@ function isAuthenticated(){
   // A session is only valid if the username still maps to a real account
   if(SUPER_ADMINS.includes(s.username))return true;
   return getAdminUsers().some(u=>u.username===s.username);
+}
+// ── VIEW PERMISSIONS ──────────────────────────────────────────
+// Users (non-super-admins) carry a pages[] whitelist. Super admins
+// always see everything. Legacy users without pages[] get full access.
+const PERMISSION_PAGES=[
+  {id:'dashboard',label:'Dashboard'},
+  {id:'tasks',label:'Task Command Center'},
+  {id:'mktmgmt',label:'Marketing Management (all channel tabs)'},
+  {id:'strategy',label:'Strategy'},
+  {id:'principles',label:'Principles'},
+  {id:'outreach',label:'Lead Outreach'},
+  {id:'presales',label:'Pre-Sales'},
+  {id:'marketingperf',label:'Marketing Performance'},
+  {id:'seodash',label:'SEO / AIEO — organic'},
+  {id:'paiddash',label:'Paid Marketing'},
+  {id:'socialdash',label:'Social Media'},
+  {id:'reporting',label:'Reporting / MZ Report'},
+  {id:'settings',label:'Settings & Integrations'}
+];
+function currentUserPages(){
+  const s=getSession();if(!s)return null;
+  if(SUPER_ADMINS.includes(s.username))return null; // null = unrestricted
+  const u=getAdminUsers().find(x=>x.username===s.username);
+  if(!u)return [];
+  if(!Array.isArray(u.pages))return null; // legacy user → full access
+  return u.pages;
+}
+function canAccess(pageId){
+  const pages=currentUserPages();
+  if(pages===null)return true;
+  const key=REPORTING_PAGES.has(pageId)?'reporting':(pageId==='mktdash'?'dashboard':pageId);
+  return pages.includes(key);
+}
+// Edit rights are a SUBSET of view rights, granted per page.
+// View-only users can open a page but every mutation is blocked.
+function currentUserEdits(){
+  const s=getSession();if(!s)return null;
+  if(SUPER_ADMINS.includes(s.username))return null; // unrestricted
+  const u=getAdminUsers().find(x=>x.username===s.username);
+  if(!u)return [];
+  if(!Array.isArray(u.pages))return null;          // legacy user → full access
+  return Array.isArray(u.edits)?u.edits:u.pages;   // pre-edit-model user → edit where they can view
+}
+function canEdit(pageId){
+  const edits=currentUserEdits();
+  if(edits===null)return true;
+  const key=REPORTING_PAGES.has(pageId)?'reporting':pageId;
+  return edits.includes(key);
+}
+// ── EDIT GUARD REGISTRY ───────────────────────────────────────
+// Every user-facing mutation entry point, mapped to the page whose
+// edit permission it requires. Installed once at startup; a view-only
+// user hitting any of these gets a toast instead of a change.
+const EDIT_GUARDS={
+  // Task Command Center — create / edit / stage / delete
+  openNewTask:'tasks',saveTask:'tasks',openEditTask:'tasks',saveEditTask:'tasks',
+  deleteTask:'tasks',openStageUpdate:'tasks',saveStageUpdate:'tasks',
+  // Strategy — full CRUD, journal, items, chain
+  openNewStrategyModal:'strategy',saveNewStrategy:'strategy',deleteStrategy:'strategy',
+  openEditStrategy:'strategy',saveEditStrategy:'strategy',openJournalModal:'strategy',
+  saveJournalEntry:'strategy',stOpenItem:'strategy',stSaveItem:'strategy',
+  cyclePhaseStatus:'strategy',cycleDepStatus:'strategy',
+  stDeletePhase:'strategy',stDeleteTrack:'strategy',stDeleteDep:'strategy',stDeleteMissing:'strategy',
+  // Principles / standup
+  savePrinciple:'principles',deletePrinciple:'principles',saveStandup:'principles',
+  // Lead Outreach — calls, emails, notes, bulk, import, templates, sync
+  ltOpenAdd:'outreach',ltSaveLead:'outreach',ltSetCall:'outreach',ltSetEmail:'outreach',
+  ltSetNote:'outreach',ltSetHubspot:'outreach',ltBulkApply:'outreach',
+  ltOpenImport:'outreach',ltDoImport:'outreach',ltOpenLogFor:'outreach',ltSaveActivity:'outreach',
+  ltSaveSetting:'outreach',ltSaveTemplate:'outreach',ltResetTemplate:'outreach',
+  ltHsSaveToken:'outreach',ltHubspotSync:'outreach',
+  // Pre-Sales — prospects, touchpoints, stages
+  psOpenAdd:'presales',psSaveProspect:'presales',psOpenLogFor:'presales',psOpenLog:'presales',
+  psSaveActivity:'presales',psUpdateStage:'presales'
+};
+function installEditGuards(){
+  Object.entries(EDIT_GUARDS).forEach(([fn,page])=>{
+    const orig=window[fn];
+    if(typeof orig!=='function')return console.warn('[guards] missing fn:',fn);
+    window[fn]=function(...args){
+      if(!canEdit(page)){toast('View-only access — ask a super admin for edit rights on this view');return;}
+      return orig.apply(this,args);
+    };
+  });
+}
+// Hide sidebar entries the user cannot open (parses navTo/navToSub targets)
+function applyNavPermissions(){
+  const pages=currentUserPages();
+  document.querySelectorAll('.sidebar .nav-item,.sidebar .nav-sub-item').forEach(el=>{
+    const oc=el.getAttribute('onclick')||'';
+    const m=oc.match(/navTo(?:Sub)?\('([a-z]+)'/);
+    if(!m)return; // logout, bell, user mgmt handled elsewhere
+    el.style.display=(pages===null||canAccess(m[1]))?'':'none';
+  });
+}
+function firstAllowedPage(){
+  const pages=currentUserPages();
+  if(pages===null)return'dashboard';
+  const order=PERMISSION_PAGES.map(p=>p.id);
+  const first=order.find(p=>pages.includes(p));
+  return first||'dashboard';
 }
 function getCurrentUser(){
   const s=getSession();
@@ -11426,10 +11536,16 @@ async function doLogin(){
   if(errEl)errEl.textContent='';
   if(pEl)pEl.value='';
   updateUserChip();
+  // Land users on the first view they're allowed to see
+  const landing=firstAllowedPage();
+  if(landing!=='dashboard'||!canAccess('dashboard'))navTo(landing,document.getElementById('nav-'+landing));
 }
 
 function doLogout(){
   clearSession();
+  // Close anything that was open so the next user starts clean
+  document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));
+  document.querySelectorAll('.side-panel.open,.panel-overlay.open').forEach(o=>o.classList.remove('open'));
   const loginEl=document.getElementById('login-screen');
   if(loginEl)loginEl.style.display='flex';
   ['login-username','login-password'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -11447,6 +11563,7 @@ function updateUserChip(){
   }
   if(mgrLink)mgrLink.style.display=superAdmin?'flex':'none';
   if(exportBtn)exportBtn.style.display=superAdmin?'inline-flex':'none';
+  safeRun('nav permissions',applyNavPermissions);
 }
 
 // ── USER MANAGEMENT (every entry point re-verifies super admin) ──
@@ -11458,40 +11575,94 @@ function openUserMgmt(){
 function umToggleAddForm(){
   if(!isSuperAdmin())return;
   const f=document.getElementById('um-add-form');if(!f)return;
-  f.style.display=f.style.display==='none'?'block':'none';
-  if(f.style.display==='block'){
-    ['um-new-name','um-new-username','um-new-password'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    const err=document.getElementById('um-add-err');if(err)err.style.display='none';
-  }
+  if(f.style.display==='none'||!f.style.display)umStartCreate();
+  else{f.style.display='none';umEditingUsername=null;}
 }
 function umRenderList(){
   const users=getAdminUsers();
   const el=document.getElementById('um-user-list');if(!el)return;
-  if(!users.length){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text3);text-align:center">No admin users yet.</div>';return;}
-  el.innerHTML=users.map((u,i)=>`<div class="um-user-row">
+  if(!users.length){el.innerHTML='<div style="padding:1rem;font-size:13px;color:var(--text3);text-align:center">No users yet — add your team with only the views they need.</div>';return;}
+  const labelById=Object.fromEntries(PERMISSION_PAGES.map(p=>[p.id,p.label.split(' (')[0].split(' — ')[0]]));
+  el.innerHTML=users.map((u,i)=>{
+    const pages=Array.isArray(u.pages)?u.pages:null;
+    const edits=Array.isArray(u.edits)?u.edits:pages;
+    const access=pages===null?'All views (legacy — edit to restrict)':`${pages.length} view${pages.length!==1?'s':''} · edit on ${edits?edits.length:0}`+(pages.length?` — ${pages.slice(0,3).map(p=>labelById[p]||p).join(', ')}${pages.length>3?' +'+(pages.length-3):''}`:'');
+    return`<div class="um-user-row">
     <div class="um-avatar" style="background:var(--green)">${esc(u.name.charAt(0).toUpperCase())}</div>
-    <div style="flex:1"><div style="font-weight:600">${esc(u.name)}</div><div style="font-size:12px;color:var(--text2)">${esc(u.username)}</div></div>
-    <span class="um-role-badge admin">Admin</span>
+    <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(u.name)}</div><div style="font-size:12px;color:var(--text2)">${esc(u.username)} · ${esc(access)}</div></div>
+    <button class="btn btn-sm" onclick="umStartEdit('${esc(u.username)}')"><i class="ti ti-key"></i> Edit access</button>
     <button class="btn-icon btn" onclick="umDeleteUser(${i})" title="Remove user"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+  </div>`;}).join('');
+}
+let umEditingUsername=null; // null = creating; string = editing that user's access
+function umPermChecklist(selectedViews,selectedEdits){
+  const sv=new Set(selectedViews||[]);
+  const se=new Set(selectedEdits||[]);
+  const head=`<div style="display:flex;gap:0;padding:2px 0 6px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em"><span style="width:46px">View</span><span style="width:46px">Edit</span><span>Page</span></div>`;
+  return head+PERMISSION_PAGES.map(p=>`<div style="display:flex;align-items:center;gap:0;padding:4px 0;font-size:13px">
+    <span style="width:46px"><input type="checkbox" class="um-perm" value="${p.id}"${sv.has(p.id)?' checked':''} onchange="if(!this.checked){const e=this.closest('div').querySelector('.um-perm-edit');if(e)e.checked=false;}" style="width:auto"></span>
+    <span style="width:46px"><input type="checkbox" class="um-perm-edit" value="${p.id}"${se.has(p.id)?' checked':''} onchange="if(this.checked){const v=this.closest('div').querySelector('.um-perm');if(v)v.checked=true;}" style="width:auto"></span>
+    <span>${p.label}</span>
   </div>`).join('');
+}
+function umStartCreate(){
+  umEditingUsername=null;
+  const f=document.getElementById('um-add-form');if(!f)return;
+  f.style.display='block';
+  document.getElementById('um-form-title').textContent='New user';
+  ['um-new-name','um-new-username','um-new-password'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.disabled=false;}});
+  document.getElementById('um-new-password').placeholder='Password (min 6 characters)';
+  document.getElementById('um-perm-list').innerHTML=umPermChecklist([],[]);
+  const err=document.getElementById('um-add-err');if(err)err.style.display='none';
+}
+function umStartEdit(username){
+  if(!isSuperAdmin())return;
+  const u=getAdminUsers().find(x=>x.username===username);if(!u)return;
+  umEditingUsername=username;
+  const f=document.getElementById('um-add-form');if(!f)return;
+  f.style.display='block';
+  document.getElementById('um-form-title').textContent='Edit user — '+u.name;
+  document.getElementById('um-new-name').value=u.name;
+  document.getElementById('um-new-username').value=u.username;
+  document.getElementById('um-new-username').disabled=true;
+  document.getElementById('um-new-password').value='';
+  document.getElementById('um-new-password').placeholder='Leave blank to keep current password';
+  const uViews=Array.isArray(u.pages)?u.pages:PERMISSION_PAGES.map(p=>p.id);
+  const uEdits=Array.isArray(u.edits)?u.edits:uViews;
+  document.getElementById('um-perm-list').innerHTML=umPermChecklist(uViews,uEdits);
+  const err=document.getElementById('um-add-err');if(err)err.style.display='none';
 }
 async function umAddUser(){
   if(!isSuperAdmin()){toast('Super admin access required');return;}
   const name=(document.getElementById('um-new-name')?.value||'').trim();
   const username=(document.getElementById('um-new-username')?.value||'').trim().toLowerCase();
   const password=document.getElementById('um-new-password')?.value||'';
+  const pages=[...document.querySelectorAll('#um-perm-list .um-perm:checked')].map(c=>c.value);
+  const edits=[...document.querySelectorAll('#um-perm-list .um-perm-edit:checked')].map(c=>c.value).filter(p=>pages.includes(p));
   const errEl=document.getElementById('um-add-err');
   const fail=m=>{if(errEl){errEl.textContent=m;errEl.style.display='block';}};
-  if(!name||!username||!password)return fail('All fields required.');
+  if(!name||!username)return fail('Name and username are required.');
   if(!/^[a-z0-9._-]{2,32}$/.test(username))return fail('Username: 2–32 chars, letters/numbers/._- only.');
-  if(password.length<6)return fail('Password must be at least 6 characters.');
+  if(!pages.length)return fail('Select at least one view this user can access.');
   if(SUPER_ADMINS.includes(username))return fail('That username is reserved.');
   const users=getAdminUsers();
-  if(users.some(u=>u.username===username))return fail('Username already exists.');
-  users.push({name,username,passwordHash:await hashPw(username,password)});
-  saveAdminUsers(users);
-  toast(`Admin user "${name}" created`);
-  umToggleAddForm();
+  if(umEditingUsername){
+    const u=users.find(x=>x.username===umEditingUsername);
+    if(!u)return fail('User no longer exists.');
+    u.name=name;u.pages=pages;u.edits=edits;
+    if(password){if(password.length<6)return fail('Password must be at least 6 characters.');u.passwordHash=await hashPw(u.username,password);}
+    saveAdminUsers(users);
+    toast('User updated');
+  }else{
+    if(!password)return fail('Password is required.');
+    if(password.length<6)return fail('Password must be at least 6 characters.');
+    if(users.some(u=>u.username===username))return fail('Username already exists.');
+    users.push({name,username,passwordHash:await hashPw(username,password),pages,edits});
+    saveAdminUsers(users);
+    toast(`User "${name}" created — they can see ${pages.length} view${pages.length!==1?'s':''}`);
+  }
+  document.getElementById('um-add-form').style.display='none';
+  umEditingUsername=null;
   umRenderList();
 }
 function umDeleteUser(idx){
@@ -12671,6 +12842,7 @@ loadData();
 // 2. Auth gate — show login if no valid session
 (async function(){
   await safeRunAsync('user migration',migrateLegacyUsers);
+  safeRun('edit guards',installEditGuards);
   checkAndShowLogin();
 })();
 async function safeRunAsync(label,fn){try{await fn();}catch(e){console.error('[OS] '+label+' failed:',e);}}
