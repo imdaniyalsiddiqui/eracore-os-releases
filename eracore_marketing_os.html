@@ -959,6 +959,7 @@ select.sm:focus{border-color:var(--blue)}
     <button class="itab" onclick="switchPaidTab('meta',this)">Meta</button>
     <button class="itab" onclick="switchPaidTab('linkedin',this)">LinkedIn</button>
     <button class="itab" onclick="switchPaidTab('microsoft',this)">Microsoft</button>
+    <button class="itab" onclick="switchPaidTab('historical',this)">Paid Performance</button>
     <button class="itab" onclick="switchPaidTab('weekly',this)">Weekly log</button>
   </div>
   <div id="paid-tab-overview" class="itab-pane active"></div>
@@ -966,6 +967,7 @@ select.sm:focus{border-color:var(--blue)}
   <div id="paid-tab-meta" class="itab-pane"></div>
   <div id="paid-tab-linkedin" class="itab-pane"></div>
   <div id="paid-tab-microsoft" class="itab-pane"></div>
+  <div id="paid-tab-historical" class="itab-pane"></div>
   <div id="paid-tab-weekly" class="itab-pane"></div>
   <!-- hidden KPI ids kept for backward compat -->
   <span id="kpi-google" style="display:none"></span>
@@ -9506,11 +9508,12 @@ let gadsData=null,metaAdsData=null,liAdsData=null,msAdsData=null;
 function switchPaidTab(tab,el){
   document.querySelectorAll('#page-paiddash .itab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  ['overview','google','meta','linkedin','microsoft','weekly'].forEach(t=>{
+  ['overview','google','meta','linkedin','microsoft','historical','weekly'].forEach(t=>{
     const p=document.getElementById('paid-tab-'+t);if(p)p.classList.remove('active');
   });
   const pane=document.getElementById('paid-tab-'+tab);if(pane)pane.classList.add('active');
   if(tab==='overview')renderPaidOverview();
+  else if(tab==='historical')safeRun('paid historical',renderPaidHistorical);
   else if(tab==='google')renderPaidGoogleTab();
   else if(tab==='meta')renderPaidMetaTab();
   else if(tab==='linkedin')renderPaidLinkedInTab();
@@ -11326,7 +11329,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='7.4';
+const APP_HTML_VERSION='7.5';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 const SUPER_ADMINS=['daniyal','mz'];
 // sha256(username + ':' + password) — precomputed, no plaintext in file
@@ -11440,7 +11443,10 @@ const EDIT_GUARDS={
   ltHsSaveToken:'outreach',ltHubspotSync:'outreach',
   // Pre-Sales — prospects, touchpoints, stages
   psOpenAdd:'presales',psSaveProspect:'presales',psOpenLogFor:'presales',psOpenLog:'presales',
-  psSaveActivity:'presales',psUpdateStage:'presales'
+  psSaveActivity:'presales',psUpdateStage:'presales',
+  // Paid historical review
+  paidHistSetVal:'paiddash',paidHistSetNotes:'paiddash',paidHistAddMonth:'paiddash',
+  tpSetVal:'paiddash',tpAddMonth:'paiddash'
 };
 function installEditGuards(){
   Object.entries(EDIT_GUARDS).forEach(([fn,page])=>{
@@ -12200,6 +12206,276 @@ function ltSaveSetting(){
   ltSettings.autoDelist=!!document.getElementById('lt-auto-delist')?.checked;
   ltSave();ltRenderTable();
 }
+const PAID_HIST_SEED={"2025-11":{"google":{"spend":210.58,"impr":6582,"lpv":163,"leads":4,"mql":1},"meta":{"spend":513.52,"impr":13497,"lpv":186,"leads":13,"mql":4},"bing":{"spend":0,"impr":0,"lpv":0,"leads":0,"mql":0},"notes":"Campaign launch month \u2014 Google Search + Meta lead forms live. First 17 leads, 5 MQLs. Meta CPL $39.50 vs Google $52.65."},"2025-12":{"google":{"spend":96.67,"impr":3190,"lpv":60,"leads":1,"mql":0},"meta":{"spend":250.44,"impr":4722,"lpv":6,"leads":7,"mql":1},"bing":{"spend":0,"impr":0,"lpv":0,"leads":0,"mql":0},"notes":"Holiday slowdown \u2014 reduced budgets. Lead volume halved; Meta stayed efficient ($35.78 CPL)."},"2026-01":{"google":{"spend":426.89,"impr":18255,"lpv":327,"leads":5,"mql":3},"meta":{"spend":454.72,"impr":6368,"lpv":59,"leads":8,"mql":3},"bing":{"spend":0,"impr":0,"lpv":0,"leads":0,"mql":0},"notes":"Budgets restored + scaled. Google impressions 5.7x on broader keywords; CPL rose. Rosendin closed this month (direct)."},"2026-04":{"google":{"spend":181.44,"impr":501,"lpv":15,"leads":0,"mql":0},"meta":{"spend":323.24,"impr":6233,"lpv":77,"leads":7,"mql":4},"bing":{"spend":0,"impr":0,"lpv":0,"leads":0,"mql":0},"notes":"Restart after Feb\u2013Mar pause. Google narrowed to exact-match (0 leads). Meta carried the month."},"2026-05":{"google":{"spend":807.35,"impr":9296,"lpv":240,"leads":1,"mql":0},"meta":{"spend":610.3,"impr":14796,"lpv":202,"leads":19,"mql":11},"bing":{"spend":7.03,"impr":2134,"lpv":15,"leads":0,"mql":0},"notes":"Bing pilot launched. Google scaled 4.5x for 1 lead ($807 CPL) \u2014 targeting review flagged. Meta best month yet: 19 leads / 11 MQLs."},"2026-06":{"google":{"spend":559.05,"impr":6598,"lpv":158,"leads":3,"mql":3},"meta":{"spend":968.42,"impr":23358,"lpv":213,"leads":10,"mql":8},"bing":{"spend":187.12,"impr":16663,"lpv":157,"leads":1,"mql":1},"notes":"Big closing month \u2014 Miller-Eads, OEG, Diversified, Pick all signed. 12 of 14 leads qualified (86% MQL rate). Bing scaled past pilot."},"2026-07":{"google":{"spend":738.93,"impr":7468,"lpv":192,"leads":1,"mql":1},"meta":{"spend":911.06,"impr":38563,"lpv":374,"leads":36,"mql":20},"bing":{"spend":517.08,"impr":43618,"lpv":217,"leads":1,"mql":1},"notes":"Biggest spend month \u2014 $2,167. Meta broke out: 36 leads / 20 MQLs at $25.31 CPL. RFPs out: Rizzo, Zekelman."},"2026-08":{"google":{"spend":437.81,"impr":7805,"lpv":223,"leads":8,"mql":0},"meta":{"spend":798.98,"impr":29875,"lpv":362,"leads":11,"mql":7},"bing":{"spend":497.38,"impr":47734,"lpv":300,"leads":0,"mql":0},"notes":"Google leads recovered (8) but 0 MQLs \u2014 quality watch. MQL rate dropped to 37%. Training Program launched as separate Meta campaign."}};
+const TP_SEED={"2026-08":{"spend":1049.49,"leads":35,"mofuCpl":22.74,"lpv":12414,"impr":2109939,"reach":1158993,"awareness":1410,"awarenessCost":0.31,"notes":"Launch month \u2014 Meta only. Awareness + MOFU split; blended CPL $29.99, MOFU CPL $22.74."}};
+
+// ══════════════════════════════════════════════════════════════
+// PAID PERFORMANCE — month-by-month B2B review + Training Program
+// Storage: paid_performance_data { hist:{month:{google/meta/bing:{spend,impr,lpv,leads,mql},notes}}, training:{month:{...}} }
+// Channel numbers are editable (seeded from monthly summaries); the
+// B2B sheet is derived from them. Customers + CAC/CPA come live from
+// the Outreach tracker (converted leads by ad source + form month).
+// ══════════════════════════════════════════════════════════════
+const PAID_PERF_KEY='paid_performance_data';
+const PAID_HIST_CHANNELS=[['meta','Meta (Facebook)'],['google','Google Ads'],['bing','Microsoft / Bing']];
+const PAID_HIST_SRC_MAP={'facebook ads':'meta','paid social':'meta','google ads':'google','google search':'google','paid search':'google','bing ads':'bing'};
+function paidPerfLoad(){
+  let d=Store.get(PAID_PERF_KEY,null);
+  const firstLoad=!d||typeof d!=='object';
+  if(firstLoad){
+    // migrate from the earlier ec-paid-history key if present
+    const legacy=Store.get('ec-paid-history',null);
+    d={hist:legacy&&typeof legacy==='object'?legacy:{},training:{}};
+  }
+  d.hist=d.hist||{};d.training=d.training||{};
+  // seed backfill — saved months always win
+  Object.keys(PAID_HIST_SEED).forEach(m=>{if(!d.hist[m])d.hist[m]=JSON.parse(JSON.stringify(PAID_HIST_SEED[m]));});
+  Object.keys(TP_SEED).forEach(m=>{if(!d.training[m])d.training[m]=JSON.parse(JSON.stringify(TP_SEED[m]));});
+  // older saved months may predate the lpv field
+  Object.values(d.hist).forEach(mo=>PAID_HIST_CHANNELS.forEach(([ch])=>{if(mo[ch]&&mo[ch].lpv===undefined)mo[ch].lpv=0;}));
+  if(firstLoad)paidPerfSave(d); // persist the migration + seeds once
+  return d;
+}
+function paidPerfSave(d){Store.set(PAID_PERF_KEY,d);}
+function paidHistLoad(){return paidPerfLoad().hist;}  // back-compat for tests/console
+function paidHistTrackerStats(){
+  if(typeof ltLoad==='function'&&(!ltLeads||!ltLeads.length))safeRun('lt for hist',ltLoad);
+  const out={};
+  (ltLeads||[]).forEach(l=>{
+    const ch=PAID_HIST_SRC_MAP[(l.sourceRaw||'').toLowerCase()];
+    if(!ch)return;
+    const m=(l.formDate||'').slice(0,7);if(!/^\d{4}-\d{2}$/.test(m))return;
+    out[m]=out[m]||{};out[m][ch]=out[m][ch]||{leads:0,customers:0,rfp:0};
+    out[m][ch].leads++;
+    const st=ltGetStatus(l);
+    if(st==='converted')out[m][ch].customers++;
+    if(st==='rfp')out[m][ch].rfp++;
+  });
+  return out;
+}
+function paidHistSetVal(month,ch,field,val){
+  const d=paidPerfLoad();
+  if(!d.hist[month])d.hist[month]={google:{spend:0,impr:0,lpv:0,leads:0,mql:0},meta:{spend:0,impr:0,lpv:0,leads:0,mql:0},bing:{spend:0,impr:0,lpv:0,leads:0,mql:0},notes:''};
+  d.hist[month][ch][field]=Math.max(0,parseFloat(val)||0);
+  paidPerfSave(d);renderPaidHistorical();
+}
+function paidHistSetNotes(month,val){
+  const d=paidPerfLoad();
+  if(!d.hist[month])return;
+  d.hist[month].notes=(val||'').trim();
+  paidPerfSave(d);
+}
+function paidHistAddMonth(){
+  const v=(document.getElementById('ph-new-month')?.value||'').trim();
+  if(!/^\d{4}-\d{2}$/.test(v)){toast('Pick a month first');return;}
+  const d=paidPerfLoad();
+  if(d.hist[v]){toast('That month already exists');return;}
+  d.hist[v]={google:{spend:0,impr:0,lpv:0,leads:0,mql:0},meta:{spend:0,impr:0,lpv:0,leads:0,mql:0},bing:{spend:0,impr:0,lpv:0,leads:0,mql:0},notes:''};
+  paidPerfSave(d);renderPaidHistorical();
+  toast('Month added — fill in the numbers');
+}
+function tpSetVal(month,field,val){
+  const d=paidPerfLoad();
+  if(!d.training[month])d.training[month]={spend:0,leads:0,mofuCpl:0,lpv:0,impr:0,reach:0,awareness:0,awarenessCost:0,notes:''};
+  if(field==='notes')d.training[month].notes=(val||'').trim();
+  else d.training[month][field]=Math.max(0,parseFloat(val)||0);
+  paidPerfSave(d);renderPaidHistorical();
+}
+function tpAddMonth(){
+  const v=(document.getElementById('tp-new-month')?.value||'').trim();
+  if(!/^\d{4}-\d{2}$/.test(v)){toast('Pick a month first');return;}
+  const d=paidPerfLoad();
+  if(d.training[v]){toast('That month already exists');return;}
+  d.training[v]={spend:0,leads:0,mofuCpl:0,lpv:0,impr:0,reach:0,awareness:0,awarenessCost:0,notes:''};
+  paidPerfSave(d);renderPaidHistorical();
+}
+const fm=v=>'$'+(Math.round(v*100)/100).toLocaleString(undefined,{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2});
+const fpct=v=>(Math.round(v*1000)/10)+'%';
+function renderPaidHistorical(){
+  const el=document.getElementById('paid-tab-historical');if(!el)return;
+  const d=paidPerfLoad();
+  const h=d.hist;
+  const tstats=paidHistTrackerStats();
+  const months=Object.keys(h).sort();
+  const th='font-size:11px;font-weight:600;color:var(--text2);text-align:right;padding:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const td='font-size:13px;padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;text-align:right;white-space:nowrap';
+  const inp='width:76px;height:26px;font-size:12px;padding:0 6px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);text-align:right';
+
+  // ── B2B monthly sheet (derived from channel data) ──
+  const rowsData=months.map(m=>{
+    let spend=0,impr=0,lpv=0,leads=0,mql=0,cust=0,rfp=0;
+    PAID_HIST_CHANNELS.forEach(([ch])=>{
+      const c=h[m][ch]||{};spend+=c.spend||0;impr+=c.impr||0;lpv+=c.lpv||0;leads+=c.leads||0;mql+=c.mql||0;
+      const ts=tstats[m]?.[ch];if(ts){cust+=ts.customers;rfp+=ts.rfp;}
+    });
+    return{m,spend,impr,lpv,leads,mql,cust,rfp,
+      cpl:leads?spend/leads:0,cpmql:mql?spend/mql:0,mqlRate:leads?mql/leads:0,
+      cpc:lpv?spend/lpv:0,cpm:impr?spend/impr*1000:0,ctr:impr?lpv/impr:0,cac:cust?spend/cust:0};
+  });
+  const trend=(cur,prev)=>{
+    if(!prev||!cur)return'';
+    return cur<prev?'color:var(--green);font-weight:700':cur>prev?'color:var(--red);font-weight:700':'';
+  };
+  let b2bRows='';
+  rowsData.forEach((r,i)=>{
+    const prev=i>0?rowsData[i-1]:null;
+    b2bRows+=`<tr>
+      <td style="${td};text-align:left;font-weight:700">${ltMonthLabel(r.m)}</td>
+      <td style="${td};font-weight:600">${fm(r.spend)}</td>
+      <td style="${td}">${r.leads}</td>
+      <td style="${td}">${r.mql}</td>
+      <td style="${td}">${r.leads?fpct(r.mqlRate):'—'}</td>
+      <td style="${td};${trend(r.cpl,prev&&prev.cpl)}">${r.leads?fm(r.cpl):'—'}</td>
+      <td style="${td};${trend(r.cpmql,prev&&prev.cpmql)}">${r.mql?fm(r.cpmql):'—'}</td>
+      <td style="${td}">${r.lpv?fm(r.cpc):'—'}</td>
+      <td style="${td}">${r.impr?fm(r.cpm):'—'}</td>
+      <td style="${td}">${r.impr?fpct(r.ctr):'—'}</td>
+      <td style="${td}">${r.impr.toLocaleString()}</td>
+      <td style="${td}">${r.lpv.toLocaleString()}</td>
+      <td style="${td};color:var(--green);font-weight:600">${r.cust||'—'}${r.rfp?` <span style="color:var(--purple);font-size:11px;font-weight:500">+${r.rfp} RFP</span>`:''}</td>
+      <td style="${td};font-weight:700;color:${r.cust?'var(--green)':'var(--text3)'}">${r.cust?fm(r.cac):'—'}</td>
+    </tr>`;
+  });
+  const T=rowsData.reduce((a,r)=>({spend:a.spend+r.spend,impr:a.impr+r.impr,lpv:a.lpv+r.lpv,leads:a.leads+r.leads,mql:a.mql+r.mql,cust:a.cust+r.cust,rfp:a.rfp+r.rfp}),{spend:0,impr:0,lpv:0,leads:0,mql:0,cust:0,rfp:0});
+  b2bRows+=`<tr style="background:var(--surface2);font-weight:700">
+    <td style="${td};text-align:left">TOTAL / AVG</td>
+    <td style="${td}">${fm(T.spend)}</td><td style="${td}">${T.leads}</td><td style="${td}">${T.mql}</td>
+    <td style="${td}">${T.leads?fpct(T.mql/T.leads):'—'}</td>
+    <td style="${td}">${T.leads?fm(T.spend/T.leads):'—'}</td>
+    <td style="${td}">${T.mql?fm(T.spend/T.mql):'—'}</td>
+    <td style="${td}">${T.lpv?fm(T.spend/T.lpv):'—'}</td>
+    <td style="${td}">${T.impr?fm(T.spend/T.impr*1000):'—'}</td>
+    <td style="${td}">${T.impr?fpct(T.lpv/T.impr):'—'}</td>
+    <td style="${td}">${T.impr.toLocaleString()}</td><td style="${td}">${T.lpv.toLocaleString()}</td>
+    <td style="${td};color:var(--green)">${T.cust||'—'}${T.rfp?` <span style="color:var(--purple);font-size:11px">+${T.rfp}</span>`:''}</td>
+    <td style="${td};color:${T.cust?'var(--green)':'var(--text3)'}">${T.cust?fm(T.spend/T.cust):'—'}</td>
+  </tr>`;
+
+  // ── Channel scorecards (all-time) ──
+  const totals={};
+  PAID_HIST_CHANNELS.forEach(([ch])=>{totals[ch]={spend:0,leads:0,mql:0,customers:0,rfp:0};});
+  months.forEach(m=>{PAID_HIST_CHANNELS.forEach(([ch])=>{
+    const c=h[m][ch]||{};totals[ch].spend+=c.spend||0;totals[ch].leads+=c.leads||0;totals[ch].mql+=c.mql||0;
+  });});
+  Object.values(tstats).forEach(chs=>{PAID_HIST_CHANNELS.forEach(([ch])=>{
+    const ts=chs[ch];if(ts){totals[ch].customers+=ts.customers;totals[ch].rfp+=ts.rfp;}
+  });});
+  let best=null;
+  PAID_HIST_CHANNELS.forEach(([ch])=>{
+    const t=totals[ch];
+    const score=t.customers?t.spend/t.customers:1e12+(t.mql?t.spend/t.mql:1e11);
+    if(t.spend>0&&(!best||score<best.score))best={ch,score};
+  });
+  const cards=PAID_HIST_CHANNELS.map(([ch,label])=>{
+    const t=totals[ch];
+    const isBest=best&&best.ch===ch;
+    return`<div style="background:var(--surface);border:1px solid ${isBest?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:1rem;position:relative">
+      ${isBest?'<span style="position:absolute;top:-9px;right:10px;background:var(--green);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px">MOST FRUITFUL</span>':''}
+      <div style="font-size:13px;font-weight:700;margin-bottom:.625rem">${label}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+        <div><span style="color:var(--text3)">Spend</span><div style="font-weight:600">${fm(t.spend)}</div></div>
+        <div><span style="color:var(--text3)">Leads · CPL</span><div style="font-weight:600">${t.leads} · ${t.leads?fm(t.spend/t.leads):'—'}</div></div>
+        <div><span style="color:var(--text3)">MQLs · CPMQL</span><div style="font-weight:600">${t.mql} · ${t.mql?fm(t.spend/t.mql):'—'}</div></div>
+        <div><span style="color:var(--text3)">Customers won</span><div style="font-weight:600;color:var(--green)">${t.customers}${t.rfp?` <span style="color:var(--purple);font-weight:500">(+${t.rfp} RFP)</span>`:''}</div></div>
+        <div style="grid-column:1/-1"><span style="color:var(--text3)">CAC / CPA</span><div style="font-weight:700;font-size:15px;color:${t.customers?'var(--green)':'var(--text3)'}">${t.customers?fm(t.spend/t.customers):'— no customers yet'}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Channel detail (editable source of truth) ──
+  let chRows='';
+  months.forEach(m=>{
+    const label=ltMonthLabel(m);
+    PAID_HIST_CHANNELS.forEach(([ch,lbl],ci)=>{
+      const c=h[m][ch]||{spend:0,impr:0,lpv:0,leads:0,mql:0};
+      const ts=tstats[m]?.[ch]||{customers:0,rfp:0};
+      chRows+=`<tr>
+        ${ci===0?`<td style="${td};text-align:left;font-weight:700" rowspan="3">${label}</td>`:''}
+        <td style="${td};text-align:left">${lbl}</td>
+        <td style="${td}"><input style="${inp}" value="${c.spend||0}" onchange="paidHistSetVal('${m}','${ch}','spend',this.value)"></td>
+        <td style="${td}"><input style="${inp}" value="${c.impr||0}" onchange="paidHistSetVal('${m}','${ch}','impr',this.value)"></td>
+        <td style="${td}"><input style="${inp};width:60px" value="${c.lpv||0}" onchange="paidHistSetVal('${m}','${ch}','lpv',this.value)"></td>
+        <td style="${td}"><input style="${inp};width:52px" value="${c.leads||0}" onchange="paidHistSetVal('${m}','${ch}','leads',this.value)"></td>
+        <td style="${td}"><input style="${inp};width:52px" value="${c.mql||0}" onchange="paidHistSetVal('${m}','${ch}','mql',this.value)"></td>
+        <td style="${td};color:var(--text2)">${c.leads?fm(c.spend/c.leads):'—'}</td>
+        <td style="${td};color:var(--green);font-weight:600">${ts.customers||'—'}${ts.rfp?` <span style="color:var(--purple);font-size:11px">+${ts.rfp}</span>`:''}</td>
+        <td style="${td};font-weight:700;color:${ts.customers?'var(--green)':'var(--text3)'}">${ts.customers?fm((c.spend||0)/ts.customers):'—'}</td>
+      </tr>`;
+    });
+    chRows+=`<tr><td style="${td}"></td><td style="${td};text-align:left;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.04em">What happened</td>
+      <td style="${td}" colspan="8"><input type="text" class="lt-note-input" style="min-width:100%;text-align:left" value="${esc(h[m].notes||'')}" placeholder="Changes made, launches, pauses, learnings…" onchange="paidHistSetNotes('${m}',this.value)"></td></tr>`;
+  });
+
+  // ── Training Program ──
+  const tpMonths=Object.keys(d.training).sort();
+  const tpCards=tpMonths.map(m=>{
+    const t=d.training[m];
+    const blended=t.leads?t.spend/t.leads:0;
+    const cplv=t.lpv?t.spend/t.lpv:0;
+    const tin=(f,v,w)=>`<input style="${inp};width:${w||'86px'}" value="${v||0}" onchange="tpSetVal('${m}','${f}',this.value)">`;
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+        <div style="font-size:14px;font-weight:700">${ltMonthLabel(m)} <span style="font-weight:400;color:var(--text2);font-size:12px">· Meta only</span></div>
+        <div style="font-size:12px;color:var(--text2)">Spend ${tin('spend',t.spend)} · Blended CPL <strong style="color:var(--green)">${t.leads?fm(blended):'—'}</strong> · MOFU CPL ${tin('mofuCpl',t.mofuCpl,'64px')}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:stretch;margin-bottom:.875rem">
+        <div style="background:var(--blue-l);border-radius:var(--rl);padding:.875rem;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Awareness</div>
+          <div style="font-size:20px;font-weight:800">${tin('awareness',t.awareness,'96px')}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">results · $${t.awarenessCost||0} each</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${(t.impr||0).toLocaleString()} impressions · ${(t.reach||0).toLocaleString()} reach</div>
+        </div>
+        <div style="align-self:center;font-size:18px;color:var(--text3)">→</div>
+        <div style="background:var(--amber-l,#fef3c7);border-radius:var(--rl);padding:.875rem;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Landing page views</div>
+          <div style="font-size:20px;font-weight:800">${tin('lpv',t.lpv,'96px')}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${t.lpv?fm(cplv)+' per view':'—'}</div>
+        </div>
+        <div style="align-self:center;font-size:18px;color:var(--text3)">→</div>
+        <div style="background:var(--green-l,#dcfce7);border-radius:var(--rl);padding:.875rem;text-align:center">
+          <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Leads</div>
+          <div style="font-size:20px;font-weight:800">${tin('leads',t.leads,'72px')}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">${t.leads?fm(blended)+' blended CPL':'—'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;font-size:12px;color:var(--text2);align-items:center;flex-wrap:wrap">
+        <span>Impressions ${tin('impr',t.impr,'104px')}</span><span>Reach ${tin('reach',t.reach,'104px')}</span><span>Cost per awareness ${tin('awarenessCost',t.awarenessCost,'56px')}</span>
+      </div>
+      <input type="text" class="lt-note-input" style="min-width:100%;margin-top:.625rem" value="${esc(t.notes||'')}" placeholder="What happened this month…" onchange="tpSetVal('${m}','notes',this.value)">
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div style="padding-top:8px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:.25rem">New Business Acquisition (B2B)</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem">Green/red = better/worse than the prior month. <strong>Customers + CAC/CPA are live</strong> from converted Outreach leads (cohort: month's spend ÷ customers won from that month's leads).</div>
+    <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:1.5rem">
+      <table style="width:100%;border-collapse:collapse;min-width:1080px">
+        <thead><tr><th style="${th};text-align:left">Month</th><th style="${th}">Spend</th><th style="${th}">Leads</th><th style="${th}">MQLs</th><th style="${th}">MQL rate</th><th style="${th}">CPL</th><th style="${th}">CPMQL</th><th style="${th}">CPC</th><th style="${th}">CPM</th><th style="${th}">CTR</th><th style="${th}">Impressions</th><th style="${th}">LPVs</th><th style="${th}">Customers</th><th style="${th}">CAC / CPA</th></tr></thead>
+        <tbody>${b2bRows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:.75rem">Channel fruitfulness (all-time)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem;padding-top:6px">${cards}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+      <div style="font-size:14px;font-weight:700">Channel detail — editable</div>
+      <div style="display:flex;gap:6px;align-items:center"><input type="month" id="ph-new-month" style="height:30px;font-size:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px"><button class="btn btn-sm" onclick="paidHistAddMonth()"><i class="ti ti-plus"></i> Add month</button></div>
+    </div>
+    <div style="overflow-x:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:1.5rem">
+      <table style="width:100%;border-collapse:collapse;min-width:980px">
+        <thead><tr><th style="${th};text-align:left">Month</th><th style="${th};text-align:left">Channel</th><th style="${th}">Spend</th><th style="${th}">Impressions</th><th style="${th}">LPVs</th><th style="${th}">Leads</th><th style="${th}">MQLs</th><th style="${th}">CPL</th><th style="${th}">Customers</th><th style="${th}">CAC / CPA</th></tr></thead>
+        <tbody>${chRows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.75rem;flex-wrap:wrap">
+      <div><div style="font-size:14px;font-weight:700">Training Program</div><div style="font-size:12px;color:var(--text2)">Separate funnel — never blended with B2B acquisition</div></div>
+      <div style="display:flex;gap:6px;align-items:center"><input type="month" id="tp-new-month" style="height:30px;font-size:12px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px"><button class="btn btn-sm" onclick="tpAddMonth()"><i class="ti ti-plus"></i> Add month</button></div>
+    </div>
+    ${tpCards}
+    <div style="font-size:11px;color:var(--text3);margin-top:.25rem;line-height:1.5"><i class="ti ti-info-circle" style="font-size:11px"></i> CAC/CPA is cohort-based and only counts tracker-attributed paid customers — a month can look expensive until its RFPs close (purple counts show what's in play). CPC here = spend ÷ landing page views, matching the summary sheets.</div>
+    </div>`;
+}
+
 // ── HUBSPOT LIVE SYNC ─────────────────────────────────────────
 // Cross-checks every lead against HubSpot by email (batch API) and
 // pulls: lifecycle stage, lead status, record id (→ activity link),
