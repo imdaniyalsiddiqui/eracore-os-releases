@@ -401,6 +401,7 @@ select.sm:focus{border-color:var(--blue)}
 
   <div class="nav-item" id="nav-strategy" onclick="navTo('strategy',this)"><i class="ti ti-chess"></i> Strategy <span class="nav-badge" id="nb-strategy">0</span></div>
   <div class="nav-item" id="nav-principles" onclick="navTo('principles',this)"><i class="ti ti-bookmark"></i> Principles <span class="nav-badge" id="nb-principles">0</span></div>
+  <div class="nav-item" id="nav-inventory" onclick="navTo('inventory',this)"><i class="ti ti-archive"></i> Inventory <span class="nav-badge" id="nb-inventory">0</span></div>
 
   <div class="nav-lbl" style="margin-top:.5rem">Sales</div>
   <div class="nav-item" id="nav-outreach" onclick="navTo('outreach',this)"><i class="ti ti-funnel"></i> Outreach</div>
@@ -503,6 +504,23 @@ select.sm:focus{border-color:var(--blue)}
 </div>
 
 <!-- STANDUP -->
+<div id="page-inventory" class="page">
+  <div class="page-head">
+    <div>
+      <h1>Inventory</h1>
+      <div class="ps">Repurposable references from Daniyal & MZ — copy, websites, images, renders. Long-term, time-saving, go-to inventory for quick media creation.</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="invOpenAdd()"><i class="ti ti-plus"></i> Add reference</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    <input id="inv-search" placeholder="Search title, notes, link…" oninput="invRender()" style="flex:1;min-width:220px;height:36px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 12px;font-size:13px">
+    <div id="inv-cat-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+  </div>
+  <div id="inv-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px"></div>
+</div>
+
 <div id="page-standup" class="page">
   <div><div class="pt">Reporting</div><div class="ps">MZ Report · Asana · Team Update</div></div>
   <div style="height:1.25rem"></div>
@@ -2151,6 +2169,31 @@ select.sm:focus{border-color:var(--blue)}
     <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="se-gate-on" style="width:auto"> Gate active (approval blocking work)</label></div>
     <div class="field"><label>Gate description</label><textarea id="se-gate-text" rows="2" placeholder="What is blocked and by whom…"></textarea></div>
     <div class="modal-foot"><button class="btn" onclick="document.getElementById('strategy-edit-overlay').classList.remove('open')">Cancel</button><button class="btn btn-primary" onclick="saveEditStrategy()"><i class="ti ti-check"></i> Save</button></div>
+  </div>
+</div>
+
+<!-- INVENTORY ADD/EDIT -->
+<div class="overlay" id="inv-overlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-head"><div class="modal-title" id="inv-modal-title">Add reference</div><button class="btn-icon btn" onclick="document.getElementById('inv-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <input type="hidden" id="inv-edit-id">
+    <div class="field"><label>Title</label><input id="inv-title" placeholder="e.g. Data-center hero shots — Q3 renders"></div>
+    <div class="g2">
+      <div class="field"><label>Category</label>
+        <select id="inv-cat" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option value="copy">Copy</option><option value="websites">Websites</option><option value="images">Images</option><option value="renders">Renders</option><option value="videos">Videos</option><option value="documents">Documents</option><option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Added by</label>
+        <select id="inv-by" style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px">
+          <option>Daniyal</option><option>MZ</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Link (website URL or OneDrive share link / folder path)</label><input id="inv-url" placeholder="https://… or OneDrive path"></div>
+    <div class="field"><label>Copy / notes (for Copy items paste the reusable text itself)</label><textarea id="inv-notes" rows="4" placeholder="What is this and how should the team use it…"></textarea></div>
+    <p id="inv-err" style="font-size:12px;color:var(--red);display:none;margin-bottom:.5rem"></p>
+    <div class="modal-foot"><button class="btn" onclick="document.getElementById('inv-overlay').classList.remove('open')">Cancel</button><button class="btn btn-primary" onclick="invSave()"><i class="ti ti-check"></i> Save</button></div>
   </div>
 </div>
 
@@ -4608,7 +4651,8 @@ const PAGE_MAP={
   tasks:'page-tasks',seodash:'page-seodash',paiddash:'page-paiddash',
   socialdash:'page-socialdash',mktdash:'page-mktdash',
   standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview',
-  outreach:'page-outreach', presales:'page-presales'
+  outreach:'page-outreach', presales:'page-presales',
+  inventory:'page-inventory'
 };
 const REPORTING_PAGES=new Set(['mzreport','asanaview','standup','reporting']);
 
@@ -4657,6 +4701,7 @@ function onNavTo(id){
   if(id==='mktmgmt'){const btn=document.getElementById('mmt-overview');switchMmTab('overview',btn);_updateNavBadges();}
   if(id==='strategy')renderStrategies();
   if(id==='principles')renderPrinciples();
+  if(id==='inventory'){invLoad();invRender();}
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
   if(id==='settings'){initSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
@@ -8233,6 +8278,7 @@ function _updateNavBadges(){
   const el=document.getElementById('nb-tasks');if(el)el.textContent=nonApproved||tasks.length;
   const sel=document.getElementById('nb-strategy');if(sel)sel.textContent=strategies.length;
   const pel=document.getElementById('nb-principles');if(pel)pel.textContent=principles.length;
+  safeRun('inv badge',()=>{invLoad();invPaintBadge();});
 }
 
 // ── NOTIFICATION BELL ────────────────────────────────────────────────────
@@ -11387,6 +11433,7 @@ const PERMISSION_PAGES=[
   {id:'mktmgmt',label:'Marketing Management (all channel tabs)'},
   {id:'strategy',label:'Strategy'},
   {id:'principles',label:'Principles'},
+  {id:'inventory',label:'Inventory (reference library)'},
   {id:'outreach',label:'Lead Outreach'},
   {id:'presales',label:'Pre-Sales'},
   {id:'marketingperf',label:'Marketing Performance'},
@@ -11451,6 +11498,8 @@ const EDIT_GUARDS={
   // Pre-Sales — prospects, touchpoints, stages
   psOpenAdd:'presales',psSaveProspect:'presales',psOpenLogFor:'presales',psOpenLog:'presales',
   psSaveActivity:'presales',psUpdateStage:'presales',
+  // Inventory reference library
+  invOpenAdd:'inventory',invSave:'inventory',invOpenEdit:'inventory',invDelete:'inventory',
   // Paid historical review
   paidHistSetVal:'paiddash',paidHistSetNotes:'paiddash',paidHistAddMonth:'paiddash',
   tpSetVal:'paiddash',tpAddMonth:'paiddash'
@@ -12522,6 +12571,123 @@ function renderPaidHistorical(){
     ${tpCards}
     <div style="font-size:11px;color:var(--text3);margin-top:.25rem;line-height:1.5"><i class="ti ti-info-circle" style="font-size:11px"></i> CAC/CPA is cohort-based and only counts tracker-attributed paid customers — a month can look expensive until its RFPs close (purple counts show what's in play). CPC here = spend ÷ landing page views, matching the summary sheets.</div>
     </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// INVENTORY — repurposable reference library (copy, websites,
+// images, renders…). Links point to websites or OneDrive paths;
+// Copy items carry the reusable text itself.
+// ══════════════════════════════════════════════════════════════
+const INV_KEY='ec-inventory';
+const INV_CATS=[['','All'],['copy','Copy'],['websites','Websites'],['images','Images'],['renders','Renders'],['videos','Videos'],['documents','Documents'],['other','Other']];
+const INV_CAT_LABEL=Object.fromEntries(INV_CATS.filter(c=>c[0]));
+let invItems=[],invActiveCat='';
+function invLoad(){
+  invItems=Store.get(INV_KEY,[]);
+  if(!Array.isArray(invItems))invItems=[];
+}
+function invSaveStore(){Store.set(INV_KEY,invItems);}
+function invPaintBadge(){const b=document.getElementById('nb-inventory');if(b)b.textContent=invItems.length;}
+function invOpenAdd(){
+  document.getElementById('inv-modal-title').textContent='Add reference';
+  document.getElementById('inv-edit-id').value='';
+  document.getElementById('inv-title').value='';
+  document.getElementById('inv-cat').value='copy';
+  document.getElementById('inv-by').value='Daniyal';
+  document.getElementById('inv-url').value='';
+  document.getElementById('inv-notes').value='';
+  document.getElementById('inv-err').style.display='none';
+  document.getElementById('inv-overlay').classList.add('open');
+  document.getElementById('inv-title').focus();
+}
+function invOpenEdit(id){
+  const it=invItems.find(x=>x.id===id);if(!it)return;
+  document.getElementById('inv-modal-title').textContent='Edit reference';
+  document.getElementById('inv-edit-id').value=id;
+  document.getElementById('inv-title').value=it.title;
+  document.getElementById('inv-cat').value=it.category;
+  document.getElementById('inv-by').value=it.addedBy||'Daniyal';
+  document.getElementById('inv-url').value=it.url||'';
+  document.getElementById('inv-notes').value=it.notes||'';
+  document.getElementById('inv-err').style.display='none';
+  document.getElementById('inv-overlay').classList.add('open');
+}
+function invSave(){
+  const id=document.getElementById('inv-edit-id').value;
+  const title=document.getElementById('inv-title').value.trim();
+  const category=document.getElementById('inv-cat').value;
+  const addedBy=document.getElementById('inv-by').value;
+  const url=document.getElementById('inv-url').value.trim();
+  const notes=document.getElementById('inv-notes').value.trim();
+  const err=document.getElementById('inv-err');
+  if(!title){err.textContent='Title is required.';err.style.display='block';return;}
+  if(!url&&!notes){err.textContent='Add a link or the copy/notes — an empty reference helps no one.';err.style.display='block';return;}
+  if(id){
+    const it=invItems.find(x=>x.id===id);if(!it)return;
+    Object.assign(it,{title,category,addedBy,url,notes,updated:Date.now()});
+    toast('Reference updated');
+  }else{
+    invItems.unshift({id:uid(),title,category,addedBy,url,notes,created:Date.now()});
+    toast('Added to inventory');
+  }
+  invSaveStore();
+  document.getElementById('inv-overlay').classList.remove('open');
+  invRender();
+}
+function invDelete(id){
+  if(!confirm('Remove this reference from the inventory?'))return;
+  invItems=invItems.filter(x=>x.id!==id);
+  invSaveStore();invRender();toast('Removed');
+}
+function invSetCat(c){invActiveCat=c;invRender();}
+function invCopyText(id){
+  const it=invItems.find(x=>x.id===id);if(!it)return;
+  const text=it.category==='copy'&&it.notes?it.notes:(it.url||it.notes||'');
+  (navigator.clipboard?.writeText(text)||Promise.reject()).then(()=>toast('Copied to clipboard')).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');toast('Copied to clipboard');}catch(e){toast('Copy failed — select it manually');}
+    ta.remove();
+  });
+}
+function invDomain(u){
+  try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return u&&u.length>34?u.slice(0,34)+'…':(u||'');}
+}
+function invRender(){
+  invPaintBadge();
+  const chips=document.getElementById('inv-cat-chips');
+  if(chips){
+    const counts={};invItems.forEach(i=>{counts[i.category]=(counts[i.category]||0)+1;});
+    chips.innerHTML=INV_CATS.map(([v,l])=>{
+      const n=v===''?invItems.length:(counts[v]||0);
+      const on=invActiveCat===v;
+      return`<button onclick="invSetCat('${v}')" style="height:30px;padding:0 12px;border-radius:100px;border:1px solid ${on?'var(--text)':'var(--border)'};background:${on?'var(--text)':'var(--surface)'};color:${on?'var(--surface)':'var(--text)'};font-size:12px;font-weight:600;cursor:pointer">${l} ${n?`<span style="opacity:.65;font-weight:500">${n}</span>`:''}</button>`;
+    }).join('');
+  }
+  const grid=document.getElementById('inv-grid');if(!grid)return;
+  const q=(document.getElementById('inv-search')?.value||'').toLowerCase();
+  let rows=invItems.filter(i=>!invActiveCat||i.category===invActiveCat);
+  if(q)rows=rows.filter(i=>(i.title+' '+(i.notes||'')+' '+(i.url||'')).toLowerCase().includes(q));
+  if(!rows.length){
+    grid.innerHTML=`<div class="empty" style="grid-column:1/-1">${invItems.length?'Nothing matches this filter.':'The inventory is empty — add the first reference. Links, reusable copy, OneDrive image folders, render libraries: if the team will need it again, it lives here.'}</div>`;
+    return;
+  }
+  const CAT_COLOR={copy:'var(--blue)',websites:'var(--green)',images:'var(--purple)',renders:'var(--amber)',videos:'var(--red)',documents:'var(--text2)',other:'var(--text3)'};
+  grid.innerHTML=rows.map(i=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;line-height:1.3">${esc(i.title)}</div></div>
+      <button class="btn-icon btn" onclick="invOpenEdit('${i.id}')" title="Edit"><i class="ti ti-pencil"></i></button>
+      <button class="btn-icon btn" onclick="invDelete('${i.id}')" title="Remove"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span class="pill" style="background:color-mix(in srgb,${CAT_COLOR[i.category]||'var(--text3)'} 12%,transparent);color:${CAT_COLOR[i.category]||'var(--text3)'};font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">${INV_CAT_LABEL[i.category]||esc(i.category)}</span>
+      <span style="font-size:11px;color:var(--text3)">${esc(i.addedBy||'')} · ${fmtDate(i.created)}</span>
+    </div>
+    ${i.notes?`<div style="font-size:12.5px;color:var(--text2);line-height:1.5;white-space:pre-wrap;max-height:110px;overflow:hidden">${esc(i.notes)}</div>`:''}
+    <div style="display:flex;gap:6px;margin-top:auto;align-items:center">
+      ${i.url?`<a href="${esc(i.url)}" target="_blank" class="btn btn-sm" style="text-decoration:none"><i class="ti ti-external-link"></i> Open</a><span style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${esc(invDomain(i.url))}</span>`:''}
+      <button class="btn btn-sm" onclick="invCopyText('${i.id}')" title="${i.category==='copy'?'Copy the text':'Copy the link'}"><i class="ti ti-copy"></i> ${i.category==='copy'?'Copy text':'Copy link'}</button>
+    </div>
+  </div>`).join('');
 }
 
 // ── HUBSPOT LIVE SYNC ─────────────────────────────────────────
