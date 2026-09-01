@@ -10178,10 +10178,25 @@ async function fetchMetaAds(){
 // LinkedIn versioned Marketing API — new apps are locked out of legacy v2
 // (403), so all calls use /rest/* with LinkedIn-Version headers, sent through
 // the header-capable /proxy (main.js ≥ this build).
-const LI_VERSION='202506';
-function liProxy(url,token){
-  const hdrs=JSON.stringify({'LinkedIn-Version':LI_VERSION,'X-Restli-Protocol-Version':'2.0.0'});
+// LinkedIn retires API versions ~12 months after release, so never pin one:
+// compute a safely-released version (2 months back), and if LinkedIn still
+// says "not active", retry once with an older fallback (5 months back).
+function liVersion(monthsBack){
+  const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-monthsBack);
+  return String(d.getFullYear())+String(d.getMonth()+1).padStart(2,'0');
+}
+function liProxy(url,token,ver){
+  const hdrs=JSON.stringify({'LinkedIn-Version':ver,'X-Restli-Protocol-Version':'2.0.0'});
   return `http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent('Bearer '+token)}&headers=${encodeURIComponent(hdrs)}`;
+}
+async function liFetch(url,token){
+  let res=await fetch(liProxy(url,token,liVersion(2)));
+  let data=await res.json();
+  if(/version .* not active/i.test(data.message||'')){
+    res=await fetch(liProxy(url,token,liVersion(5)));
+    data=await res.json();
+  }
+  return{res,data};
 }
 function liDatePart(d){return `(year:${d.slice(0,4)},month:${parseInt(d.slice(5,7))},day:${parseInt(d.slice(8,10))})`;}
 async function fetchLinkedInAds(){
@@ -10194,8 +10209,7 @@ async function fetchLinkedInAds(){
     const start=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
     const acct=encodeURIComponent(`urn:li:sponsoredAccount:${actId}`);
     const url=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(start)},end:${liDatePart(end)})&timeGranularity=ALL&accounts=List(${acct})&pivot=ACCOUNT&fields=costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
-    const res=await fetch(liProxy(url,token));
-    const data=await res.json();
+    const{res,data}=await liFetch(url,token);
     if(!res.ok||data.message||data.serviceErrorCode!==undefined&&data.serviceErrorCode!==0){
       throw new Error(data.message||('LinkedIn API '+res.status));
     }
@@ -11649,7 +11663,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.3';
+const APP_HTML_VERSION='8.4';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
