@@ -6838,6 +6838,18 @@ async function getGAdsAccessToken(){
   if(data.access_token){gAdsToken=data.access_token;return data.access_token;}
   throw new Error('Token refresh failed: '+(data.error||JSON.stringify(data)));
 }
+// All Google Ads API calls go through main.js /gads-query (v23) — never direct.
+async function gadsQuery(creds,accessToken,query){
+  const res=await fetch('http://127.0.0.1:8742/gads-query',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({customerId:creds.customerId.replace(/-/g,''),devToken:creds.devToken,accessToken,query})
+  });
+  let data;
+  try{data=await res.json();}catch(e){throw new Error('Proxy returned a non-JSON response (HTTP '+res.status+')');}
+  if(data.error&&typeof data.error==='object')throw new Error(data.error.message||JSON.stringify(data.error).slice(0,300));
+  if(data.error)throw new Error(String(data.error));
+  return data;
+}
 async function testGAdsConnection(){
   const statusEl=document.getElementById('gads-status');
   if(statusEl){statusEl.textContent='Testing…';statusEl.style.color='var(--text3)';}
@@ -6845,13 +6857,9 @@ async function testGAdsConnection(){
     const creds=getGAdsCreds();
     if(!creds?.devToken||!creds?.customerId){throw new Error('Save credentials first');}
     const token=await getGAdsAccessToken();
-    const custId=creds.customerId.replace(/-/g,'');
-    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
-      body:JSON.stringify({query:'SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1'})
-    });
-    const data=await res.json();
+    // Browsers cannot call googleads.googleapis.com directly (CORS) — all
+    // Google Ads traffic routes through the local /gads-query proxy (API v23).
+    const data=await gadsQuery(creds,token,'SELECT customer.id, customer.descriptive_name FROM customer LIMIT 1');
     if(data.results?.length){
       const name=data.results[0].customer?.descriptiveName||'Connected';
       if(statusEl){statusEl.textContent=`✓ Connected — ${name}`;statusEl.style.color='var(--green)';}
@@ -6862,7 +6870,7 @@ async function testGAdsConnection(){
     }
   }catch(e){
     if(statusEl){statusEl.textContent='Failed: '+e.message;statusEl.style.color='var(--red)';}
-    toast('Google Ads connection failed');
+    toast('Google Ads failed: '+String(e.message).slice(0,120));
     console.log('GAds test error',e);
   }
 }
@@ -6871,14 +6879,8 @@ async function fetchGAdsData(){
   if(!creds?.devToken||!creds?.customerId){toast('Set up Google Ads in Settings first');return null;}
   try{
     const token=await getGAdsAccessToken();
-    const custId=creds.customerId.replace(/-/g,'');
-    const res=await fetch(`https://googleads.googleapis.com/v17/customers/${custId}/googleAds:search`,{
-      method:'POST',
-      headers:{Authorization:`Bearer ${token}`,'developer-token':creds.devToken,'Content-Type':'application/json'},
-      body:JSON.stringify({query:`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`})
-    });
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
+    const data=await gadsQuery(creds,token,`SELECT campaign.name, campaign.status, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.ctr FROM campaign WHERE segments.date DURING LAST_30_DAYS AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`);
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     return (data.results||[]).map(r=>({
       name:r.campaign?.name||'',
       status:r.campaign?.status||'',
