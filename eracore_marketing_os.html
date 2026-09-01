@@ -9851,49 +9851,153 @@ function renderPaidGoogleTab(){
     </table>
   </div>`;
 }
+// ══════════════════════════════════════════════════════════════
+// META ADS TAB — parity with the Google dashboard: Ads-style date
+// presets, KPI tiles, objective segmentation, campaigns, top ads.
+// Direct Graph API v21 (CORS-friendly), token from Settings.
+// ══════════════════════════════════════════════════════════════
+const META_RANGE_KEY='ec-meta-range';
+const META_PRESETS=[['today','Today'],['yesterday','Yesterday'],['this_week_mon_today','This week'],['last_7d','Last 7 days'],['this_month','This month'],['last_month','Last month'],['last_30d','Last 30 days'],['CUSTOM','Custom…']];
+const META_OBJ_LABEL={OUTCOME_LEADS:'Leads',OUTCOME_AWARENESS:'Awareness',OUTCOME_TRAFFIC:'Traffic',OUTCOME_ENGAGEMENT:'Engagement',OUTCOME_SALES:'Sales',OUTCOME_APP_PROMOTION:'App',LINK_CLICKS:'Traffic',LEAD_GENERATION:'Leads',CONVERSIONS:'Sales',BRAND_AWARENESS:'Awareness',POST_ENGAGEMENT:'Engagement',REACH:'Awareness'};
+let metaTab={campaigns:null,ads:null,loading:false,error:'',objFilter:''};
+function metaGetRange(){const r=Store.get(META_RANGE_KEY,null);return r&&r.preset?r:{preset:'last_7d',from:'',to:''};}
+function metaDateParam(){
+  const r=metaGetRange();
+  if(r.preset==='CUSTOM'&&/^\d{4}-\d{2}-\d{2}$/.test(r.from)&&/^\d{4}-\d{2}-\d{2}$/.test(r.to))
+    return `time_range=${encodeURIComponent(JSON.stringify({since:r.from,until:r.to}))}`;
+  return `date_preset=${r.preset==='CUSTOM'?'last_7d':r.preset}`;
+}
+function metaSetPreset(v){const r=metaGetRange();r.preset=v;Store.set(META_RANGE_KEY,r);if(v==='CUSTOM'){renderPaidMetaTab();return;}metaRefreshTab();}
+function metaApplyCustom(){
+  const from=document.getElementById('meta-from')?.value||'';
+  const to=document.getElementById('meta-to')?.value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to){toast('Pick a valid from/to range');return;}
+  Store.set(META_RANGE_KEY,{preset:'CUSTOM',from,to});
+  metaRefreshTab();
+}
+function metaSetObj(o){metaTab.objFilter=o;renderPaidMetaTab();}
+function metaLeadsFrom(actions){
+  if(!Array.isArray(actions))return 0;
+  const find=t=>parseFloat((actions.find(a=>a.action_type===t)||{}).value)||0;
+  return find('lead')||find('onsite_conversion.lead_grouped')||find('leadgen_grouped');
+}
+async function metaRefreshTab(){
+  const token=getMetaToken();const actId=(getMetaAdAccount()||'').replace('act_','');
+  if(!token||!actId){renderPaidMetaTab();return;}
+  metaTab.loading=true;metaTab.error='';renderPaidMetaTab();
+  const dp=metaDateParam();
+  try{
+    const cUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('campaign_name,objective,spend,impressions,clicks,actions')}&${dp}&level=campaign&limit=100`;
+    const cRes=await fetch(cUrl);
+    const cData=await cRes.json();
+    if(cData.error)throw new Error(cData.error.message||cData.error.type);
+    metaTab.campaigns=(cData.data||[]).map(r=>({
+      name:r.campaign_name||'',objective:r.objective||'',
+      spend:parseFloat(r.spend)||0,impressions:parseInt(r.impressions)||0,
+      clicks:parseInt(r.clicks)||0,leads:metaLeadsFrom(r.actions)
+    })).sort((a,b)=>b.spend-a.spend);
+    try{
+      const aUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('ad_name,campaign_name,spend,impressions,clicks,actions')}&${dp}&level=ad&limit=50`;
+      const aRes=await fetch(aUrl);
+      const aData=await aRes.json();
+      metaTab.ads=aData.error?[]:(aData.data||[]).map(r=>({
+        name:r.ad_name||'',campaign:r.campaign_name||'',
+        spend:parseFloat(r.spend)||0,impressions:parseInt(r.impressions)||0,
+        clicks:parseInt(r.clicks)||0,leads:metaLeadsFrom(r.actions)
+      })).sort((a,b)=>b.spend-a.spend);
+    }catch(adErr){metaTab.ads=[];}
+  }catch(e){metaTab.error=e.message;console.error('[meta tab]',e);}
+  metaTab.loading=false;
+  renderPaidMetaTab();
+}
 function renderPaidMetaTab(){
   const el=document.getElementById('paid-tab-meta');if(!el)return;
-  loadPaidAdsData();
-  if(!metaAdsData){
+  const token=getMetaToken();const actId=getMetaAdAccount&&getMetaAdAccount();
+  if(!token||!actId){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
-      <i class="ti ti-brand-facebook" style="font-size:2rem;display:block;margin-bottom:.75rem" style="color:#1877F2"></i>
+      <i class="ti ti-brand-meta" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--blue)"></i>
       <div style="font-weight:600;margin-bottom:.5rem">Meta Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem">You'll need a Meta System User Access Token and Ad Account ID from business.facebook.com</div>
-      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchMetaAds()"><i class="ti ti-plug"></i> Connect Meta</button>
+      <div style="font-size:12px;margin-bottom:.75rem">Add the access token and ad account in Settings → Meta Ads.</div>
+      <button class="btn btn-primary" onclick="navTo('settings')"><i class="ti ti-settings"></i> Open Settings</button>
     </div>`;return;
   }
-  const ctr=metaAdsData.ctr?metaAdsData.ctr.toFixed(2)+'%':'—';
-  const cpl=metaAdsData.leads&&metaAdsData.spend?'$'+Math.round(metaAdsData.spend/metaAdsData.leads):'—';
-  const camps=metaAdsData.campaigns||[];
-  el.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
-    ${[['Spend','$'+Math.round(metaAdsData.spend||0).toLocaleString(),'#1877F2'],['Clicks',(metaAdsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((metaAdsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CTR',ctr,'var(--green)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
-      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
-    </div>`).join('')}
-  </div>
-  ${camps.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns — last 7d</div>
-    <div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
-      <span>Campaign</span>
-      <span style="text-align:right;padding-right:1rem">Spend</span>
-      <span style="text-align:right;padding-right:1rem">Clicks</span>
-      <span style="text-align:right;padding-right:1rem">Impr</span>
-      <span style="text-align:right;padding-right:1rem">CTR</span>
-      <span style="text-align:right">Leads</span>
-    </div>
-    ${camps.map(c=>`<div style="display:grid;grid-template-columns:1fr auto auto auto auto auto;gap:0;font-size:12px;padding:.5rem .5rem;border-bottom:1px solid var(--border);align-items:center">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.5rem;max-width:300px" title="${c.name}">${c.name}</span>
-      <span style="text-align:right;padding-right:1rem;font-weight:600;color:#1877F2">$${Math.round(c.spend)}</span>
-      <span style="text-align:right;padding-right:1rem">${(c.clicks||0).toLocaleString()}</span>
-      <span style="text-align:right;padding-right:1rem;color:var(--text2)">${c.impressions?(c.impressions/1000).toFixed(1)+'K':'0'}</span>
-      <span style="text-align:right;padding-right:1rem;color:var(--green)">${c.ctr?c.ctr.toFixed(2)+'%':'—'}</span>
-      <span style="text-align:right;color:var(--amber)">${c.leads||0}</span>
-    </div>`).join('')}
-  </div>`:'<div style="color:var(--text3);font-size:13px;margin-top:.5rem">No campaign breakdown available — click Connect Meta to refresh</div>'}`;
-}
+  const r=metaGetRange();
+  const presetSel=`<select class="sm" onchange="metaSetPreset(this.value)" style="height:32px">${META_PRESETS.map(([v,l])=>`<option value="${v}"${r.preset===v?' selected':''}>${l}</option>`).join('')}</select>`;
+  const customInputs=r.preset==='CUSTOM'?`<input type="date" id="meta-from" value="${esc(r.from||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><span style="color:var(--text3);font-size:12px">to</span><input type="date" id="meta-to" value="${esc(r.to||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><button class="btn btn-sm btn-primary" onclick="metaApplyCustom()">Apply</button>`:'';
+  const header=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    ${presetSel}${customInputs}
+    <button class="btn btn-sm" onclick="metaRefreshTab()"${metaTab.loading?' disabled':''}><i class="ti ti-refresh"></i> ${metaTab.loading?'Loading…':'Refresh'}</button>
+    <span style="font-size:11px;color:var(--text3)">Live from Meta Graph API · ${esc(String(actId))}</span>
+  </div>`;
+  if(metaTab.loading&&!metaTab.campaigns){el.innerHTML=header+`<div class="empty">Pulling live data from Meta…</div>`;return;}
+  if(metaTab.error&&!metaTab.campaigns){el.innerHTML=header+`<div class="empty" style="color:var(--red)">Meta error: ${esc(metaTab.error)}</div>`;return;}
+  if(!metaTab.campaigns){el.innerHTML=header+`<div class="empty">Click Refresh to pull live data.</div>`;metaRefreshTab();return;}
 
+  const camps=metaTab.campaigns;
+  const objOf=c=>META_OBJ_LABEL[c.objective]||'Other';
+  const objs=[...new Set(camps.map(objOf))];
+  const chip=(val,label,n)=>`<button onclick="metaSetObj('${val}')" style="height:30px;padding:0 12px;border-radius:100px;border:1px solid ${metaTab.objFilter===val?'var(--text)':'var(--border)'};background:${metaTab.objFilter===val?'var(--text)':'var(--surface)'};color:${metaTab.objFilter===val?'var(--surface)':'var(--text)'};font-size:12px;font-weight:600;cursor:pointer">${label} <span style="opacity:.6">${n}</span></button>`;
+  const chips=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${chip('','All campaigns',camps.length)}${objs.map(o=>chip(o,o,camps.filter(c=>objOf(c)===o).length)).join('')}</div>`;
+  const view=camps.filter(c=>!metaTab.objFilter||objOf(c)===metaTab.objFilter);
+  const adsAll=metaTab.ads||[];
+  const adsView=metaTab.objFilter?adsAll.filter(a=>view.some(c=>c.name===a.campaign)):adsAll;
+
+  const T=view.reduce((a,c)=>({sp:a.sp+c.spend,im:a.im+c.impressions,cl:a.cl+c.clicks,ld:a.ld+c.leads}),{sp:0,im:0,cl:0,ld:0});
+  const tiles=[
+    ['Spend',gadsFmt$(T.sp),'var(--blue)'],
+    ['Impressions',T.im>=1000?(T.im/1000).toFixed(1)+'K':T.im.toLocaleString(),'var(--text)'],
+    ['Clicks',T.cl.toLocaleString(),'var(--text)'],
+    ['CTR',T.im?(T.cl/T.im*100).toFixed(2)+'%':'—','var(--green)'],
+    ['Avg CPC',T.cl?gadsFmt$(T.sp/T.cl):'—','var(--text)'],
+    ['Leads',T.ld?Math.round(T.ld).toLocaleString():'0','var(--purple)'],
+    ['CPL',T.ld?gadsFmt$(T.sp/T.ld):'—','var(--amber)']
+  ].map(([l,v,c])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div>
+    <div style="font-size:1.35rem;font-weight:700;color:${c}">${v}</div>
+  </div>`).join('');
+
+  const th='font-size:11px;font-weight:600;color:var(--text2);text-align:right;padding:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const td='font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
+  const campRows=view.map(c=>`<tr>
+    <td style="${td};text-align:left;max-width:300px;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</td>
+    <td style="${td};text-align:left;color:var(--text2)">${esc(objOf(c))}</td>
+    <td style="${td};font-weight:600;color:var(--blue)">${gadsFmt$(c.spend)}</td>
+    <td style="${td}">${c.impressions.toLocaleString()}</td>
+    <td style="${td}">${c.clicks.toLocaleString()}</td>
+    <td style="${td}">${c.impressions?(c.clicks/c.impressions*100).toFixed(2)+'%':'—'}</td>
+    <td style="${td}">${c.clicks?gadsFmt$(c.spend/c.clicks):'—'}</td>
+    <td style="${td};color:var(--purple);font-weight:600">${c.leads?Math.round(c.leads):'—'}</td>
+    <td style="${td};font-weight:600">${c.leads?gadsFmt$(c.spend/c.leads):'—'}</td>
+  </tr>`).join('');
+  const adRows=adsView.slice(0,20).map(a=>`<tr>
+    <td style="${td};text-align:left;font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis">${esc(a.name)}</td>
+    <td style="${td};text-align:left;color:var(--text2);max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:11px">${esc(a.campaign)}</td>
+    <td style="${td};font-weight:600;color:var(--blue)">${gadsFmt$(a.spend)}</td>
+    <td style="${td}">${a.impressions.toLocaleString()}</td>
+    <td style="${td}">${a.clicks.toLocaleString()}</td>
+    <td style="${td}">${a.impressions?(a.clicks/a.impressions*100).toFixed(2)+'%':'—'}</td>
+    <td style="${td};color:var(--purple)">${a.leads?Math.round(a.leads):'—'}</td>
+    <td style="${td};font-weight:600">${a.leads?gadsFmt$(a.spend/a.leads):'—'}</td>
+  </tr>`).join('');
+
+  el.innerHTML=header+chips+
+  `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">${tiles}</div>
+  ${metaTab.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Last refresh error: ${esc(metaTab.error)}</div>`:''}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;margin-bottom:1.25rem">
+    <div style="font-size:13px;font-weight:700;padding:.875rem 1rem .25rem">Campaigns${metaTab.objFilter?' — '+esc(metaTab.objFilter):''}</div>
+    <table style="width:100%;border-collapse:collapse;min-width:920px">
+      <thead><tr><th style="${th};text-align:left">Campaign</th><th style="${th};text-align:left">Objective</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Leads</th><th style="${th}">CPL</th></tr></thead>
+      <tbody>${campRows||`<tr><td colspan="9" style="${td};text-align:center;color:var(--text3)">No campaigns in this range</td></tr>`}</tbody>
+    </table>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto">
+    <div style="display:flex;align-items:baseline;gap:8px;padding:.875rem 1rem .25rem"><div style="font-size:13px;font-weight:700">Top ads</div><div style="font-size:11px;color:var(--text3)">by spend — Meta's equivalent of the keywords view</div></div>
+    <table style="width:100%;border-collapse:collapse;min-width:920px">
+      <thead><tr><th style="${th};text-align:left">Ad</th><th style="${th};text-align:left">Campaign</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">Leads</th><th style="${th}">CPL</th></tr></thead>
+      <tbody>${adRows||`<tr><td colspan="8" style="${td};text-align:center;color:var(--text3)">No ad-level data in this range</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
 function renderPaidLinkedInTab(){
   const el=document.getElementById('paid-tab-linkedin');if(!el)return;
   loadPaidAdsData();
@@ -11529,7 +11633,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.0';
+const APP_HTML_VERSION='8.2';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
