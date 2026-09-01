@@ -10175,26 +10175,42 @@ async function fetchMetaAds(){
 }
 
 // ── LINKEDIN ADS — live API ────────────────────────────────────────────────
+// LinkedIn versioned Marketing API — new apps are locked out of legacy v2
+// (403), so all calls use /rest/* with LinkedIn-Version headers, sent through
+// the header-capable /proxy (main.js ≥ this build).
+const LI_VERSION='202506';
+function liProxy(url,token){
+  const hdrs=JSON.stringify({'LinkedIn-Version':LI_VERSION,'X-Restli-Protocol-Version':'2.0.0'});
+  return `http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent('Bearer '+token)}&headers=${encodeURIComponent(hdrs)}`;
+}
+function liDatePart(d){return `(year:${d.slice(0,4)},month:${parseInt(d.slice(5,7))},day:${parseInt(d.slice(8,10))})`;}
 async function fetchLinkedInAds(){
-  const token=getLinkedInToken();const actId=getLinkedInAdAccount();
+  const token=getLinkedInToken();const actId=(getLinkedInAdAccount()||'').replace(/\D/g,'');
   if(!token||!actId){toast('Set LinkedIn Ads credentials in Settings first');openSettingsToSection('li-ads');return;}
   const btn=document.getElementById('li-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
-    const proxy=(url,hdrs)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent(hdrs||'')}`;
     const end=new Date().toISOString().slice(0,10);
     const start=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
-    const url=`https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&dateRange.start.year=${start.slice(0,4)}&dateRange.start.month=${parseInt(start.slice(5,7))}&dateRange.start.day=${parseInt(start.slice(8,10))}&dateRange.end.year=${end.slice(0,4)}&dateRange.end.month=${parseInt(end.slice(5,7))}&dateRange.end.day=${parseInt(end.slice(8,10))}&timeGranularity=ALL&accounts=urn:li:sponsoredAccount:${actId}&pivot=ACCOUNT&fields=spend,impressions,clicks,leadGenerationMailContactInfoShares`;
-    const res=await fetch(proxy(url,'Bearer '+token));
-    if(!res.ok)throw new Error('LinkedIn API '+res.status);
+    const acct=encodeURIComponent(`urn:li:sponsoredAccount:${actId}`);
+    const url=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(start)},end:${liDatePart(end)})&timeGranularity=ALL&accounts=List(${acct})&pivot=ACCOUNT&fields=costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
+    const res=await fetch(liProxy(url,token));
     const data=await res.json();
-    if(data.message||data.serviceErrorCode)throw new Error(data.message||'LinkedIn error '+data.serviceErrorCode);
+    if(!res.ok||data.message||data.serviceErrorCode!==undefined&&data.serviceErrorCode!==0){
+      throw new Error(data.message||('LinkedIn API '+res.status));
+    }
     const el=data.elements?.[0]||{};
-    liAdsData={spend:el.spend?.amount?parseFloat(el.spend.amount):0,impressions:el.impressions||0,clicks:el.clicks||0,leads:el.leadGenerationMailContactInfoShares||0,fetched:Date.now()};
+    liAdsData={
+      spend:parseFloat(el.costInLocalCurrency)||0,
+      impressions:el.impressions||0,
+      clicks:el.clicks||0,
+      leads:(el.oneClickLeads||0)+(el.externalWebsiteConversions||0),
+      fetched:Date.now()
+    };
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
-    toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
+    toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${(liAdsData.clicks||0).toLocaleString()} clicks`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span>Connect LinkedIn</span>';
     toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
@@ -11633,7 +11649,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.2';
+const APP_HTML_VERSION='8.3';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
