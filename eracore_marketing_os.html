@@ -6815,13 +6815,23 @@ async function exchangeGAdsCode(){
   try{
     const res=await fetch('https://oauth2.googleapis.com/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:`code=${encodeURIComponent(code)}&client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&redirect_uri=${encodeURIComponent('http://localhost')}&grant_type=authorization_code`
+      body:`code=${encodeURIComponent(code)}&client_id=${encodeURIComponent(GSC_CLIENT_ID)}&client_secret=${encodeURIComponent(GSC_CLIENT_SECRET)}&redirect_uri=${encodeURIComponent('http://localhost')}&grant_type=authorization_code`
     });
     const data=await res.json();
     if(data.refresh_token){
       const rtEl=document.getElementById('gads-refresh-token');if(rtEl)rtEl.value=data.refresh_token;
-      if(statusEl){statusEl.textContent='✓ Refresh token generated — click "Save & connect" above';statusEl.style.color='var(--green)';}
-      toast('Adwords refresh token ready — save credentials');
+      // Auto-save immediately — no save-ordering pitfalls — then self-test the
+      // fresh token with a real refresh so problems surface RIGHT NOW.
+      saveGAdsCredentials();
+      if(statusEl){statusEl.textContent='✓ Token minted + saved — verifying with Google…';statusEl.style.color='var(--text2)';}
+      try{
+        await getGAdsAccessToken();
+        if(statusEl){statusEl.textContent='✓ Token minted, saved, and verified with Google — click "Test connection" for the full check';statusEl.style.color='var(--green)';}
+        toast('Google refresh token verified');
+      }catch(selfErr){
+        if(statusEl){statusEl.textContent='Token minted but Google refused the refresh: '+selfErr.message;statusEl.style.color='var(--red)';}
+        toast('Fresh token failed verification — see the message below the buttons');
+      }
     }else{
       if(statusEl){statusEl.textContent='Error: '+(data.error_description||data.error||JSON.stringify(data));statusEl.style.color='var(--red)';}
     }
@@ -6832,11 +6842,12 @@ async function getGAdsAccessToken(){
   if(!creds?.refreshToken){throw new Error('No adwords refresh token — generate one in Settings');}
   const res=await fetch('https://oauth2.googleapis.com/token',{
     method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${creds.refreshToken}&grant_type=refresh_token`
+    body:`client_id=${encodeURIComponent(GSC_CLIENT_ID)}&client_secret=${encodeURIComponent(GSC_CLIENT_SECRET)}&refresh_token=${encodeURIComponent(creds.refreshToken)}&grant_type=refresh_token`
   });
   const data=await res.json();
   if(data.access_token){gAdsToken=data.access_token;return data.access_token;}
-  throw new Error('Token refresh failed: '+(data.error||JSON.stringify(data)));
+  // Google's error_description names the actual cause (expired vs revoked vs bad client)
+  throw new Error('Token refresh failed: '+(data.error||'?')+(data.error_description?' — '+data.error_description:'')+' [client …'+String(GSC_CLIENT_ID).slice(-8)+']');
 }
 // All Google Ads API calls go through main.js /gads-query (v23) — never direct.
 async function gadsQuery(creds,accessToken,query){
@@ -11383,7 +11394,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='7.7';
+const APP_HTML_VERSION='8.0';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
