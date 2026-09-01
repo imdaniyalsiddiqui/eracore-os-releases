@@ -9680,42 +9680,177 @@ function renderPaidOverview(){
   `;
 }
 
+// ══════════════════════════════════════════════════════════════
+// GOOGLE ADS TAB — full dashboard: Ads-style date presets, KPI
+// tiles, campaign-type segmentation, campaigns, top keywords with
+// Quality Score. All data live via GAQL through /gads-query (v23).
+// Note: Google assigns Quality Score to SEARCH keywords only —
+// Performance Max has no QS by design.
+// ══════════════════════════════════════════════════════════════
+const GADS_RANGE_KEY='ec-gads-range';
+const GADS_PRESETS=[['TODAY','Today'],['YESTERDAY','Yesterday'],['THIS_WEEK_MON_TODAY','This week'],['LAST_7_DAYS','Last 7 days'],['THIS_MONTH','This month'],['LAST_MONTH','Last month'],['LAST_30_DAYS','Last 30 days'],['CUSTOM','Custom…']];
+const GADS_TYPE_LABEL={SEARCH:'Search',PERFORMANCE_MAX:'Performance Max',DISPLAY:'Display',VIDEO:'Video',SHOPPING:'Shopping',DEMAND_GEN:'Demand Gen',MULTI_CHANNEL:'Multi-channel'};
+let gadsTab={campaigns:null,keywords:null,loading:false,error:'',typeFilter:''};
+function gadsGetRange(){
+  const r=Store.get(GADS_RANGE_KEY,null);
+  return r&&r.preset?r:{preset:'LAST_7_DAYS',from:'',to:''};
+}
+function gadsDateClause(){
+  const r=gadsGetRange();
+  if(r.preset==='CUSTOM'&&/^\d{4}-\d{2}-\d{2}$/.test(r.from)&&/^\d{4}-\d{2}-\d{2}$/.test(r.to))
+    return `segments.date BETWEEN '${r.from}' AND '${r.to}'`;
+  return `segments.date DURING ${r.preset==='CUSTOM'?'LAST_7_DAYS':r.preset}`;
+}
+function gadsSetPreset(v){
+  const r=gadsGetRange();r.preset=v;Store.set(GADS_RANGE_KEY,r);
+  if(v==='CUSTOM'){renderPaidGoogleTab();return;} // show the date inputs, wait for Apply
+  gadsRefreshTab();
+}
+function gadsApplyCustom(){
+  const from=document.getElementById('gads-from')?.value||'';
+  const to=document.getElementById('gads-to')?.value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to){toast('Pick a valid from/to range');return;}
+  Store.set(GADS_RANGE_KEY,{preset:'CUSTOM',from,to});
+  gadsRefreshTab();
+}
+function gadsSetType(t){gadsTab.typeFilter=t;renderPaidGoogleTab();}
+async function gadsRefreshTab(){
+  const creds=getGAdsCreds();
+  if(!creds?.devToken||!creds?.refreshToken){renderPaidGoogleTab();return;}
+  gadsTab.loading=true;gadsTab.error='';renderPaidGoogleTab();
+  try{
+    const token=await getGAdsAccessToken();
+    const dc=gadsDateClause();
+    const campData=await gadsQuery(creds,token,
+      `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE ${dc} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`);
+    gadsTab.campaigns=(campData.results||[]).map(r=>({
+      id:r.campaign?.id,name:r.campaign?.name||'',status:r.campaign?.status||'',
+      type:r.campaign?.advertisingChannelType||'OTHER',
+      impressions:parseInt(r.metrics?.impressions)||0,clicks:parseInt(r.metrics?.clicks)||0,
+      spend:(parseInt(r.metrics?.costMicros)||0)/1e6,conversions:parseFloat(r.metrics?.conversions)||0
+    }));
+    let kw=[];
+    try{
+      const kwData=await gadsQuery(creds,token,
+        `SELECT campaign.name, ad_group.name, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ad_group_criterion.quality_info.quality_score, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM keyword_view WHERE ${dc} AND ad_group_criterion.status != 'REMOVED' AND metrics.impressions > 0 ORDER BY metrics.clicks DESC LIMIT 40`);
+      kw=(kwData.results||[]).map(r=>({
+        text:r.adGroupCriterion?.keyword?.text||'',match:(r.adGroupCriterion?.keyword?.matchType||'').replace('EXACT','Exact').replace('PHRASE','Phrase').replace('BROAD','Broad'),
+        campaign:r.campaign?.name||'',adGroup:r.adGroup?.name||'',
+        qs:r.adGroupCriterion?.qualityInfo?.qualityScore||null,
+        impressions:parseInt(r.metrics?.impressions)||0,clicks:parseInt(r.metrics?.clicks)||0,
+        spend:(parseInt(r.metrics?.costMicros)||0)/1e6,conversions:parseFloat(r.metrics?.conversions)||0
+      }));
+    }catch(kwErr){console.warn('[gads] keyword query failed:',kwErr.message);}
+    gadsTab.keywords=kw;
+  }catch(e){gadsTab.error=e.message;console.error('[gads tab]',e);}
+  gadsTab.loading=false;
+  renderPaidGoogleTab();
+}
+const gadsFmt$=v=>'$'+(v>=100?Math.round(v).toLocaleString():(Math.round(v*100)/100));
+function gadsQsBadge(qs){
+  if(qs==null)return '<span style="color:var(--text3)">—</span>';
+  const c=qs>=8?'var(--green)':qs>=5?'var(--amber)':'var(--red)';
+  return `<span style="display:inline-block;min-width:26px;text-align:center;padding:2px 6px;border-radius:6px;font-weight:700;font-size:11px;background:color-mix(in srgb,${c} 14%,transparent);color:${c}">${qs}</span>`;
+}
 function renderPaidGoogleTab(){
   const el=document.getElementById('paid-tab-google');if(!el)return;
-  loadPaidAdsData();
-  if(!gadsData){
+  const creds=getGAdsCreds&&getGAdsCreds();
+  if(!creds?.devToken||!creds?.refreshToken){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-google" style="font-size:2rem;display:block;margin-bottom:.75rem;color:var(--blue)"></i>
       <div style="font-weight:600;margin-bottom:.5rem">Google Ads not connected</div>
-      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchGoogleAdsLive()"><i class="ti ti-plug"></i> Connect Google Ads</button>
+      <div style="font-size:12px;margin-bottom:.75rem">Add credentials in Settings → Google Ads API, then reload this tab.</div>
+      <button class="btn btn-primary" onclick="navTo('settings')"><i class="ti ti-settings"></i> Open Settings</button>
     </div>`;return;
   }
-  const campaigns=gadsData.campaigns||[];
-  const ctr=gadsData.clicks&&gadsData.impressions?(gadsData.clicks/gadsData.impressions*100).toFixed(2)+'%':'—';
-  const cpl=gadsData.conversions&&gadsData.spend?'$'+Math.round(gadsData.spend/gadsData.conversions):'—';
-  el.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:1.5rem">
-    ${[['Spend','$'+Math.round(gadsData.spend||0).toLocaleString(),'var(--blue)'],['Clicks',(gadsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((gadsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CTR',ctr,'var(--green)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
-      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
-    </div>`).join('')}
-  </div>
-  ${campaigns.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns (last 7d)</div>
-    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
-      <span>Campaign</span><span style="text-align:right;padding-right:1rem">Spend</span><span style="text-align:right;padding-right:1rem">Clicks</span><span style="text-align:right;padding-right:1rem">Impr</span><span style="text-align:right">Conv</span>
-    </div>
-    ${campaigns.map(c=>`<div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:12px;padding:.5rem .5rem;border-bottom:1px solid var(--border);align-items:center">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:.5rem">${c.name}</span>
-      <span style="text-align:right;padding-right:1rem;font-weight:600;color:var(--blue)">$${Math.round(c.spend)}</span>
-      <span style="text-align:right;padding-right:1rem">${(c.clicks||0).toLocaleString()}</span>
-      <span style="text-align:right;padding-right:1rem;color:var(--text2)">${c.impressions?(c.impressions/1000).toFixed(1)+'K':'0'}</span>
-      <span style="text-align:right;color:var(--green)">${c.conversions||0}</span>
-    </div>`).join('')}
-  </div>`:'<div style="color:var(--text3);font-size:13px">No campaign data returned — campaigns may be paused or have no spend in the last 7 days</div>'}`;
-}
+  const r=gadsGetRange();
+  const presetSel=`<select class="sm" onchange="gadsSetPreset(this.value)" style="height:32px">${GADS_PRESETS.map(([v,l])=>`<option value="${v}"${r.preset===v?' selected':''}>${l}</option>`).join('')}</select>`;
+  const customInputs=r.preset==='CUSTOM'?`<input type="date" id="gads-from" value="${esc(r.from||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><span style="color:var(--text3);font-size:12px">to</span><input type="date" id="gads-to" value="${esc(r.to||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><button class="btn btn-sm btn-primary" onclick="gadsApplyCustom()">Apply</button>`:'';
+  const header=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    ${presetSel}${customInputs}
+    <button class="btn btn-sm" onclick="gadsRefreshTab()"${gadsTab.loading?' disabled':''}><i class="ti ti-refresh"></i> ${gadsTab.loading?'Loading…':'Refresh'}</button>
+    <span style="font-size:11px;color:var(--text3)">Live from Google Ads API</span>
+  </div>`;
+  if(gadsTab.loading&&!gadsTab.campaigns){el.innerHTML=header+`<div class="empty">Pulling live data from Google Ads…</div>`;return;}
+  if(gadsTab.error&&!gadsTab.campaigns){el.innerHTML=header+`<div class="empty" style="color:var(--red)">Google Ads error: ${esc(gadsTab.error)}</div>`;return;}
+  if(!gadsTab.campaigns){el.innerHTML=header+`<div class="empty">Click Refresh to pull live campaign data.</div>`;gadsRefreshTab();return;}
 
+  // ── Type filter chips + filtered set ──
+  const camps=gadsTab.campaigns;
+  const types=[...new Set(camps.map(c=>c.type))];
+  const chip=(val,label,n)=>`<button onclick="gadsSetType('${val}')" style="height:30px;padding:0 12px;border-radius:100px;border:1px solid ${gadsTab.typeFilter===val?'var(--text)':'var(--border)'};background:${gadsTab.typeFilter===val?'var(--text)':'var(--surface)'};color:${gadsTab.typeFilter===val?'var(--surface)':'var(--text)'};font-size:12px;font-weight:600;cursor:pointer">${label} <span style="opacity:.6">${n}</span></button>`;
+  const chips=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${chip('','All campaigns',camps.length)}${types.map(t=>chip(t,GADS_TYPE_LABEL[t]||t,camps.filter(c=>c.type===t).length)).join('')}</div>`;
+  const view=camps.filter(c=>!gadsTab.typeFilter||c.type===gadsTab.typeFilter);
+  const kwAll=gadsTab.keywords||[];
+  const kwView=gadsTab.typeFilter?kwAll.filter(k=>view.some(c=>c.name===k.campaign)):kwAll;
+
+  // ── KPI tiles (respect the type filter) ──
+  const T=view.reduce((a,c)=>({sp:a.sp+c.spend,im:a.im+c.impressions,cl:a.cl+c.clicks,cv:a.cv+c.conversions}),{sp:0,im:0,cl:0,cv:0});
+  const tiles=[
+    ['Spend',gadsFmt$(T.sp),'var(--blue)'],
+    ['Impressions',T.im>=1000?(T.im/1000).toFixed(1)+'K':T.im.toLocaleString(),'var(--text)'],
+    ['Clicks',T.cl.toLocaleString(),'var(--text)'],
+    ['CTR',T.im?(T.cl/T.im*100).toFixed(2)+'%':'—','var(--green)'],
+    ['Avg CPC',T.cl?gadsFmt$(T.sp/T.cl):'—','var(--text)'],
+    ['Conversions',T.cv?(Math.round(T.cv*10)/10).toLocaleString():'0','var(--purple)'],
+    ['Cost / Conv',T.cv?gadsFmt$(T.sp/T.cv):'—','var(--amber)']
+  ].map(([l,v,c])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div>
+    <div style="font-size:1.35rem;font-weight:700;color:${c}">${v}</div>
+  </div>`).join('');
+
+  // ── Campaigns table with avg QS from keyword data ──
+  const qsByCampaign={};
+  kwAll.forEach(k=>{if(k.qs!=null){(qsByCampaign[k.campaign]=qsByCampaign[k.campaign]||[]).push(k.qs);}});
+  const th='font-size:11px;font-weight:600;color:var(--text2);text-align:right;padding:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const td='font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
+  const campRows=view.map(c=>{
+    const qsArr=qsByCampaign[c.name];
+    const avgQs=qsArr&&qsArr.length?Math.round(qsArr.reduce((a,b)=>a+b,0)/qsArr.length*10)/10:null;
+    return`<tr>
+      <td style="${td};text-align:left;max-width:280px;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</td>
+      <td style="${td};text-align:left;color:var(--text2)">${GADS_TYPE_LABEL[c.type]||esc(c.type)}</td>
+      <td style="${td};text-align:left"><span style="font-size:10px;font-weight:700;color:${c.status==='ENABLED'?'var(--green)':'var(--text3)'}">${c.status==='ENABLED'?'ACTIVE':esc(c.status)}</span></td>
+      <td style="${td};font-weight:600;color:var(--blue)">${gadsFmt$(c.spend)}</td>
+      <td style="${td}">${c.impressions.toLocaleString()}</td>
+      <td style="${td}">${c.clicks.toLocaleString()}</td>
+      <td style="${td}">${c.impressions?(c.clicks/c.impressions*100).toFixed(2)+'%':'—'}</td>
+      <td style="${td}">${c.clicks?gadsFmt$(c.spend/c.clicks):'—'}</td>
+      <td style="${td};color:var(--purple);font-weight:600">${c.conversions?Math.round(c.conversions*10)/10:'—'}</td>
+      <td style="${td}">${avgQs!=null?gadsQsBadge(Math.round(avgQs)):'<span style="color:var(--text3)" title="Quality Score exists only for Search keywords">—</span>'}</td>
+    </tr>`;}).join('');
+
+  // ── Top keywords ──
+  const kwRows=kwView.slice(0,25).map(k=>`<tr>
+    <td style="${td};text-align:left;font-weight:600;max-width:240px;overflow:hidden;text-overflow:ellipsis">${esc(k.text)}</td>
+    <td style="${td};text-align:left;color:var(--text3);font-size:11px">${esc(k.match)}</td>
+    <td style="${td};text-align:left;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:11px">${esc(k.campaign)}</td>
+    <td style="${td}">${k.impressions.toLocaleString()}</td>
+    <td style="${td};font-weight:600">${k.clicks.toLocaleString()}</td>
+    <td style="${td}">${k.impressions?(k.clicks/k.impressions*100).toFixed(2)+'%':'—'}</td>
+    <td style="${td}">${k.clicks?gadsFmt$(k.spend/k.clicks):'—'}</td>
+    <td style="${td};color:var(--purple)">${k.conversions?Math.round(k.conversions*10)/10:'—'}</td>
+    <td style="${td}">${gadsQsBadge(k.qs)}</td>
+  </tr>`).join('');
+
+  el.innerHTML=header+chips+
+  `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">${tiles}</div>
+  ${gadsTab.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Last refresh error: ${esc(gadsTab.error)}</div>`:''}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;margin-bottom:1.25rem">
+    <div style="font-size:13px;font-weight:700;padding:.875rem 1rem .25rem">Campaigns${gadsTab.typeFilter?' — '+(GADS_TYPE_LABEL[gadsTab.typeFilter]||gadsTab.typeFilter):''}</div>
+    <table style="width:100%;border-collapse:collapse;min-width:960px">
+      <thead><tr><th style="${th};text-align:left">Campaign</th><th style="${th};text-align:left">Type</th><th style="${th};text-align:left">Status</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Conv</th><th style="${th}">Avg QS</th></tr></thead>
+      <tbody>${campRows||`<tr><td colspan="10" style="${td};text-align:center;color:var(--text3)">No campaigns in this range</td></tr>`}</tbody>
+    </table>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto">
+    <div style="display:flex;align-items:baseline;gap:8px;padding:.875rem 1rem .25rem"><div style="font-size:13px;font-weight:700">Top keywords</div><div style="font-size:11px;color:var(--text3)">by clicks · Quality Score is Search-only (1–10; 8+ healthy)</div></div>
+    <table style="width:100%;border-collapse:collapse;min-width:960px">
+      <thead><tr><th style="${th};text-align:left">Keyword</th><th style="${th};text-align:left">Match</th><th style="${th};text-align:left">Campaign</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Conv</th><th style="${th}">QS</th></tr></thead>
+      <tbody>${kwRows||`<tr><td colspan="9" style="${td};text-align:center;color:var(--text3)">No keyword data in this range${gadsTab.typeFilter==='PERFORMANCE_MAX'?' — Performance Max campaigns have no keywords by design':''}</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
 function renderPaidMetaTab(){
   const el=document.getElementById('paid-tab-meta');if(!el)return;
   loadPaidAdsData();
