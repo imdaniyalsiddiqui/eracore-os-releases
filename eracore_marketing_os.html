@@ -9687,6 +9687,87 @@ function renderPaidOverview(){
 // Note: Google assigns Quality Score to SEARCH keywords only —
 // Performance Max has no QS by design.
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// SHARED PAID-ADS ANALYTICS ENGINE — used by Google, Meta and
+// LinkedIn tabs (Microsoft inherits it when connected):
+//  · pfPrevRange: the equal-length period immediately before
+//  · pfTrendSVG: daily spend bars + clicks line, dependency-free
+//  · pfInsights + pfChangeCard: plain-language "what changed"
+// ══════════════════════════════════════════════════════════════
+function pfPrevRange(from,to){
+  const F=new Date(from+'T00:00:00Z'),T=new Date(to+'T00:00:00Z');
+  const len=Math.round((T-F)/86400000)+1;
+  const pT=new Date(F-86400000),pF=new Date(F-len*86400000);
+  return[pF.toISOString().slice(0,10),pT.toISOString().slice(0,10)];
+}
+function pfTrendSVG(days){
+  if(!days||days.length<2)return'';
+  const W=640,H=130,P=6,n=days.length;
+  const maxSp=Math.max(...days.map(d=>d.sp),0.01);
+  const maxCl=Math.max(...days.map(d=>d.cl),1);
+  const bw=Math.max(2,(W-2*P)/n-2);
+  const bars=days.map((d,i)=>{
+    const x=P+i*((W-2*P)/n),h=Math.max(1,(d.sp/maxSp)*(H-30));
+    return`<rect x="${x.toFixed(1)}" y="${(H-18-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="var(--blue)" opacity=".45"><title>${d.d} — $${Math.round(d.sp)} spend · ${d.cl} clicks</title></rect>`;
+  }).join('');
+  const pts=days.map((d,i)=>`${(P+i*((W-2*P)/n)+bw/2).toFixed(1)},${(H-18-(d.cl/maxCl)*(H-34)).toFixed(1)}`).join(' ');
+  const labels=[0,Math.floor(n/2),n-1].map(i=>`<text x="${(P+i*((W-2*P)/n)).toFixed(1)}" y="${H-4}" font-size="9" fill="var(--text3)">${days[i].d}</text>`).join('');
+  return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;margin-bottom:1.25rem">
+    <div style="display:flex;gap:14px;align-items:baseline;margin-bottom:.25rem">
+      <div style="font-size:13px;font-weight:700">Daily trend</div>
+      <div style="font-size:11px;color:var(--text3)"><span style="color:var(--blue)">▮</span> spend&nbsp;&nbsp;<span style="color:var(--purple)">—</span> clicks</div>
+    </div>
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${bars}<polyline points="${pts}" fill="none" stroke="var(--purple)" stroke-width="1.8"/>${labels}</svg>
+  </div>`;
+}
+function pfPct(cur,prev){
+  if(!prev)return cur?'new':'—';
+  const p=(cur-prev)/prev*100;
+  return(p>=0?'+':'')+(Math.abs(p)>=100?Math.round(p):p.toFixed(1))+'%';
+}
+function pfArrow(cur,prev,goodWhenUp){
+  if(!prev||cur===prev)return'';
+  const up=cur>prev,good=(up&&goodWhenUp)||(!up&&!goodWhenUp);
+  return` <span style="color:${good?'var(--green)':'var(--red)'};font-weight:700">${up?'▲':'▼'} ${pfPct(cur,prev)}</span>`;
+}
+function pfInsights(cur,prev,convLabel){
+  // cur/prev: arrays of {name, spend, clicks, impressions, conv}
+  const tot=a=>a.reduce((t,c)=>({sp:t.sp+c.spend,cl:t.cl+c.clicks,im:t.im+c.impressions,cv:t.cv+c.conv}),{sp:0,cl:0,im:0,cv:0});
+  const C=tot(cur),P=tot(prev);
+  const bullets=[];
+  bullets.push(`Spend <strong>$${Math.round(C.sp).toLocaleString()}</strong>${pfArrow(C.sp,P.sp,null===null?false:false)||(P.sp?` <span style="color:var(--text3)">(${pfPct(C.sp,P.sp)} vs prior)</span>`:'')}`);
+  const ctrC=C.im?C.cl/C.im*100:0,ctrP=P.im?P.cl/P.im*100:0;
+  if(ctrC||ctrP)bullets.push(`CTR <strong>${ctrC.toFixed(2)}%</strong>${pfArrow(ctrC,ctrP,true)}`);
+  const cplC=C.cv?C.sp/C.cv:0,cplP=P.cv?P.sp/P.cv:0;
+  if(cplC&&cplP)bullets.push(`${convLabel} <strong>${Math.round(C.cv)}</strong> at <strong>$${cplC.toFixed(0)}</strong> each${pfArrow(cplC,cplP,false)}`);
+  else if(C.cv)bullets.push(`<strong>${Math.round(C.cv)}</strong> ${convLabel.toLowerCase()} this period${P.cv?'':' (none in the prior period)'}`);
+  else if(P.cv)bullets.push(`<span style="color:var(--red)">No ${convLabel.toLowerCase()} this period</span> — prior period had ${Math.round(P.cv)}`);
+  // movers: biggest spend swings
+  const pmap={};prev.forEach(c=>pmap[c.name]=c);
+  const movers=cur.map(c=>{const p=pmap[c.name];return{c,p,d:Math.abs(c.spend-(p?p.spend:0))};})
+    .sort((a,b)=>b.d-a.d).slice(0,2).filter(m=>m.d>1);
+  movers.forEach(({c,p})=>{
+    if(!p){bullets.push(`<strong>${esc(c.name)}</strong> is new — $${Math.round(c.spend)} spend, ${Math.round(c.conv)||0} ${convLabel.toLowerCase()}`);return;}
+    const parts=[`spend ${pfPct(c.spend,p.spend)}`];
+    if(c.conv||p.conv)parts.push(`${convLabel.toLowerCase()} ${Math.round(p.conv)}→${Math.round(c.conv)}`);
+    const cpl=c.conv?c.spend/c.conv:0,pcpl=p.conv?p.spend/p.conv:0;
+    if(cpl&&pcpl)parts.push(`cost/${convLabel.toLowerCase().replace(/s$/,'')} $${pcpl.toFixed(0)}→$${cpl.toFixed(0)}`);
+    bullets.push(`<strong>${esc(c.name)}</strong>: ${parts.join(' · ')}`);
+  });
+  const gone=prev.filter(p=>p.spend>1&&!cur.some(c=>c.name===p.name)).slice(0,1);
+  gone.forEach(p=>bullets.push(`<strong>${esc(p.name)}</strong> went quiet — $${Math.round(p.spend)} last period, $0 now`));
+  return bullets;
+}
+function pfChangeCard(bullets,prevFrom,prevTo){
+  if(!bullets||!bullets.length)return'';
+  return`<div style="background:color-mix(in srgb,var(--blue) 5%,var(--surface));border:1px solid color-mix(in srgb,var(--blue) 25%,var(--border));border-radius:var(--rl);padding:.875rem 1rem;margin-bottom:1.25rem">
+    <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:.4rem">
+      <div style="font-size:13px;font-weight:700"><i class="ti ti-sparkles" style="color:var(--blue)"></i> What changed</div>
+      <div style="font-size:11px;color:var(--text3)">vs ${esc(prevFrom)} → ${esc(prevTo)}</div>
+    </div>
+    <div style="font-size:12.5px;line-height:1.85;color:var(--text)">${bullets.map(b=>`<div>· ${b}</div>`).join('')}</div>
+  </div>`;
+}
 const GADS_RANGE_KEY='ec-gads-range';
 const GADS_PRESETS=[['TODAY','Today'],['YESTERDAY','Yesterday'],['THIS_WEEK_MON_TODAY','This week'],['LAST_7_DAYS','Last 7 days'],['THIS_MONTH','This month'],['LAST_MONTH','Last month'],['LAST_30_DAYS','Last 30 days'],['CUSTOM','Custom…']];
 const GADS_TYPE_LABEL={SEARCH:'Search',PERFORMANCE_MAX:'Performance Max',DISPLAY:'Display',VIDEO:'Video',SHOPPING:'Shopping',DEMAND_GEN:'Demand Gen',MULTI_CHANNEL:'Multi-channel'};
@@ -9694,6 +9775,18 @@ let gadsTab={campaigns:null,keywords:null,loading:false,error:'',typeFilter:''};
 function gadsGetRange(){
   const r=Store.get(GADS_RANGE_KEY,null);
   return r&&r.preset?r:{preset:'LAST_7_DAYS',from:'',to:''};
+}
+function gadsRangeDates(){
+  const r=gadsGetRange();const iso=d=>d.toISOString().slice(0,10);
+  const now=new Date();const today=iso(now);
+  if(r.preset==='CUSTOM'&&r.from&&r.to)return[r.from,r.to];
+  if(r.preset==='TODAY')return[today,today];
+  if(r.preset==='YESTERDAY'){const y=new Date(now-86400000);return[iso(y),iso(y)];}
+  if(r.preset==='THIS_WEEK_MON_TODAY'){const d=new Date(now);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);return[iso(d),today];}
+  if(r.preset==='THIS_MONTH')return[today.slice(0,8)+'01',today];
+  if(r.preset==='LAST_MONTH'){const f=new Date(now.getFullYear(),now.getMonth()-1,1);const l=new Date(now.getFullYear(),now.getMonth(),0);return[iso(f),iso(l)];}
+  if(r.preset==='LAST_30_DAYS')return[iso(new Date(now-30*86400000)),today];
+  return[iso(new Date(now-7*86400000)),today];
 }
 function gadsDateClause(){
   const r=gadsGetRange();
@@ -9742,6 +9835,28 @@ async function gadsRefreshTab(){
       }));
     }catch(kwErr){console.warn('[gads] keyword query failed:',kwErr.message);}
     gadsTab.keywords=kw;
+    // daily trend (account level)
+    try{
+      const dData=await gadsQuery(creds,token,
+        `SELECT segments.date, metrics.clicks, metrics.cost_micros FROM customer WHERE ${dc} ORDER BY segments.date`);
+      gadsTab.trend=(dData.results||[]).map(r=>({d:(r.segments?.date||'').slice(5),sp:(parseInt(r.metrics?.costMicros)||0)/1e6,cl:parseInt(r.metrics?.clicks)||0}));
+    }catch(tErr){gadsTab.trend=null;}
+    // previous equal-length period, campaign level (for What changed)
+    try{
+      const[f,t]=gadsRangeDates();const[pf,pt]=pfPrevRange(f,t);
+      gadsTab.prevRange=[pf,pt];
+      const pData=await gadsQuery(creds,token,
+        `SELECT campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${pf}' AND '${pt}' AND campaign.status != 'REMOVED'`);
+      gadsTab.prev=(pData.results||[]).map(r=>({name:r.campaign?.name||'',impressions:parseInt(r.metrics?.impressions)||0,clicks:parseInt(r.metrics?.clicks)||0,spend:(parseInt(r.metrics?.costMicros)||0)/1e6,conv:parseFloat(r.metrics?.conversions)||0}));
+    }catch(pErr){gadsTab.prev=null;}
+    // demographics: age + gender (Search/Display; PMax reports limited demo data)
+    try{
+      const ageQ=await gadsQuery(creds,token,`SELECT ad_group_criterion.age_range.type, metrics.impressions, metrics.clicks, metrics.cost_micros FROM age_range_view WHERE ${dc}`);
+      const genQ=await gadsQuery(creds,token,`SELECT ad_group_criterion.gender.type, metrics.impressions, metrics.clicks, metrics.cost_micros FROM gender_view WHERE ${dc}`);
+      const agg=(rows,key)=>{const m={};(rows||[]).forEach(r=>{const k=(key(r)||'UNKNOWN').replace('AGE_RANGE_','').replace('_',' – ').replace('UNDETERMINED','Unknown');if(!m[k])m[k]={im:0,cl:0,sp:0};m[k].im+=parseInt(r.metrics?.impressions)||0;m[k].cl+=parseInt(r.metrics?.clicks)||0;m[k].sp+=(parseInt(r.metrics?.costMicros)||0)/1e6;});return Object.entries(m).map(([k,v])=>({k,...v})).sort((a,b)=>b.im-a.im);};
+      gadsTab.demoAge=agg(ageQ.results,r=>r.adGroupCriterion?.ageRange?.type);
+      gadsTab.demoGender=agg(genQ.results,r=>{const g=r.adGroupCriterion?.gender?.type||'';return g==='MALE'?'Male':g==='FEMALE'?'Female':'Unknown';});
+    }catch(dErr){gadsTab.demoAge=null;gadsTab.demoGender=null;}
   }catch(e){gadsTab.error=e.message;console.error('[gads tab]',e);}
   gadsTab.loading=false;
   renderPaidGoogleTab();
@@ -9833,8 +9948,25 @@ function renderPaidGoogleTab(){
     <td style="${td}">${gadsQsBadge(k.qs)}</td>
   </tr>`).join('');
 
+  // What changed + trend + demographics
+  let changeCard='';
+  if(gadsTab.prev&&!gadsTab.typeFilter){
+    const curFlat=camps.map(c=>({name:c.name,spend:c.spend,clicks:c.clicks,impressions:c.impressions,conv:c.conversions}));
+    changeCard=pfChangeCard(pfInsights(curFlat,gadsTab.prev,'Conversions'),gadsTab.prevRange?.[0]||'',gadsTab.prevRange?.[1]||'');
+  }
+  const trendCard=(!gadsTab.typeFilter&&gadsTab.trend)?pfTrendSVG(gadsTab.trend):'';
+  const demoRow=(t,rows)=>rows&&rows.length?`<div style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+    <div style="font-size:12px;font-weight:700;margin-bottom:.5rem">${t}</div>
+    ${rows.slice(0,7).map(r=>{const max=rows[0].im||1;return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="width:82px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.k)}</div>
+      <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="width:${Math.max(3,r.im/max*100)}%;height:100%;background:var(--blue);opacity:.6"></div></div>
+      <div style="width:88px;font-size:11px;color:var(--text3);text-align:right">${r.im>=1000?(r.im/1000).toFixed(1)+'K':r.im} · $${Math.round(r.sp)}</div>
+    </div>`;}).join('')}
+  </div>`:'';
+  const demoCards=(!gadsTab.typeFilter&&(gadsTab.demoAge?.length||gadsTab.demoGender?.length))?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.25rem">${demoRow('Age (impressions · spend)',gadsTab.demoAge)}${demoRow('Gender',gadsTab.demoGender)}</div>`:'';
   el.innerHTML=header+chips+
   `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">${tiles}</div>
+  ${changeCard}${trendCard}
   ${gadsTab.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Last refresh error: ${esc(gadsTab.error)}</div>`:''}
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;margin-bottom:1.25rem">
     <div style="font-size:13px;font-weight:700;padding:.875rem 1rem .25rem">Campaigns${gadsTab.typeFilter?' — '+(GADS_TYPE_LABEL[gadsTab.typeFilter]||gadsTab.typeFilter):''}</div>
@@ -9849,7 +9981,8 @@ function renderPaidGoogleTab(){
       <thead><tr><th style="${th};text-align:left">Keyword</th><th style="${th};text-align:left">Match</th><th style="${th};text-align:left">Campaign</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Conv</th><th style="${th}">QS</th></tr></thead>
       <tbody>${kwRows||`<tr><td colspan="9" style="${td};text-align:center;color:var(--text3)">No keyword data in this range${gadsTab.typeFilter==='PERFORMANCE_MAX'?' — Performance Max campaigns have no keywords by design':''}</td></tr>`}</tbody>
     </table>
-  </div>`;
+  </div>
+  <div style="margin-top:1.25rem">${demoCards}</div>`;
 }
 // ══════════════════════════════════════════════════════════════
 // META ADS TAB — parity with the Google dashboard: Ads-style date
@@ -9866,6 +9999,18 @@ function metaDateParam(){
   if(r.preset==='CUSTOM'&&/^\d{4}-\d{2}-\d{2}$/.test(r.from)&&/^\d{4}-\d{2}-\d{2}$/.test(r.to))
     return `time_range=${encodeURIComponent(JSON.stringify({since:r.from,until:r.to}))}`;
   return `date_preset=${r.preset==='CUSTOM'?'last_7d':r.preset}`;
+}
+function metaRangeDates(){
+  const r=metaGetRange();const iso=d=>d.toISOString().slice(0,10);
+  const now=new Date();const today=iso(now);
+  if(r.preset==='CUSTOM'&&r.from&&r.to)return[r.from,r.to];
+  if(r.preset==='today')return[today,today];
+  if(r.preset==='yesterday'){const y=new Date(now-86400000);return[iso(y),iso(y)];}
+  if(r.preset==='this_week_mon_today'){const d=new Date(now);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);return[iso(d),today];}
+  if(r.preset==='this_month')return[today.slice(0,8)+'01',today];
+  if(r.preset==='last_month'){const f=new Date(now.getFullYear(),now.getMonth()-1,1);const l=new Date(now.getFullYear(),now.getMonth(),0);return[iso(f),iso(l)];}
+  if(r.preset==='last_30d')return[iso(new Date(now-30*86400000)),today];
+  return[iso(new Date(now-7*86400000)),today];
 }
 function metaSetPreset(v){const r=metaGetRange();r.preset=v;Store.set(META_RANGE_KEY,r);if(v==='CUSTOM'){renderPaidMetaTab();return;}metaRefreshTab();}
 function metaApplyCustom(){
@@ -9906,6 +10051,35 @@ async function metaRefreshTab(){
         clicks:parseInt(r.clicks)||0,leads:metaLeadsFrom(r.actions)
       })).sort((a,b)=>b.spend-a.spend);
     }catch(adErr){metaTab.ads=[];}
+    // daily trend
+    try{
+      const tUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('spend,clicks')}&${dp}&time_increment=1&level=account&limit=200`;
+      const tData=await(await fetch(tUrl)).json();
+      metaTab.trend=tData.error?null:(tData.data||[]).map(r=>({d:(r.date_start||'').slice(5),sp:parseFloat(r.spend)||0,cl:parseInt(r.clicks)||0}));
+    }catch(tErr){metaTab.trend=null;}
+    // previous equal-length period (campaign level)
+    try{
+      const[f,t]=metaRangeDates();const[pf,pt]=pfPrevRange(f,t);
+      metaTab.prevRange=[pf,pt];
+      const pUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('campaign_name,spend,impressions,clicks,actions')}&time_range=${encodeURIComponent(JSON.stringify({since:pf,until:pt}))}&level=campaign&limit=100`;
+      const pData=await(await fetch(pUrl)).json();
+      metaTab.prev=pData.error?null:(pData.data||[]).map(r=>({name:r.campaign_name||'',spend:parseFloat(r.spend)||0,impressions:parseInt(r.impressions)||0,clicks:parseInt(r.clicks)||0,conv:metaLeadsFrom(r.actions)}));
+    }catch(pErr){metaTab.prev=null;}
+    // demographics: age + gender breakdown
+    try{
+      const gUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('spend,impressions,clicks')}&${dp}&level=account&breakdowns=${encodeURIComponent('age,gender')}&limit=200`;
+      const gData=await(await fetch(gUrl)).json();
+      if(!gData.error){
+        const ageM={},genM={};
+        (gData.data||[]).forEach(r=>{
+          const im=parseInt(r.impressions)||0,sp=parseFloat(r.spend)||0;
+          const a=r.age||'?';if(!ageM[a])ageM[a]={im:0,sp:0};ageM[a].im+=im;ageM[a].sp+=sp;
+          const g=r.gender==='male'?'Male':r.gender==='female'?'Female':'Unknown';if(!genM[g])genM[g]={im:0,sp:0};genM[g].im+=im;genM[g].sp+=sp;
+        });
+        metaTab.demoAge=Object.entries(ageM).map(([k,v])=>({k,...v})).sort((a,b)=>b.im-a.im);
+        metaTab.demoGender=Object.entries(genM).map(([k,v])=>({k,...v})).sort((a,b)=>b.im-a.im);
+      }else{metaTab.demoAge=null;metaTab.demoGender=null;}
+    }catch(dErr){metaTab.demoAge=null;metaTab.demoGender=null;}
   }catch(e){metaTab.error=e.message;console.error('[meta tab]',e);}
   metaTab.loading=false;
   renderPaidMetaTab();
@@ -9980,8 +10154,24 @@ function renderPaidMetaTab(){
     <td style="${td};font-weight:600">${a.leads?gadsFmt$(a.spend/a.leads):'—'}</td>
   </tr>`).join('');
 
+  let changeCard='';
+  if(metaTab.prev&&!metaTab.objFilter){
+    const curFlat=camps.map(c=>({name:c.name,spend:c.spend,clicks:c.clicks,impressions:c.impressions,conv:c.leads}));
+    changeCard=pfChangeCard(pfInsights(curFlat,metaTab.prev,'Leads'),metaTab.prevRange?.[0]||'',metaTab.prevRange?.[1]||'');
+  }
+  const trendCard=(!metaTab.objFilter&&metaTab.trend)?pfTrendSVG(metaTab.trend):'';
+  const demoRow=(t,rows)=>rows&&rows.length?`<div style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+    <div style="font-size:12px;font-weight:700;margin-bottom:.5rem">${t}</div>
+    ${rows.slice(0,7).map(r=>{const max=rows[0].im||1;return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="width:82px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.k)}</div>
+      <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="width:${Math.max(3,r.im/max*100)}%;height:100%;background:var(--blue);opacity:.6"></div></div>
+      <div style="width:88px;font-size:11px;color:var(--text3);text-align:right">${r.im>=1000?(r.im/1000).toFixed(1)+'K':r.im} · $${Math.round(r.sp)}</div>
+    </div>`;}).join('')}
+  </div>`:'';
+  const demoCards=(!metaTab.objFilter&&(metaTab.demoAge?.length||metaTab.demoGender?.length))?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.25rem">${demoRow('Age (impressions · spend)',metaTab.demoAge)}${demoRow('Gender',metaTab.demoGender)}</div>`:'';
   el.innerHTML=header+chips+
   `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">${tiles}</div>
+  ${changeCard}${trendCard}
   ${metaTab.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Last refresh error: ${esc(metaTab.error)}</div>`:''}
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto;margin-bottom:1.25rem">
     <div style="font-size:13px;font-weight:700;padding:.875rem 1rem .25rem">Campaigns${metaTab.objFilter?' — '+esc(metaTab.objFilter):''}</div>
@@ -9996,30 +10186,195 @@ function renderPaidMetaTab(){
       <thead><tr><th style="${th};text-align:left">Ad</th><th style="${th};text-align:left">Campaign</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">Leads</th><th style="${th}">CPL</th></tr></thead>
       <tbody>${adRows||`<tr><td colspan="8" style="${td};text-align:center;color:var(--text3)">No ad-level data in this range</td></tr>`}</tbody>
     </table>
-  </div>`;
+  </div>
+  <div style="margin-top:1.25rem">${demoCards}</div>`;
+}
+// ══════════════════════════════════════════════════════════════
+// LINKEDIN ADS TAB — parity with Google/Meta: date presets, KPI
+// tiles, objective segmentation, campaign table. Versioned REST
+// API via the header-capable proxy; campaign names joined from
+// /adCampaigns, metrics from /adAnalytics pivot=CAMPAIGN.
+// ══════════════════════════════════════════════════════════════
+const LI_RANGE_KEY='ec-li-range';
+const LI_PRESETS=[['today','Today'],['yesterday','Yesterday'],['this_week','This week'],['last_7','Last 7 days'],['this_month','This month'],['last_month','Last month'],['last_30','Last 30 days'],['CUSTOM','Custom…']];
+const LI_OBJ_LABEL={LEAD_GENERATION:'Leads',WEBSITE_VISITS:'Traffic',BRAND_AWARENESS:'Awareness',ENGAGEMENT:'Engagement',WEBSITE_CONVERSIONS:'Conversions',VIDEO_VIEWS:'Video',JOB_APPLICANTS:'Jobs'};
+let liTab={campaigns:null,loading:false,error:'',objFilter:''};
+function liGetRange(){const r=Store.get(LI_RANGE_KEY,null);return r&&r.preset?r:{preset:'last_7',from:'',to:''};}
+function liRangeDates(){
+  const r=liGetRange();const iso=d=>d.toISOString().slice(0,10);
+  const now=new Date();const today=iso(now);
+  if(r.preset==='CUSTOM'&&/^\d{4}-\d{2}-\d{2}$/.test(r.from)&&/^\d{4}-\d{2}-\d{2}$/.test(r.to))return[r.from,r.to];
+  if(r.preset==='today')return[today,today];
+  if(r.preset==='yesterday'){const y=new Date(now-86400000);return[iso(y),iso(y)];}
+  if(r.preset==='this_week'){const d=new Date(now);const dow=(d.getDay()+6)%7;d.setDate(d.getDate()-dow);return[iso(d),today];}
+  if(r.preset==='this_month')return[today.slice(0,8)+'01',today];
+  if(r.preset==='last_month'){const f=new Date(now.getFullYear(),now.getMonth()-1,1);const l=new Date(now.getFullYear(),now.getMonth(),0);return[iso(f),iso(l)];}
+  if(r.preset==='last_30')return[iso(new Date(now-30*86400000)),today];
+  return[iso(new Date(now-7*86400000)),today];
+}
+function liSetPreset(v){const r=liGetRange();r.preset=v;Store.set(LI_RANGE_KEY,r);if(v==='CUSTOM'){renderPaidLinkedInTab();return;}liRefreshTab();}
+function liApplyCustom(){
+  const from=document.getElementById('li-from')?.value||'';
+  const to=document.getElementById('li-to')?.value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to){toast('Pick a valid from/to range');return;}
+  Store.set(LI_RANGE_KEY,{preset:'CUSTOM',from,to});
+  liRefreshTab();
+}
+function liSetObj(o){liTab.objFilter=o;renderPaidLinkedInTab();}
+async function liRefreshTab(){
+  const token=getLinkedInToken();const actId=(getLinkedInAdAccount()||'').replace(/\D/g,'');
+  if(!token||!actId){renderPaidLinkedInTab();return;}
+  liTab.loading=true;liTab.error='';renderPaidLinkedInTab();
+  try{
+    // 1. Campaign metadata (names, objectives, status)
+    const metaUrl=`https://api.linkedin.com/rest/adAccounts/${actId}/adCampaigns?q=search&pageSize=200`;
+    const metaRes=await liFetch(metaUrl,token);
+    if(!metaRes.res.ok||metaRes.data.message)throw new Error(metaRes.data.message||('LinkedIn campaigns '+metaRes.res.status));
+    const byId={};
+    (metaRes.data.elements||[]).forEach(c=>{byId[String(c.id)]={name:c.name||('Campaign '+c.id),objective:c.objectiveType||'',status:c.status||''};});
+    // 2. Metrics pivoted by campaign
+    const[from,to]=liRangeDates();
+    const acct=encodeURIComponent(`urn:li:sponsoredAccount:${actId}`);
+    const anUrl=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(from)},end:${liDatePart(to)})&timeGranularity=ALL&accounts=List(${acct})&pivot=CAMPAIGN&fields=pivotValues,costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
+    const anRes=await liFetch(anUrl,token);
+    if(!anRes.res.ok||anRes.data.message)throw new Error(anRes.data.message||('LinkedIn analytics '+anRes.res.status));
+    liTab.campaigns=(anRes.data.elements||[]).map(r=>{
+      const urn=(r.pivotValues||[])[0]||'';
+      const id=urn.split(':').pop();
+      const m=byId[id]||{};
+      return{
+        name:m.name||('Campaign '+id),objective:m.objective||'',status:m.status||'',
+        spend:parseFloat(r.costInLocalCurrency)||0,impressions:r.impressions||0,
+        clicks:r.clicks||0,leads:(r.oneClickLeads||0)+(r.externalWebsiteConversions||0)
+      };
+    }).sort((a,b)=>b.spend-a.spend);
+    // daily trend (account pivot, DAILY granularity)
+    try{
+      const tUrl=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(from)},end:${liDatePart(to)})&timeGranularity=DAILY&accounts=List(${acct})&pivot=ACCOUNT&fields=dateRange,costInLocalCurrency,clicks`;
+      const tRes=await liFetch(tUrl,token);
+      liTab.trend=(!tRes.res.ok||tRes.data.message)?null:(tRes.data.elements||[]).map(r=>{
+        const s=r.dateRange?.start||{};
+        return{d:String(s.month).padStart(2,'0')+'-'+String(s.day).padStart(2,'0'),sp:parseFloat(r.costInLocalCurrency)||0,cl:r.clicks||0,_k:(s.year||0)*10000+(s.month||0)*100+(s.day||0)};
+      }).sort((a,b)=>a._k-b._k);
+    }catch(tErr){liTab.trend=null;}
+    // previous equal-length period
+    try{
+      const[pf,pt]=pfPrevRange(from,to);
+      liTab.prevRange=[pf,pt];
+      const pUrl=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(pf)},end:${liDatePart(pt)})&timeGranularity=ALL&accounts=List(${acct})&pivot=CAMPAIGN&fields=pivotValues,costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
+      const pRes=await liFetch(pUrl,token);
+      liTab.prev=(!pRes.res.ok||pRes.data.message)?null:(pRes.data.elements||[]).map(r=>{
+        const id=((r.pivotValues||[])[0]||'').split(':').pop();
+        return{name:(byId[id]||{}).name||('Campaign '+id),spend:parseFloat(r.costInLocalCurrency)||0,impressions:r.impressions||0,clicks:r.clicks||0,conv:(r.oneClickLeads||0)+(r.externalWebsiteConversions||0)};
+      });
+    }catch(pErr){liTab.prev=null;}
+    // demographics: seniority + company size (static URN maps — safe to resolve locally)
+    try{
+      const SEN={'1':'Unpaid','2':'Training','3':'Entry','4':'Senior','5':'Manager','6':'Director','7':'VP','8':'CXO','9':'Partner','10':'Owner'};
+      const SIZE={'A':'Self-employed','B':'1–10','C':'11–50','D':'51–200','E':'201–500','F':'501–1K','G':'1K–5K','H':'5K–10K','I':'10K+'};
+      const demoFetch=async(pivot,map)=>{
+        const u=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(from)},end:${liDatePart(to)})&timeGranularity=ALL&accounts=List(${acct})&pivot=${pivot}&fields=pivotValues,impressions,costInLocalCurrency,clicks`;
+        const r=await liFetch(u,token);
+        if(!r.res.ok||r.data.message)return null;
+        return(r.data.elements||[]).map(e=>{
+          const key=((e.pivotValues||[])[0]||'').split(':').pop();
+          return{k:map[key]||key,im:e.impressions||0,sp:parseFloat(e.costInLocalCurrency)||0};
+        }).filter(x=>x.im>0).sort((a,b)=>b.im-a.im);
+      };
+      liTab.demoSen=await demoFetch('MEMBER_SENIORITY',SEN);
+      liTab.demoSize=await demoFetch('MEMBER_COMPANY_SIZE',SIZE);
+    }catch(dErr){liTab.demoSen=null;liTab.demoSize=null;}
+  }catch(e){liTab.error=e.message;console.error('[li tab]',e);}
+  liTab.loading=false;
+  renderPaidLinkedInTab();
 }
 function renderPaidLinkedInTab(){
   const el=document.getElementById('paid-tab-linkedin');if(!el)return;
-  loadPaidAdsData();
-  if(!liAdsData){
+  const token=getLinkedInToken();const actId=getLinkedInAdAccount&&getLinkedInAdAccount();
+  if(!token||!actId){
     el.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--text2)">
       <i class="ti ti-brand-linkedin" style="font-size:2rem;display:block;margin-bottom:.75rem;color:#0A66C2"></i>
       <div style="font-weight:600;margin-bottom:.5rem">LinkedIn Ads not connected</div>
-      <div style="font-size:13px;margin-bottom:1rem">You'll need a LinkedIn OAuth token and Campaign Manager Account ID</div>
-      <button class="btn btn-primary" style="margin-top:.5rem" onclick="fetchLinkedInAds()"><i class="ti ti-plug"></i> Connect LinkedIn</button>
+      <div style="font-size:12px;margin-bottom:.75rem">Add the OAuth token and Campaign Manager account ID in Settings → LinkedIn Ads.</div>
+      <button class="btn btn-primary" onclick="navTo('settings')"><i class="ti ti-settings"></i> Open Settings</button>
     </div>`;return;
   }
-  const cpl=liAdsData.leads&&liAdsData.spend?'$'+Math.round(liAdsData.spend/liAdsData.leads):'—';
-  el.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
-    ${[['Spend','$'+Math.round(liAdsData.spend||0).toLocaleString(),'#0A66C2'],['Clicks',(liAdsData.clicks||0).toLocaleString(),'var(--text)'],['Impressions',((liAdsData.impressions||0)/1000).toFixed(1)+'K','var(--text)'],['CPL',cpl,'var(--amber)']].map(([l,v,c])=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">${l}</div>
-      <div style="font-size:1.5rem;font-weight:700;color:${c}">${v}</div>
-    </div>`).join('')}
+  const r=liGetRange();
+  const presetSel=`<select class="sm" onchange="liSetPreset(this.value)" style="height:32px">${LI_PRESETS.map(([v,l])=>`<option value="${v}"${r.preset===v?' selected':''}>${l}</option>`).join('')}</select>`;
+  const customInputs=r.preset==='CUSTOM'?`<input type="date" id="li-from" value="${esc(r.from||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><span style="color:var(--text3);font-size:12px">to</span><input type="date" id="li-to" value="${esc(r.to||'')}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><button class="btn btn-sm btn-primary" onclick="liApplyCustom()">Apply</button>`:'';
+  const header=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    ${presetSel}${customInputs}
+    <button class="btn btn-sm" onclick="liRefreshTab()"${liTab.loading?' disabled':''}><i class="ti ti-refresh"></i> ${liTab.loading?'Loading…':'Refresh'}</button>
+    <span style="font-size:11px;color:var(--text3)">Live from LinkedIn Marketing API · ${esc(String(actId))}</span>
   </div>`;
-}
+  if(liTab.loading&&!liTab.campaigns){el.innerHTML=header+`<div class="empty">Pulling live data from LinkedIn…</div>`;return;}
+  if(liTab.error&&!liTab.campaigns){el.innerHTML=header+`<div class="empty" style="color:var(--red)">LinkedIn error: ${esc(liTab.error)}</div>`;return;}
+  if(!liTab.campaigns){el.innerHTML=header+`<div class="empty">Click Refresh to pull live data.</div>`;liRefreshTab();return;}
 
+  const camps=liTab.campaigns;
+  const objOf=c=>LI_OBJ_LABEL[c.objective]||(c.objective?c.objective:'Other');
+  const objs=[...new Set(camps.map(objOf))];
+  const chip=(val,label,n)=>`<button onclick="liSetObj('${val}')" style="height:30px;padding:0 12px;border-radius:100px;border:1px solid ${liTab.objFilter===val?'var(--text)':'var(--border)'};background:${liTab.objFilter===val?'var(--text)':'var(--surface)'};color:${liTab.objFilter===val?'var(--surface)':'var(--text)'};font-size:12px;font-weight:600;cursor:pointer">${label} <span style="opacity:.6">${n}</span></button>`;
+  const chips=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${chip('','All campaigns',camps.length)}${objs.map(o=>chip(o,o,camps.filter(c=>objOf(c)===o).length)).join('')}</div>`;
+  const view=camps.filter(c=>!liTab.objFilter||objOf(c)===liTab.objFilter);
+
+  const T=view.reduce((a,c)=>({sp:a.sp+c.spend,im:a.im+c.impressions,cl:a.cl+c.clicks,ld:a.ld+c.leads}),{sp:0,im:0,cl:0,ld:0});
+  const tiles=[
+    ['Spend',gadsFmt$(T.sp),'var(--blue)'],
+    ['Impressions',T.im>=1000?(T.im/1000).toFixed(1)+'K':T.im.toLocaleString(),'var(--text)'],
+    ['Clicks',T.cl.toLocaleString(),'var(--text)'],
+    ['CTR',T.im?(T.cl/T.im*100).toFixed(2)+'%':'—','var(--green)'],
+    ['Avg CPC',T.cl?gadsFmt$(T.sp/T.cl):'—','var(--text)'],
+    ['Leads / Conv',T.ld?Math.round(T.ld).toLocaleString():'0','var(--purple)'],
+    ['CPL',T.ld?gadsFmt$(T.sp/T.ld):'—','var(--amber)']
+  ].map(([l,v,c])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div>
+    <div style="font-size:1.35rem;font-weight:700;color:${c}">${v}</div>
+  </div>`).join('');
+
+  const th='font-size:11px;font-weight:600;color:var(--text2);text-align:right;padding:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const td='font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
+  const rows=view.map(c=>`<tr>
+    <td style="${td};text-align:left;max-width:300px;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</td>
+    <td style="${td};text-align:left;color:var(--text2)">${esc(objOf(c))}</td>
+    <td style="${td};text-align:left"><span style="font-size:10px;font-weight:700;color:${c.status==='ACTIVE'?'var(--green)':'var(--text3)'}">${esc(c.status||'—')}</span></td>
+    <td style="${td};font-weight:600;color:var(--blue)">${gadsFmt$(c.spend)}</td>
+    <td style="${td}">${c.impressions.toLocaleString()}</td>
+    <td style="${td}">${c.clicks.toLocaleString()}</td>
+    <td style="${td}">${c.impressions?(c.clicks/c.impressions*100).toFixed(2)+'%':'—'}</td>
+    <td style="${td}">${c.clicks?gadsFmt$(c.spend/c.clicks):'—'}</td>
+    <td style="${td};color:var(--purple);font-weight:600">${c.leads?Math.round(c.leads):'—'}</td>
+    <td style="${td};font-weight:600">${c.leads?gadsFmt$(c.spend/c.leads):'—'}</td>
+  </tr>`).join('');
+
+  let changeCard='';
+  if(liTab.prev&&!liTab.objFilter){
+    const curFlat=camps.map(c=>({name:c.name,spend:c.spend,clicks:c.clicks,impressions:c.impressions,conv:c.leads}));
+    changeCard=pfChangeCard(pfInsights(curFlat,liTab.prev,'Leads'),liTab.prevRange?.[0]||'',liTab.prevRange?.[1]||'');
+  }
+  const trendCard=(!liTab.objFilter&&liTab.trend&&liTab.trend.length>1)?pfTrendSVG(liTab.trend):'';
+  const demoRow=(t,rows)=>rows&&rows.length?`<div style="flex:1;min-width:240px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+    <div style="font-size:12px;font-weight:700;margin-bottom:.5rem">${t}</div>
+    ${rows.slice(0,7).map(r=>{const max=rows[0].im||1;return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div style="width:92px;font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.k)}</div>
+      <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="width:${Math.max(3,r.im/max*100)}%;height:100%;background:#0A66C2;opacity:.65"></div></div>
+      <div style="width:88px;font-size:11px;color:var(--text3);text-align:right">${r.im>=1000?(r.im/1000).toFixed(1)+'K':r.im} · $${Math.round(r.sp)}</div>
+    </div>`;}).join('')}
+  </div>`:'';
+  const demoCards=(!liTab.objFilter&&(liTab.demoSen?.length||liTab.demoSize?.length))?`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:1.25rem">${demoRow('Seniority reached (impressions · spend)',liTab.demoSen)}${demoRow('Company size reached',liTab.demoSize)}</div>`:'';
+  el.innerHTML=header+chips+
+  `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">${tiles}</div>
+  ${changeCard}${trendCard}
+  ${liTab.error?`<div style="font-size:12px;color:var(--red);margin-bottom:.75rem">Last refresh error: ${esc(liTab.error)}</div>`:''}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto">
+    <div style="font-size:13px;font-weight:700;padding:.875rem 1rem .25rem">Campaigns${liTab.objFilter?' — '+esc(liTab.objFilter):''}</div>
+    <table style="width:100%;border-collapse:collapse;min-width:960px">
+      <thead><tr><th style="${th};text-align:left">Campaign</th><th style="${th};text-align:left">Objective</th><th style="${th};text-align:left">Status</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Leads</th><th style="${th}">CPL</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="10" style="${td};text-align:center;color:var(--text3)">No campaign activity in this range</td></tr>`}</tbody>
+    </table>
+  </div>
+  ${demoCards}`;
+}
 function renderPaidMicrosoftTab(){
   const el=document.getElementById('paid-tab-microsoft');if(!el)return;
   loadPaidAdsData();
@@ -11663,7 +12018,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.4';
+const APP_HTML_VERSION='8.6';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
