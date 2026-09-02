@@ -9835,6 +9835,23 @@ async function gadsRefreshTab(){
       }));
     }catch(kwErr){console.warn('[gads] keyword query failed:',kwErr.message);}
     gadsTab.keywords=kw;
+    // ads on air — actual served ads (RSA text creatives)
+    try{
+      const aData=await gadsQuery(creds,token,
+        `SELECT campaign.name, ad_group.name, ad_group_ad.ad.type, ad_group_ad.status, ad_group_ad.ad.final_urls, ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM ad_group_ad WHERE ${dc} AND ad_group_ad.status = 'ENABLED' AND metrics.impressions > 0 ORDER BY metrics.clicks DESC LIMIT 12`);
+      gadsTab.adsList=(aData.results||[]).map(r=>{
+        const rsa=r.adGroupAd?.ad?.responsiveSearchAd||{};
+        return{
+          campaign:r.campaign?.name||'',adGroup:r.adGroup?.name||'',
+          type:(r.adGroupAd?.ad?.type||'').replace(/_/g,' '),
+          url:(r.adGroupAd?.ad?.finalUrls||[])[0]||'',
+          headlines:(rsa.headlines||[]).map(h=>h.text).filter(Boolean),
+          descriptions:(rsa.descriptions||[]).map(x=>x.text).filter(Boolean),
+          impressions:parseInt(r.metrics?.impressions)||0,clicks:parseInt(r.metrics?.clicks)||0,
+          spend:(parseInt(r.metrics?.costMicros)||0)/1e6,conv:parseFloat(r.metrics?.conversions)||0
+        };
+      });
+    }catch(aErr){gadsTab.adsList=null;}
     // daily trend (account level)
     try{
       const dData=await gadsQuery(creds,token,
@@ -9982,6 +9999,21 @@ function renderPaidGoogleTab(){
       <tbody>${kwRows||`<tr><td colspan="9" style="${td};text-align:center;color:var(--text3)">No keyword data in this range${gadsTab.typeFilter==='PERFORMANCE_MAX'?' — Performance Max campaigns have no keywords by design':''}</td></tr>`}</tbody>
     </table>
   </div>
+  ${(!gadsTab.typeFilter&&gadsTab.adsList&&gadsTab.adsList.length)?`
+  <div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+    <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:.75rem"><div style="font-size:13px;font-weight:700">Ads on air</div><div style="font-size:11px;color:var(--text3)">what searchers are actually seeing · by clicks</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px">
+    ${gadsTab.adsList.map(a=>{
+      let host='';try{host=new URL(a.url).hostname.replace(/^www\./,'');}catch(e){host=a.url;}
+      return`<div style="border:1px solid var(--border);border-radius:var(--r);padding:.75rem;background:var(--bg)">
+        <div style="font-size:10px;color:var(--text3);margin-bottom:4px"><strong style="color:var(--text2)">Ad</strong> · ${esc(host)}</div>
+        <div style="font-size:13.5px;font-weight:600;color:#1a0dab;line-height:1.35;margin-bottom:2px">${esc(a.headlines.slice(0,3).join(' | ')||'(asset-based ad)')}</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.45;margin-bottom:6px">${esc((a.descriptions[0]||'').slice(0,140))}</div>
+        <div style="font-size:10.5px;color:var(--text3)">${esc(a.campaign)} · ${a.impressions.toLocaleString()} impr · <strong>${a.clicks}</strong> clicks · ${a.impressions?(a.clicks/a.impressions*100).toFixed(2):'0'}% CTR${a.conv?` · <span style="color:var(--purple);font-weight:600">${Math.round(a.conv)} conv</span>`:''}</div>
+      </div>`;}).join('')}
+    </div>
+    <div style="font-size:10.5px;color:var(--text3);margin-top:.5rem">Performance Max assets are mixed dynamically by Google and don't render as fixed ads.</div>
+  </div>`:''}
   <div style="margin-top:1.25rem">${demoCards}</div>`;
 }
 // ══════════════════════════════════════════════════════════════
@@ -10042,14 +10074,27 @@ async function metaRefreshTab(){
       clicks:parseInt(r.clicks)||0,leads:metaLeadsFrom(r.actions)
     })).sort((a,b)=>b.spend-a.spend);
     try{
-      const aUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('ad_name,campaign_name,spend,impressions,clicks,actions')}&${dp}&level=ad&limit=50`;
+      const aUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${encodeURIComponent('ad_id,ad_name,campaign_name,spend,impressions,clicks,actions')}&${dp}&level=ad&limit=50`;
       const aRes=await fetch(aUrl);
       const aData=await aRes.json();
       metaTab.ads=aData.error?[]:(aData.data||[]).map(r=>({
-        name:r.ad_name||'',campaign:r.campaign_name||'',
+        id:r.ad_id||'',name:r.ad_name||'',campaign:r.campaign_name||'',
         spend:parseFloat(r.spend)||0,impressions:parseInt(r.impressions)||0,
         clicks:parseInt(r.clicks)||0,leads:metaLeadsFrom(r.actions)
       })).sort((a,b)=>b.spend-a.spend);
+      // creatives for the top ads: thumbnail + shareable preview
+      try{
+        const topIds=metaTab.ads.slice(0,8).map(a=>a.id).filter(Boolean);
+        metaTab.creatives={};
+        if(topIds.length){
+          const crUrl=`https://graph.facebook.com/v21.0/?ids=${topIds.join(',')}&fields=${encodeURIComponent('creative{thumbnail_url,title,body},preview_shareable_link,effective_status')}&access_token=${token}`;
+          const crData=await(await fetch(crUrl)).json();
+          if(!crData.error)Object.keys(crData).forEach(id=>{
+            const c=crData[id]||{};
+            metaTab.creatives[id]={thumb:c.creative?.thumbnail_url||'',title:c.creative?.title||'',body:c.creative?.body||'',preview:c.preview_shareable_link||'',status:c.effective_status||''};
+          });
+        }
+      }catch(crErr){metaTab.creatives={};}
     }catch(adErr){metaTab.ads=[];}
     // daily trend
     try{
@@ -10187,6 +10232,23 @@ function renderPaidMetaTab(){
       <tbody>${adRows||`<tr><td colspan="8" style="${td};text-align:center;color:var(--text3)">No ad-level data in this range</td></tr>`}</tbody>
     </table>
   </div>
+  ${(!metaTab.objFilter&&adsAll.length&&metaTab.creatives)?`
+  <div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+    <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:.75rem"><div style="font-size:13px;font-weight:700">Ads on air</div><div style="font-size:11px;color:var(--text3)">the creatives people are actually seeing · by spend</div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">
+    ${adsAll.slice(0,8).map(a=>{
+      const cr=metaTab.creatives[a.id]||{};
+      return`<div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden;background:var(--bg);display:flex;flex-direction:column">
+        ${cr.thumb?`<img src="${esc(cr.thumb)}" alt="" style="width:100%;height:130px;object-fit:cover;background:var(--border)" onerror="this.style.display='none'">`:''}
+        <div style="padding:.6rem .7rem;display:flex;flex-direction:column;gap:3px;flex:1">
+          <div style="font-size:12px;font-weight:700;line-height:1.3">${esc(a.name)}</div>
+          ${cr.body?`<div style="font-size:11px;color:var(--text2);line-height:1.4;max-height:44px;overflow:hidden">${esc(cr.body.slice(0,110))}</div>`:''}
+          <div style="font-size:10.5px;color:var(--text3);margin-top:auto">$${Math.round(a.spend)} · ${a.impressions.toLocaleString()} impr · ${a.clicks} clicks${a.leads?` · <span style="color:var(--purple);font-weight:600">${Math.round(a.leads)} leads</span>`:''}</div>
+          ${cr.preview?`<a href="${esc(cr.preview)}" target="_blank" style="font-size:10.5px;color:var(--blue);text-decoration:none;font-weight:600">Open live preview ↗</a>`:''}
+        </div>
+      </div>`;}).join('')}
+    </div>
+  </div>`:''}
   <div style="margin-top:1.25rem">${demoCards}</div>`;
 }
 // ══════════════════════════════════════════════════════════════
@@ -10268,6 +10330,18 @@ async function liRefreshTab(){
         return{name:(byId[id]||{}).name||('Campaign '+id),spend:parseFloat(r.costInLocalCurrency)||0,impressions:r.impressions||0,clicks:r.clicks||0,conv:(r.oneClickLeads||0)+(r.externalWebsiteConversions||0)};
       });
     }catch(pErr){liTab.prev=null;}
+    // ads on air: creative-level performance (LinkedIn gates full previews behind
+    // Campaign Manager, so we show per-creative numbers + a deep link)
+    try{
+      const cvUrl=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(from)},end:${liDatePart(to)})&timeGranularity=ALL&accounts=List(${acct})&pivot=CREATIVE&fields=pivotValues,impressions,clicks,costInLocalCurrency,oneClickLeads,externalWebsiteConversions`;
+      const cvRes=await liFetch(cvUrl,token);
+      liTab.creatives=(!cvRes.res.ok||cvRes.data.message)?null:(cvRes.data.elements||[]).map(e=>({
+        id:((e.pivotValues||[])[0]||'').split(':').pop(),
+        impressions:e.impressions||0,clicks:e.clicks||0,
+        spend:parseFloat(e.costInLocalCurrency)||0,
+        leads:(e.oneClickLeads||0)+(e.externalWebsiteConversions||0)
+      })).filter(c=>c.impressions>0).sort((a,b)=>b.spend-a.spend).slice(0,10);
+    }catch(cvErr){liTab.creatives=null;}
     // demographics: seniority + company size (static URN maps — safe to resolve locally)
     try{
       const SEN={'1':'Unpaid','2':'Training','3':'Entry','4':'Senior','5':'Manager','6':'Director','7':'VP','8':'CXO','9':'Partner','10':'Owner'};
@@ -10373,6 +10447,23 @@ function renderPaidLinkedInTab(){
       <tbody>${rows||`<tr><td colspan="10" style="${td};text-align:center;color:var(--text3)">No campaign activity in this range</td></tr>`}</tbody>
     </table>
   </div>
+  ${(!liTab.objFilter&&liTab.creatives&&liTab.creatives.length)?`
+  <div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow-x:auto">
+    <div style="display:flex;gap:8px;align-items:baseline;padding:.875rem 1rem .25rem"><div style="font-size:13px;font-weight:700">Ads on air</div><div style="font-size:11px;color:var(--text3)">per-creative performance · LinkedIn only shows the visual in <a href="https://www.linkedin.com/campaignmanager/accounts/${esc(String(actId))}/creatives" target="_blank" style="color:var(--blue)">Campaign Manager ↗</a></div></div>
+    <table style="width:100%;border-collapse:collapse;min-width:700px">
+      <thead><tr><th style="${th};text-align:left">Creative</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">Leads</th><th style="${th}">CPL</th><th style="${th}"></th></tr></thead>
+      <tbody>${liTab.creatives.map(c=>`<tr>
+        <td style="${td};text-align:left;font-weight:600">Creative ${esc(c.id)}</td>
+        <td style="${td};color:var(--blue);font-weight:600">${gadsFmt$(c.spend)}</td>
+        <td style="${td}">${c.impressions.toLocaleString()}</td>
+        <td style="${td}">${c.clicks.toLocaleString()}</td>
+        <td style="${td}">${c.impressions?(c.clicks/c.impressions*100).toFixed(2)+'%':'—'}</td>
+        <td style="${td};color:var(--purple);font-weight:600">${c.leads?Math.round(c.leads):'—'}</td>
+        <td style="${td}">${c.leads?gadsFmt$(c.spend/c.leads):'—'}</td>
+        <td style="${td}"><a href="https://www.linkedin.com/campaignmanager/accounts/${esc(String(actId))}/creatives" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none">View ↗</a></td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`:''}
   ${demoCards}`;
 }
 function renderPaidMicrosoftTab(){
@@ -12018,7 +12109,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.6';
+const APP_HTML_VERSION='8.7';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
