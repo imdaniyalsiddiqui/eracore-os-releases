@@ -4831,6 +4831,7 @@ function onNavTo(id){
     // Auto-fetch if credentials already saved
     if(localStorage.getItem('ec-gsc-token')){try{fetchLiveData();fetchConversionData();}catch(e){}}
     if(localStorage.getItem('ec-bing-wmt-key')){try{fetchBingWmt();}catch(e){}}
+    try{autoRefreshBing();}catch(e){}
     seoSourcesLoad();
     try{fetchPageSpeed();}catch(e){}
     if(localStorage.getItem('ec-semrush-key')){try{fetchBacklinksOverview();}catch(e){}}
@@ -8568,7 +8569,7 @@ function loadSEO(){
   try{const d=localStorage.getItem('ec-aieo-v1');if(d)aieoWeeks=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('ec-deliv-v1');if(d)deliverables=JSON.parse(d);}catch(e){}
   try{gscToken=localStorage.getItem('ec-gsc-token');}catch(e){}
-  try{const d=localStorage.getItem('ec-google-stats');if(d){const parsed=JSON.parse(d);googleStats={...GOOGLE_STATS_DEFAULTS,...parsed};['pages','countries','queries','ga4Countries','ga4Pages','daily','dailySessions'].forEach(k=>{if(!Array.isArray(googleStats[k]))googleStats[k]=[];});}}catch(e){}
+  try{const d=localStorage.getItem('ec-google-stats');if(d){const parsed=JSON.parse(d);googleStats={...GOOGLE_STATS_DEFAULTS,...parsed};['pages','countries','queries','ga4Countries','ga4Pages','daily','dailySessions'].forEach(k=>{if(!Array.isArray(googleStats[k]))googleStats[k]=[];});if(!googleStats.site||typeof googleStats.site!=='object')googleStats.site={countries:[],pages:[],channels:[]};}}catch(e){}
   if(gscToken)updateGSCConnectedState();
 }
 function saveSEO(){
@@ -8759,7 +8760,7 @@ const GOOGLE_STATS_DEFAULTS={
   clicks:null,impressions:null,sessions:null,
   pages:[],countries:[],queries:[],
   bounceRate:null,avgSessionDuration:null,pagesPerSession:null,
-  ga4Countries:[],ga4Pages:[],daily:[],dailySessions:[],
+  ga4Countries:[],ga4Pages:[],daily:[],dailySessions:[],site:{countries:[],pages:[],channels:[]},
   prevClicks:null,prevImpressions:null,prevSessions:null,
   prevBounceRate:null,prevAvgSessionDuration:null,prevPagesPerSession:null,
   fetchedAt:null
@@ -8839,6 +8840,7 @@ async function fetchLiveData(){
   const prevStart=new Date(new Date(prevEnd+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
   const d28=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
   const mv=(row,i)=>parseFloat(row?.metricValues?.[i]?.value);
+  const ga4TwoRange=j=>{const m={};(j.rows||[]).forEach(r=>{const name=r.dimensionValues[0].value,range=r.dimensionValues[1]?.value||'cur';m[name]=m[name]||{name,cur:0,prev:0};m[name][range==='prev'?'prev':'cur']+=parseFloat(r.metricValues[0].value)||0;});return Object.values(m).sort((a,b)=>b.cur-a.cur);};
   const feeds={
     engagement:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.bounceRate=mv(r,0)||null;googleStats.avgSessionDuration=mv(r,1)||null;googleStats.pagesPerSession=mv(r,2)||null;},
     prevGA4:async()=>{const j=await ga4({dateRanges:[{startDate:prevStart,endDate:prevEnd}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.prevSessions=parseInt(r.metricValues[0].value)||null;googleStats.prevBounceRate=mv(r,1)||null;googleStats.prevAvgSessionDuration=mv(r,2)||null;googleStats.prevPagesPerSession=mv(r,3)||null;},
@@ -8846,6 +8848,10 @@ async function fetchLiveData(){
     countries:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'country'}],metrics:[{name:'sessions'},{name:'bounceRate'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Countries=(j.rows||[]).map(r=>({country:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0}));},
     dailyGSC:async()=>{const j=await gsc({startDate:d28,endDate,dimensions:['date'],rowLimit:100});googleStats.daily=(j.rows||[]).map(r=>({d:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions)})).sort((a,b)=>a.d.localeCompare(b.d));},
     dailyGA4:async()=>{const j=await ga4({dateRanges:[{startDate:d28,endDate}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:organic,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.dailySessions=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
+    // All-channel site panels (GA4 home parity): two date ranges in one report → rows carry a dateRange dimension
+    siteCountries:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'country'}],metrics:[{name:'activeUsers'}],orderBys:[{metric:{metricName:'activeUsers'},desc:true}],limit:60});googleStats.site.countries=ga4TwoRange(j);},
+    sitePages:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'pageTitle'}],metrics:[{name:'screenPageViews'}],orderBys:[{metric:{metricName:'screenPageViews'},desc:true}],limit:40});googleStats.site.pages=ga4TwoRange(j);},
+    siteChannels:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'sessionDefaultChannelGroup'}],metrics:[{name:'sessions'}],orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:20});googleStats.site.channels=ga4TwoRange(j);},
     landingPages:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
   };
   const results=await Promise.allSettled(Object.entries(feeds).map(async([k,fn])=>{try{await fn();}catch(e){googleStats.feedErrors[k]=e.message;console.error('[SEO feed]',k,e.message);}}));
@@ -8858,8 +8864,9 @@ async function fetchLiveData(){
 }
 
 function updateSEOTopCounters(){
-  const bingClicks=bingData.length?bingData[0].totalClicks7:0;
-  const bingImpressions=bingData.length?bingData[0].totalImpressions7:0;
+  const bu=bingUsable();
+  const bingClicks=bu?bu.totalClicks7:0;
+  const bingImpressions=bu?bu.totalImpressions7:0;
   const totalClicks=(googleStats.clicks||0)+bingClicks;
   const totalImpressions=(googleStats.impressions||0)+bingImpressions;
   const tce=document.getElementById('seo-total-clicks');if(tce)tce.textContent=totalClicks?totalClicks.toLocaleString():'—';
@@ -9160,8 +9167,29 @@ function saveBingData(){
 function loadBingData(){
   try{
     const d=localStorage.getItem('ec-bing-v1');
-    if(d){bingData=JSON.parse(d);updateSEOTopCounters();}
+    if(d){bingData=JSON.parse(d);
+      // Pre-9.1 OAuth snapshots summed Bing's entire query history and called it "7d". Quarantine them.
+      if(bingData[0]&&bingData[0].source==='oauth'&&bingData[0].prevClicks7===undefined){bingData[0].stale=true;}
+      updateSEOTopCounters();}
   }catch(e){bingData=[];}
+}
+function bingUsable(){return bingData.length&&!bingData[0].stale?bingData[0]:null;}
+// Silent refresh for OAuth-connected Bing: no popups, errors go to console only.
+let _bingAutoBusy=false;
+async function autoRefreshBing(){
+  if(_bingAutoBusy)return;
+  const hasAuth=localStorage.getItem('ec-bing-oauth-refresh')||localStorage.getItem('ec-bing-oauth-token');
+  if(!hasAuth)return;
+  const b=bingData[0];
+  const fresh=b&&!b.stale&&b.fetched&&Date.now()-b.fetched<6*3600e3;
+  if(fresh)return;
+  _bingAutoBusy=true;
+  try{
+    let tok=localStorage.getItem('ec-bing-oauth-token');
+    if(!tok||parseInt(localStorage.getItem('ec-bing-oauth-expiry')||'0')<=Date.now()){const rt=localStorage.getItem('ec-bing-oauth-refresh');tok=rt?await refreshBingToken(rt):null;}
+    if(tok)await fetchBingDataWithToken(tok);else console.warn('[Bing] auto-refresh skipped — no valid token, click Connect Bing');
+  }catch(e){console.warn('[Bing] auto-refresh failed',e.message);}
+  _bingAutoBusy=false;
 }
 
 
@@ -9270,8 +9298,9 @@ function seoChangeCard(){
   const b=[];
   const fmtSec=s=>{if(s==null)return'—';const m=Math.floor(s/60),x=Math.round(s%60);return m?`${m}m ${x}s`:`${x}s`;};
   // Traffic
-  if(g.clicks!=null)b.push(`Organic clicks <strong>${g.clicks.toLocaleString()}</strong>${pfArrow(g.clicks,g.prevClicks,true)}`);
-  if(g.impressions!=null)b.push(`Impressions <strong>${g.impressions.toLocaleString()}</strong>${pfArrow(g.impressions,g.prevImpressions,true)}`);
+  if(g.clicks!=null)b.push(`Google clicks <strong>${g.clicks.toLocaleString()}</strong>${pfArrow(g.clicks,g.prevClicks,true)}`);
+  if(g.impressions!=null)b.push(`Google impressions <strong>${g.impressions.toLocaleString()}</strong>${pfArrow(g.impressions,g.prevImpressions,true)}`);
+  const _bu=bingUsable();if(_bu)b.push(`Bing clicks <strong>${_bu.totalClicks7.toLocaleString()}</strong>${pfArrow(_bu.totalClicks7,_bu.prevClicks7,true)}`);
   const ctrC=(g.clicks&&g.impressions)?g.clicks/g.impressions*100:0,ctrP=(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:0;
   if(ctrC)b.push(`CTR <strong>${ctrC.toFixed(2)}%</strong>${pfArrow(ctrC,ctrP,true)}${ctrC<2?' <span style="color:var(--amber)">— below 2%, review meta titles</span>':''}`);
   if(g.sessions!=null)b.push(`GA4 organic sessions <strong>${g.sessions.toLocaleString()}</strong>${pfArrow(g.sessions,g.prevSessions,true)}`);
@@ -9317,6 +9346,24 @@ function seoChangeCard(){
 const SEO_ISO3={usa:'United States',ukr:'Ukraine',egy:'Egypt',sau:'Saudi Arabia',are:'United Arab Emirates',jor:'Jordan',kwt:'Kuwait',qat:'Qatar',bhr:'Bahrain',lbn:'Lebanon',mar:'Morocco',tun:'Tunisia',pak:'Pakistan',ind:'India',gbr:'United Kingdom',bra:'Brazil',pol:'Poland',col:'Colombia',mkd:'North Macedonia',can:'Canada',aus:'Australia',deu:'Germany',fra:'France',esp:'Spain',ita:'Italy',nld:'Netherlands',tur:'Türkiye',sgp:'Singapore',vnm:'Vietnam',bgd:'Bangladesh',phl:'Philippines',idn:'Indonesia',mex:'Mexico',arg:'Argentina',nga:'Nigeria',zaf:'South Africa',ken:'Kenya',irq:'Iraq',omn:'Oman',dza:'Algeria',lby:'Libya',syr:'Syria',yem:'Yemen',pse:'Palestine',irn:'Iran',rou:'Romania',cze:'Czechia',swe:'Sweden',nor:'Norway',dnk:'Denmark',fin:'Finland',irl:'Ireland',prt:'Portugal',che:'Switzerland',aut:'Austria',bel:'Belgium',grc:'Greece',hun:'Hungary',srb:'Serbia',hrv:'Croatia',bgr:'Bulgaria',ltu:'Lithuania',lva:'Latvia',est:'Estonia',geo:'Georgia',kaz:'Kazakhstan',uzb:'Uzbekistan',aze:'Azerbaijan',arm:'Armenia',mda:'Moldova',blr:'Belarus',rus:'Russia',chn:'China',jpn:'Japan',kor:'South Korea',twn:'Taiwan',hkg:'Hong Kong',mys:'Malaysia',tha:'Thailand',npl:'Nepal',lka:'Sri Lanka',nzl:'New Zealand',chl:'Chile',per:'Peru',ecu:'Ecuador',ven:'Venezuela',isr:'Israel',eth:'Ethiopia',gha:'Ghana',zzz:'Unknown'};
 const SEO_MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan','Iraq','Oman','Algeria','Libya','Syria','Yemen','Palestine'];
 function seoCountryName(c){if(!c)return'';const k=String(c).toLowerCase();return SEO_ISO3[k]||(k.length===3?k.toUpperCase():c);}
+// ── Geo map: choropleth of GA4 active users by country (d3 + world-atlas, lazy from jsdelivr) ──
+let _geoLibs=null,_geoWorld=null;
+function loadScript(src){return new Promise((res,rej)=>{if(document.querySelector(`script[src="${src}"]`))return res();const el=document.createElement('script');el.src=src;el.onload=res;el.onerror=()=>rej(new Error('load failed '+src));document.head.appendChild(el);});}
+const GEO_ALIASES={'United States':'United States of America','Türkiye':'Turkey','Myanmar (Burma)':'Myanmar','Bosnia & Herzegovina':'Bosnia and Herz.','Dominican Republic':'Dominican Rep.','Democratic Republic of the Congo':'Dem. Rep. Congo','Congo - Brazzaville':'Congo','Central African Republic':'Central African Rep.','South Sudan':'S. Sudan','Eswatini':'eSwatini'};
+async function seoRenderGeoMap(countries){
+  const host=document.getElementById('seo-geo-map');if(!host)return;
+  try{
+    if(!_geoLibs){await loadScript('https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js');await loadScript('https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js');_geoLibs=true;}
+    if(!_geoWorld){_geoWorld=await(await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')).json();}
+    const W=host.clientWidth||420,H=Math.max(190,Math.round(W*0.52));
+    const feats=topojson.feature(_geoWorld,_geoWorld.objects.countries).features;
+    const val={};countries.forEach(c=>{val[GEO_ALIASES[c.name]||c.name]=c.cur;});
+    const max=Math.max(1,...countries.map(c=>c.cur));
+    const proj=d3.geoNaturalEarth1().fitSize([W,H],{type:'Sphere'});const path=d3.geoPath(proj);
+    const color=v=>v?d3.interpolateRgb('#cfe0f5','#185FA5')(Math.sqrt(v/max)):'var(--surface2)';
+    host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${feats.map(f=>{const n=f.properties.name;const v=val[n]||0;return`<path d="${path(f)}" fill="${color(v)}" stroke="var(--surface)" stroke-width=".5"><title>${esc(n)}: ${v.toLocaleString()} users</title></path>`;}).join('')}</svg>`;
+  }catch(e){console.warn('[geo map]',e.message);host.innerHTML=`<div style="font-size:11px;color:var(--text3)">Map unavailable (needs internet)</div>`;}
+}
 // ── Overview helpers ──────────────────────────────────────────
 function seoCard(title,sub,body,actions='',style=''){
   return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem;${style}">
@@ -9373,7 +9420,7 @@ function renderSEOOverview(){
   seoSourcesLoad();
   const g=googleStats;
   const gClicks=g.clicks,gImpressions=g.impressions,gSessions=g.sessions;
-  const bClicks=bingData.length?bingData[0].totalClicks7:null,bImpressions=bingData.length?bingData[0].totalImpressions7:null;
+  const bu=bingUsable();const bClicks=bu?bu.totalClicks7:null,bImpressions=bu?bu.totalImpressions7:null;
   const combinedClicks=(gClicks||0)+(bClicks||0),combinedImpressions=(gImpressions||0)+(bImpressions||0);
   const gCTR=(gClicks&&gImpressions)?gClicks/gImpressions*100:null;
   const latest=semrushData[0],latestAIEO=aieoWeeks[0];
@@ -9386,16 +9433,18 @@ function renderSEOOverview(){
   let html='';
 
   // ── Row A: KPI tiles with sparklines ──
+  const bingStale=bingData[0]?.stale;
   const tiles=[
-    ['Organic clicks',combinedClicks?combinedClicks.toLocaleString():'—',dChip(combinedClicks,(g.prevClicks||0)+(bingData[0]?.prevClicks7||0)),d7.map(d=>d.clicks),'var(--blue)','Google + Bing · 7d'],
-    ['Impressions',combinedImpressions?combinedImpressions.toLocaleString():'—',dChip(combinedImpressions,(g.prevImpressions||0)+(bingData[0]?.prevImpressions7||0)),d7.map(d=>d.impressions),'var(--amber)','All engines · 7d'],
+    ['Google clicks',gClicks!=null?gClicks.toLocaleString():'—',dChip(gClicks,g.prevClicks),d7.map(d=>d.clicks),'var(--blue)','Search Console · 7d'],
+    ['Google impressions',gImpressions!=null?gImpressions.toLocaleString():'—',dChip(gImpressions,g.prevImpressions),d7.map(d=>d.impressions),'var(--amber)','Search Console · 7d'],
     ['CTR',gCTR!=null?gCTR.toFixed(2)+'%':'—',dChip(gCTR,(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:null),d7.map(d=>d.impressions?d.clicks/d.impressions*100:0),'var(--green)','Google Search'],
+    ['Bing clicks',bu?bu.totalClicks7.toLocaleString():(bingStale?'…':'—'),bu?dChip(bu.totalClicks7,bu.prevClicks7):'',bu?bu.dailyRows.slice(-7).map(d=>d.clicks):null,'var(--purple)',bu?`${bu.totalImpressions7.toLocaleString()} impr · 7d`:bingStale?'refreshing real 7d data':'Bing not connected'],
     ['Organic sessions',gSessions!=null?gSessions.toLocaleString():'—',dChip(gSessions,g.prevSessions),sess7.map(d=>d.sessions),'var(--purple)','GA4 · 7d'],
     ['Bounce rate',g.bounceRate!=null?(g.bounceRate*100).toFixed(1)+'%':'—',dChip(g.bounceRate,g.prevBounceRate,false),null,g.bounceRate>0.75?'var(--red)':g.bounceRate>0.6?'var(--amber)':'var(--green)','GA4 organic'],
     ['Avg session',fmtDur(g.avgSessionDuration),dChip(g.avgSessionDuration,g.prevAvgSessionDuration),null,'var(--teal)','GA4 organic'],
     ['Organic leads',leads.loaded?leads.total:'—',dChip(leads.total,leads.forms.reduce((t,f)=>t+f.prev,0)),null,'var(--green)','Forms + calls · 7d'],
   ];
-  html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1rem">${tiles.map(([l,v,chip,spark,c,sub])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;min-width:0">
+  html+=`<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:1rem">${tiles.map(([l,v,chip,spark,c,sub])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;min-width:0">
     <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:.3rem">${l}</div>
     <div style="font-size:1.3rem;font-weight:700;display:flex;align-items:baseline;flex-wrap:wrap">${v}${chip}</div>
     <div style="font-size:10px;color:var(--text3);margin-top:2px">${sub}</div>
@@ -9406,7 +9455,7 @@ function renderSEOOverview(){
   html+=seoChangeCard();
   const fe=g.feedErrors||{};
   if(Object.keys(fe).length){
-    const nice={engagement:'GA4 engagement (bounce/duration)',prevGA4:'GA4 prior period',prevGSC:'GSC prior period',countries:'GA4 countries',dailyGSC:'GSC 28-day trend',dailyGA4:'GA4 28-day sessions',landingPages:'GA4 landing pages'};
+    const nice={engagement:'GA4 engagement (bounce/duration)',prevGA4:'GA4 prior period',prevGSC:'GSC prior period',countries:'GA4 countries',dailyGSC:'GSC 28-day trend',dailyGA4:'GA4 28-day sessions',landingPages:'GA4 landing pages',siteCountries:'GA4 users by country',sitePages:'GA4 page views',siteChannels:'GA4 channels'};
     html+=`<div style="background:var(--amber-l);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--rl);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;line-height:1.6">
       <div style="font-weight:700;color:var(--amber);margin-bottom:2px"><i class="ti ti-alert-triangle"></i> ${Object.keys(fe).length} data feed${Object.keys(fe).length>1?'s':''} failed on last refresh</div>
       ${Object.entries(fe).map(([k,m])=>`<div>· <b>${nice[k]||k}</b>: ${esc(m)}</div>`).join('')}
@@ -9415,13 +9464,26 @@ function renderSEOOverview(){
   }
 
   // ── Row C: Organic traffic (28d) + Sessions (28d) ──
-  const bingByDate={};(bingData[0]?.dailyRows||[]).forEach(r=>{if(r.date&&/^\d{4}-\d{2}-\d{2}/.test(r.date))bingByDate[r.date.slice(0,10)]={c:r.clicks||0,i:r.impressions||0};});
+  const bingByDate={};(bu?.dailyRows||[]).forEach(r=>{if(r.date&&/^\d{4}-\d{2}-\d{2}/.test(r.date))bingByDate[r.date.slice(0,10)]={c:r.clicks||0,i:r.impressions||0};});
   const traffic=d28.map(d=>({d:d.d,clicks:d.clicks+(bingByDate[d.d]?.c||0),impressions:d.impressions+(bingByDate[d.d]?.i||0)}));
   const sessSeries=[{days:g.dailySessions.slice(-28).map(d=>({d:d.d,v:d.sessions})),color:'var(--blue)',label:'Organic sessions'}];
   html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
     ${seoCard('Organic search traffic','last 28 days · Google'+(Object.keys(bingByDate).length?' + Bing':''),seoBarLineChart(traffic,'impressions','clicks','var(--amber)','var(--blue)','Impressions','Clicks'),g.clicks===null?`<button class="btn btn-sm" onclick="connectGSC()"><i class="ti ti-plug"></i> Connect Google</button>`:`<button class="btn btn-sm" onclick="fetchLiveData();toast('Refreshing Google data…')"><i class="ti ti-refresh"></i></button>`)}
     ${seoCard('Sessions','GA4 organic · last 28 days',seoLineChart(sessSeries))}
   </div>`;
+
+  // ── Row C2: Site traffic — all channels (GA4 home parity) ──
+  const site=g.site||{countries:[],pages:[],channels:[]};
+  const gaRow=(name,cur,prev,fmt=v=>Math.round(v).toLocaleString())=>{const p=prev?((cur-prev)/prev*100):null;return`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(name)}">${esc(name)}</span><b style="flex-shrink:0">${fmt(cur)}</b><span style="width:56px;text-align:right;flex-shrink:0;font-size:11px;font-weight:600;color:${p==null?'var(--text3)':p>=0?'var(--green)':'var(--red)'}">${p==null?(cur?'new':''):(p>=0?'▲':'▼')+Math.abs(p).toFixed(1)+'%'}</span></div>`;};
+  const gaEmpty=`<div style="font-size:12px;color:var(--text3);padding:.5rem 0">Loads with Google data.</div>`;
+  const totUsers=site.countries.reduce((t,c)=>t+c.cur,0);
+  html+=`<div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:1.25rem 0 .5rem">Site traffic · all channels · GA4 · 7d vs prior 7d</div>
+  <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:12px;margin-bottom:1rem">
+    ${seoCard('Active users by country',totUsers?totUsers.toLocaleString()+' users':'',`<div style="display:grid;grid-template-columns:1fr 210px;gap:12px;align-items:start"><div id="seo-geo-map" style="min-height:190px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">${site.countries.length?'Loading map…':''}</div><div>${site.countries.length?site.countries.slice(0,8).map(c=>gaRow(c.name,c.cur,c.prev)).join(''):gaEmpty}</div></div>`)}
+    ${seoCard('Views by page title','',site.pages.length?site.pages.slice(0,8).map(c=>gaRow(c.name.replace(/\s*[|–-]\s*Eracore.*$/i,''),c.cur,c.prev)).join(''):gaEmpty)}
+    ${seoCard('Sessions by channel','',site.channels.length?site.channels.slice(0,8).map(c=>gaRow(c.name,c.cur,c.prev)).join(''):gaEmpty)}
+  </div>`;
+  if(site.countries.length)setTimeout(()=>seoRenderGeoMap(site.countries),0);
 
   // ── Row D: Site speed · Backlinks · Google Business Profile ──
   const psiBody=(()=>{
@@ -12582,7 +12644,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.2';
+const APP_HTML_VERSION='9.3';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
