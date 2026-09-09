@@ -543,7 +543,7 @@ select.sm:focus{border-color:var(--blue)}
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:36px;height:36px;border-radius:var(--r);background:var(--blue-l);display:flex;align-items:center;justify-content:center"><i class="ti ti-link" style="color:var(--blue);font-size:18px"></i></div>
-        <div><div style="font-size:14px;font-weight:700">Backlink Bot</div><div style="font-size:12px;color:var(--text2)">Finds link opportunities for target keywords · drafts ready-to-post text · tracks a queue to completion</div></div>
+        <div><div style="font-size:14px;font-weight:700">Backlink Bot</div><div style="font-size:12px;color:var(--text2)">Scouts Reddit, Hacker News &amp; Google for real link opportunities · free · drafts post text · tracks a queue to completion</div></div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px">Found <strong id="bl-s-found">0</strong></div>
@@ -571,18 +571,23 @@ select.sm:focus{border-color:var(--blue)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:1rem">
         <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Source types</div>
-        <div id="bl-src-pills" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem">
-          <span class="bl-chip on" data-src="Reddit">Reddit</span>
-          <span class="bl-chip on" data-src="Quora">Quora</span>
-          <span class="bl-chip on" data-src="niche forums">Forums</span>
+        <div id="bl-src-pills" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.5rem">
+          <span class="bl-chip on" data-src="myforums" title="Your forum list — native search on Discourse forums, site: search on the rest">My forums</span>
+          <span class="bl-chip on" data-src="competitors" title="Pages linking to your competitors (SEMrush, dofollow only)">Competitor backlinks</span>
+          <span class="bl-chip on" data-src="niche forums" title="inurl:forum / viewtopic / showthread footprints">Forum footprints</span>
+          <span class="bl-chip on" data-src="resource/directory pages" title="inurl:directory, intitle:resources, 'list of companies'">Directories &amp; resource pages</span>
+          <span class="bl-chip on" data-src="guest post opportunities" title='"write for us", inurl:write-for-us'>Guest posts</span>
           <span class="bl-chip on" data-src="blog comments">Blog comments</span>
-          <span class="bl-chip on" data-src="resource/directory pages">Directories</span>
           <span class="bl-chip on" data-src="Q&A sites">Q&amp;A sites</span>
-          <span class="bl-chip on" data-src="guest post opportunities">Guest posts</span>
+          <span class="bl-chip on" data-src="Quora">Quora</span>
+          <span class="bl-chip on" data-src="Reddit">Reddit</span>
+          <span class="bl-chip" data-src="hackernews">Hacker News</span>
+          <span class="bl-chip" data-src="custom" title="Your own footprints from Settings">Custom footprints</span>
         </div>
+        <div id="bl-engine-note" style="font-size:11px;color:var(--text3);margin-bottom:1rem"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
-          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Min. Domain Authority</div><select id="bl-min-da" class="sm" style="width:100%"><option value="0">Any</option><option value="20" selected>20+</option><option value="30">30+</option><option value="40">40+</option></select></div>
-          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Max spam score</div><select id="bl-max-spam" class="sm" style="width:100%"><option value="100">Any</option><option value="30" selected>Under 30%</option><option value="15">Under 15%</option><option value="5">Under 5%</option></select></div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Min. opportunity score</div><select id="bl-min-da" class="sm" style="width:100%"><option value="0">Any</option><option value="30" selected>30+</option><option value="45">45+</option><option value="60">60+</option></select></div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Max thread age</div><select id="bl-max-spam" class="sm" style="width:100%"><option value="9999">Any</option><option value="365" selected>1 year</option><option value="180">6 months</option><option value="90">3 months</option></select></div>
           <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Results per keyword</div><select id="bl-results-n" class="sm" style="width:100%"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option></select></div>
           <button class="btn btn-primary" id="bl-scan-btn" onclick="blRunScan()"><i class="ti ti-radar"></i> <span id="bl-scan-txt">Scan for opportunities</span></button>
         </div>
@@ -619,9 +624,42 @@ select.sm:focus{border-color:var(--blue)}
           </div>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-messages" style="color:var(--purple)"></i> My forums <span style="font-size:10px;color:var(--text3);font-weight:500">Discourse forums searched natively (free) · others via site: search</span></div>
+          <div id="bl-forum-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:.625rem;max-height:260px;overflow:auto"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap"><input type="text" id="bl-new-forum-host" placeholder="forums.example.com" style="flex:1;min-width:150px;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><input type="text" id="bl-new-forum-label" placeholder="Label" style="flex:1;min-width:110px;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')blAddForum()"><button class="btn" onclick="blAddForum()"><i class="ti ti-plus"></i></button></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-swords" style="color:var(--red)"></i> Competitors <span style="font-size:10px;color:var(--text3);font-weight:500">SEMrush pulls the pages that link to them · 40 units per link</span></div>
+          <div id="bl-comp-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:.625rem"></div>
+          <div style="display:flex;gap:6px"><input type="text" id="bl-new-comp" placeholder="competitor.com" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')blAddComp()"><button class="btn" onclick="blAddComp()"><i class="ti ti-plus"></i></button></div>
+          <div style="font-size:13px;font-weight:700;margin:1rem 0 .35rem"><i class="ti ti-code" style="color:var(--blue)"></i> Custom footprints <span style="font-size:10px;color:var(--text3);font-weight:500">one per line · use {kw}</span></div>
+          <textarea id="bl-footprints" placeholder='{kw} inurl:forum "electrical"&#10;site:linkedin.com/pulse {kw}&#10;intitle:"bim" "add your listing"' style="width:100%;min-height:80px;resize:vertical;padding:8px 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none" onchange="blSaveFootprints()"></textarea>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">Built-in library already covers inurl:forum, viewtopic, showthread, "write for us", inurl:directory, intitle:resources, Q&amp;A and Quora footprints.</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google Programmable Search <span style="font-size:10px;color:var(--green);font-weight:600">FREE · 100 searches/day</span></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Covers Quora, forums, blogs, directories and "write for us" pages. Two values, both free: (1) <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" style="color:var(--blue)">create a search engine</a> set to "Search the entire web" → copy its <b>Search engine ID (cx)</b>; (2) in the same Google Cloud project as Search Console, enable <b>Custom Search API</b> and create an <b>API key</b>.</div>
+          <input type="password" id="bl-gcse-key" placeholder="API key — AIza…" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none;margin-bottom:6px">
+          <div style="display:flex;gap:6px"><input type="text" id="bl-gcse-cx" placeholder="Search engine ID (cx)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-search" style="color:#fb542b"></i> Brave Search <span style="font-size:10px;color:var(--green);font-weight:600">FREE · $5 credit/month ≈ 1,000 searches</span></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Independent index (not Google, not Bing — Bing's API was retired Aug 2025). Runs the same footprints as Google for a second set of results. <a href="https://api-dashboard.search.brave.com/register" target="_blank" style="color:var(--blue)">Get a key</a>.</div>
+          <div style="display:flex;gap:6px"><input type="password" id="bl-brave-key" placeholder="Brave Search API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-chart-arrows" style="color:var(--green)"></i> Open PageRank <span style="font-size:10px;color:var(--green);font-weight:600">FREE · 1,000 domains/day</span></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Adds a real 0–10 domain-authority score to each opportunity. <a href="https://www.domcop.com/openpagerank/auth/signup" target="_blank" style="color:var(--blue)">Sign up</a> → copy the API key.</div>
+          <div style="display:flex;gap:6px"><input type="password" id="bl-opr-key" placeholder="Open PageRank API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
+        </div>
+      </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-top:12px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:8px">Connection <span id="bl-conn-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">—</span></div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">The bot calls Claude through the app's local proxy using the Anthropic API key saved in <a href="#" onclick="navTo('settings');return false" style="color:var(--blue)">Settings</a>. Scans use roughly 2–4k tokens per keyword.</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:8px">AI drafting <span style="font-size:10px;color:var(--text3);font-weight:600">OPTIONAL · paid</span> <span id="bl-conn-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">—</span></div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Discovery never needs this — it runs on free public APIs. Without a key the bot writes drafts from Eracore-specific templates you edit in the queue. With an Anthropic API key (console.anthropic.com, pay-per-use, a few cents per draft) saved in <a href="#" onclick="navTo('settings');return false" style="color:var(--blue)">Settings</a>, drafts are written to fit each thread.</div>
         <div style="display:flex;gap:8px;align-items:center"><button class="btn" onclick="blTestConnection()"><i class="ti ti-plug"></i> Test connection</button><span id="bl-conn-msg" style="font-size:12px;color:var(--text2)"></span></div>
       </div>
     </div>
@@ -8770,6 +8808,20 @@ let blState={
     {label:'MEP BIM',url:'https://eracore.com/mep-bim'},
     {label:'VDC Services',url:'https://eracore.com/vdc-services'}
   ],
+  forums:[
+    {host:'forums.autodesk.com',label:'Autodesk Revit forums',engine:'auto'},
+    {host:'forum.dynamobim.com',label:'Dynamo BIM (Discourse)',engine:'auto'},
+    {host:'community.osarch.org',label:'OSArch (Discourse)',engine:'auto'},
+    {host:'www.revitforum.org',label:'RevitForum',engine:'auto'},
+    {host:'forums.augi.com',label:'AUGI forums',engine:'auto'},
+    {host:'forums.mikeholt.com',label:'Mike Holt (electrical)',engine:'auto'},
+    {host:'www.electriciantalk.com',label:'Electrician Talk',engine:'auto'},
+    {host:'www.eng-tips.com',label:'Eng-Tips',engine:'auto'},
+    {host:'www.contractortalk.com',label:'Contractor Talk',engine:'auto'},
+    {host:'community.procore.com',label:'Procore Community',engine:'auto'}
+  ],
+  competitors:[],
+  footprints:[],
   opportunities:[],queue:[]
 };
 let blBusy=false;
@@ -12817,7 +12869,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.6';
+const APP_HTML_VERSION='9.8';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -12942,7 +12994,7 @@ const EDIT_GUARDS={
   tpSetVal:'paiddash',tpAddMonth:'paiddash',
   // Agents — Backlink Bot
   blRunScan:'agents',blApproveOpp:'agents',blSkipOpp:'agents',blMarkDone:'agents',blRemoveQI:'agents',
-  blAddKw:'agents',blDelKw:'agents',blAddPage:'agents',blDelPage:'agents',blSaveSettings:'agents'
+  blAddKw:'agents',blDelKw:'agents',blAddPage:'agents',blDelPage:'agents',blSaveSettings:'agents',blAddForum:'agents',blDelForum:'agents',blAddComp:'agents',blDelComp:'agents',blSaveFootprints:'agents'
 };
 function installEditGuards(){
   Object.entries(EDIT_GUARDS).forEach(([fn,page])=>{
@@ -14832,6 +14884,7 @@ function blRenderScanPills(){
   const pp=document.getElementById('bl-pg-pills');
   if(pp)pp.innerHTML=blState.pages.map((p,i)=>`<span class="bl-chip on" data-pi="${i}" onclick="this.classList.toggle('on')" title="${esc(p.url)}">${esc(p.label)}</span>`).join('')||'<span style="font-size:12px;color:var(--text3)">Add pages in Settings</span>';
   document.querySelectorAll('#bl-src-pills .bl-chip').forEach(c=>{c.onclick=()=>c.classList.toggle('on');});
+  const en=document.getElementById('bl-engine-note');if(en){const e=blEngines();en.innerHTML=e.length?`Search engines: <b>${e.map(x=>x==='google'?'Google':'Brave').join(' + ')}</b> · ${(blState.forums||[]).length} forums · ${(blState.competitors||[]).length} competitors${getSemrushKey()?'':' <span style="color:var(--amber)">(SEMrush not connected)</span>'}`:`<span style="color:var(--amber)"><i class="ti ti-alert-circle"></i> No search engine key yet — only Reddit, Hacker News, Discourse forums and SEMrush work. Add a free Google or Brave key in Settings to unlock footprints.</span>`;}
 }
 async function blCallClaude(prompt,maxTokens=2500){
   const key=getApiKey();
@@ -14846,75 +14899,183 @@ async function blCallClaude(prompt,maxTokens=2500){
   const start=raw.search(/[\[{]/);
   return JSON.parse(start>0?raw.slice(start):raw);
 }
+// ══════════════════════════════════════════════════════════════
+// BACKLINK BOT — SCOUT ENGINE (free, no LLM required)
+// Discovery hits real public APIs: Reddit search, Hacker News (Algolia),
+// optional Google Programmable Search (100 queries/day free — covers Quora,
+// forums, directories), optional Open PageRank for domain authority.
+// Drafting uses templates by default; Claude only if an Anthropic key exists.
+// ══════════════════════════════════════════════════════════════
+const BL_UA='Eracore-Marketing-OS/1.0 (backlink research; contact marketing@eracore.com)';
+const blProxy=(url,headers)=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}${headers?'&headers='+encodeURIComponent(JSON.stringify(headers)):''}`;
+async function blGetJson(url,headers){const r=await fetch(blProxy(url,headers));const t=await r.text();try{return JSON.parse(t);}catch(e){throw new Error('Non-JSON from '+new URL(url).hostname+' (HTTP '+r.status+'): '+t.slice(0,80));}}
+const blAgeDays=ts=>Math.max(0,Math.round((Date.now()-ts)/86400000));
+const blDomain=u=>{try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return'';}};
+const BL_INDUSTRY=/bim|revit|mep|electrical|conduit|cable tray|clash|coordination|prefab|data cent|construction|contractor|vdc|navisworks|autocad|lod|shop drawing|estimat|preconstruction/i;
+function blRelevance(text,kw){const t=(text||'').toLowerCase();const terms=kw.toLowerCase().split(/\s+/).filter(w=>w.length>2);const hit=terms.filter(w=>t.includes(w)).length/Math.max(1,terms.length);return Math.round(hit*60+(BL_INDUSTRY.test(t)?40:0));}
+function blScore(o){ // 0–100: relevance 45% · engagement 25% · freshness 20% · authority 10%
+  const eng=Math.min(1,Math.log10(1+(o.points||0)+(o.comments||0)*2)/2.5);
+  const fresh=o.ageDays==null?0.5:o.ageDays<30?1:o.ageDays<90?0.8:o.ageDays<180?0.55:o.ageDays<365?0.3:0.1;
+  const auth=o.rank!=null?Math.min(1,o.rank/8):0.4;
+  return Math.round(o.relevance*0.45+eng*25+fresh*20+auth*10);
+}
+// ── Sources ──
+async function blScoutReddit(kw,n){
+  const j=await blGetJson(`https://www.reddit.com/search.json?q=${encodeURIComponent(kw)}&sort=relevance&t=year&limit=${Math.min(50,n*3)}&type=link`,{'User-Agent':BL_UA});
+  return (j?.data?.children||[]).map(c=>c.data).filter(d=>d&&!d.over_18&&!d.locked&&!d.archived).map(d=>({
+    title:d.title,url:'https://www.reddit.com'+d.permalink,domain:'reddit.com',type:'Reddit',site:'r/'+d.subreddit,points:d.score||0,comments:d.num_comments||0,
+    createdAt:d.created_utc*1000,ageDays:blAgeDays(d.created_utc*1000),linkType:'nofollow',relevance:blRelevance(d.title+' '+(d.selftext||'').slice(0,400),kw),
+    context:`r/${d.subreddit} thread · ${d.num_comments||0} comments · ${d.score||0} upvotes · ${(d.selftext||'').replace(/\s+/g,' ').slice(0,160)}${d.selftext&&d.selftext.length>160?'…':''}`
+  }));
+}
+async function blScoutHN(kw,n){
+  const j=await blGetJson(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(kw)}&tags=story&hitsPerPage=${Math.min(30,n*2)}`);
+  return (j?.hits||[]).filter(h=>h.title).map(h=>({title:h.title,url:'https://news.ycombinator.com/item?id='+h.objectID,domain:'news.ycombinator.com',type:'Forum',site:'Hacker News',points:h.points||0,comments:h.num_comments||0,createdAt:new Date(h.created_at).getTime(),ageDays:blAgeDays(new Date(h.created_at).getTime()),linkType:'nofollow',relevance:blRelevance(h.title+' '+(h.story_text||''),kw),context:`Hacker News story · ${h.num_comments||0} comments · ${h.points||0} points${h.url?' · links to '+blDomain(h.url):''}`}));
+}
+// ── Footprint library: boolean operators Google & Brave both honour (site:, inurl:, intitle:, "quotes", OR, -) ──
+const BL_FOOTPRINTS={
+  'Quora':['site:quora.com {kw}'],
+  'Q&A sites':['{kw} inurl:questions OR inurl:question OR inurl:answers -site:reddit.com -site:quora.com','{kw} intitle:"how do" OR intitle:"how to" inurl:forum'],
+  'niche forums':['{kw} inurl:forum OR inurl:forums OR inurl:thread OR inurl:viewtopic OR inurl:showthread -site:reddit.com','{kw} intitle:forum OR intitle:"discussion" -site:reddit.com -site:quora.com'],
+  'blog comments':['{kw} inurl:blog "leave a comment" OR "post a comment" OR "add a comment"','{kw} inurl:blog intitle:"comments"'],
+  'resource/directory pages':['{kw} inurl:directory OR intitle:directory OR "list of companies" OR "top companies"','{kw} intitle:resources OR inurl:resources OR intitle:"useful links"','"bim" "submit" "listing" OR "add your company"'],
+  'guest post opportunities':['{kw} "write for us"','{kw} "guest post" OR "guest article" OR "contribute an article" OR "become a contributor"','{kw} inurl:write-for-us OR inurl:guest-post OR inurl:contribute']
+};
+const BL_TYPE_FOR={'Quora':'Quora','Q&A sites':'Q&A','niche forums':'Forum','blog comments':'Blog','resource/directory pages':'Directory','guest post opportunities':'Guest','custom':'Blog'};
+function blInferType(url,fallback){const u=(url||'').toLowerCase();if(/reddit\.com/.test(u))return'Reddit';if(/quora\.com/.test(u))return'Quora';if(/forum|thread|viewtopic|showthread|community\.|discourse|\/t\//.test(u))return'Forum';if(/directory|listing|\/companies|\/vendors|\/resources|\/links/.test(u))return'Directory';if(/write-for-us|guest-post|contribute/.test(u))return'Guest';if(/questions|answers/.test(u))return'Q&A';return fallback||'Blog';}
+function blEngines(){const e=[];if(localStorage.getItem('ec-gcse-key')&&localStorage.getItem('ec-gcse-cx'))e.push('google');if(localStorage.getItem('ec-brave-key'))e.push('brave');return e;}
+async function blWebSearch(q,n){ // fan out to every configured engine, dedupe by URL
+  const out=[],seen=new Set();
+  for(const eng of blEngines()){
+    try{
+      let items=[];
+      if(eng==='google'){const r=await fetch(`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(localStorage.getItem('ec-gcse-key'))}&cx=${encodeURIComponent(localStorage.getItem('ec-gcse-cx'))}&q=${encodeURIComponent(q)}&num=${Math.min(10,n)}`);const j=await r.json();if(j.error)throw new Error('Google: '+(j.error.message||'').slice(0,100));items=(j.items||[]).map(it=>({title:it.title,url:it.link,snippet:it.snippet||'',site:it.displayLink,engine:'Google'}));}
+      else if(eng==='brave'){const j=await blGetJson(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=${Math.min(20,n)}`,{'X-Subscription-Token':localStorage.getItem('ec-brave-key'),'Accept':'application/json'});if(j.error)throw new Error('Brave: '+(j.error.detail||j.error.message||'').slice(0,100));items=(j.web?.results||[]).map(it=>({title:it.title,url:it.url,snippet:it.description||'',site:blDomain(it.url),engine:'Brave',age:it.age}));}
+      items.forEach(it=>{if(it.url&&!seen.has(it.url)){seen.add(it.url);out.push(it);}});
+    }catch(e){console.warn('[Scout]',eng,e.message);if(blEngines().length===1)throw e;}
+  }
+  return out;
+}
+async function blScoutFootprints(kw,srcType,n){
+  const fps=srcType==='custom'?(blState.footprints||[]):(BL_FOOTPRINTS[srcType]||[]);
+  const rows=[];
+  for(const fp of fps){
+    const q=fp.replace(/\{kw\}/g,kw);
+    const items=await blWebSearch(q,n);
+    items.forEach(it=>rows.push({title:it.title,url:it.url,domain:blDomain(it.url),type:blInferType(it.url,BL_TYPE_FOR[srcType]),site:it.site,points:0,comments:0,createdAt:null,ageDays:null,linkType:/quora|forum|reddit/i.test(it.url)?'nofollow':'unknown',relevance:blRelevance(it.title+' '+it.snippet,kw),context:`${it.engine} · footprint "${q.length>70?q.slice(0,70)+'…':q}" · ${it.snippet.replace(/\s+/g,' ').slice(0,180)}`,footprint:q}));
+    await new Promise(r=>setTimeout(r,400));
+  }
+  return rows;
+}
+// ── Forums from the user's list: Discourse forums have a free JSON search; the rest go through site: search ──
+async function blDetectDiscourse(f){
+  if(f.engine!=='auto')return f.engine;
+  try{const j=await blGetJson(`https://${f.host}/search.json?q=bim`,{'User-Agent':BL_UA,'Accept':'application/json'});f.engine=(j&&Array.isArray(j.topics))?'discourse':'search';}catch(e){f.engine='search';}
+  agentSave();return f.engine;
+}
+async function blScoutForum(f,kw,n){
+  const eng=await blDetectDiscourse(f);
+  if(eng==='discourse'){
+    const j=await blGetJson(`https://${f.host}/search.json?q=${encodeURIComponent(kw)}`,{'User-Agent':BL_UA,'Accept':'application/json'});
+    const posts={};(j.posts||[]).forEach(p=>{posts[p.topic_id]=p;});
+    return (j.topics||[]).slice(0,n).map(t=>{const created=new Date(t.created_at||t.last_posted_at).getTime();return{title:t.title,url:`https://${f.host}/t/${t.slug}/${t.id}`,domain:f.host.replace(/^www\./,''),type:'Forum',site:f.label,points:t.like_count||0,comments:Math.max(0,(t.posts_count||1)-1),createdAt:created,ageDays:blAgeDays(created),linkType:'nofollow',relevance:blRelevance(t.title+' '+(posts[t.id]?.blurb||''),kw),context:`${f.label} · ${t.posts_count||1} posts · ${t.closed?'CLOSED · ':''}${(posts[t.id]?.blurb||'').replace(/\s+/g,' ').slice(0,180)}`};}).filter(o=>!/CLOSED/.test(o.context));
+  }
+  if(!blEngines().length)return[];
+  const items=await blWebSearch(`site:${f.host} ${kw}`,n);
+  return items.map(it=>({title:it.title,url:it.url,domain:f.host.replace(/^www\./,''),type:'Forum',site:f.label,points:0,comments:0,createdAt:null,ageDays:null,linkType:'nofollow',relevance:blRelevance(it.title+' '+it.snippet,kw),context:`${f.label} · via ${it.engine} · ${it.snippet.replace(/\s+/g,' ').slice(0,180)}`}));
+}
+// ── Competitor backlinks (SEMrush Backlink Analytics): pages that link to competitors are the classic prospect list ──
+// backlinks = 40 units/line. Dofollow only. Cached 30 days per competitor.
+async function blScoutCompetitor(domain,n){
+  const key=getSemrushKey();if(!key)throw new Error('SEMrush not connected');
+  const cacheKey='ec-bl-comp-'+domain;const cached=Store.get(cacheKey,null);
+  if(cached&&Date.now()-cached.fetched<30*86400e3)return cached.rows;
+  const u=`https://api.semrush.com/analytics/v1/?key=${key}&type=backlinks&target=${encodeURIComponent(domain)}&target_type=root_domain&display_limit=${n}&display_sort=page_ascore_desc&display_filter=%2B|nofollow|Eq|false&export_columns=page_ascore,source_url,source_title,target_url,anchor,first_seen,last_seen`;
+  const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}`);const txt=await r.text();
+  if(/^ERROR/i.test(txt.trim()))throw new Error('SEMrush '+txt.trim().slice(0,80));
+  const [h,...lines]=txt.trim().split('\n').map(l=>l.split(';'));
+  const rows=lines.filter(l=>l.length>=3).map(l=>{const o={};h.forEach((k,i)=>o[k.trim()]=l[i]);const created=o.first_seen?new Date(o.first_seen).getTime():null;return{title:o.source_title||o.source_url,url:o.source_url,domain:blDomain(o.source_url),type:blInferType(o.source_url,'Directory'),site:blDomain(o.source_url),points:parseInt(o.page_ascore)||0,comments:0,createdAt:created,ageDays:created?blAgeDays(created):null,linkType:'dofollow',relevance:60,competitor:domain,context:`Links to competitor ${domain} (dofollow) · anchor "${o.anchor||''}" · target ${(o.target_url||'').replace(/^https?:\/\//,'').slice(0,60)} · page authority ${o.page_ascore||'?'}`};});
+  Store.set(cacheKey,{fetched:Date.now(),rows});return rows;
+}
+async function blEnrichRank(opps){ // Open PageRank: free key, 1000 domains/day. Adds 0–10 domain authority.
+  const key=localStorage.getItem('ec-opr-key');if(!key)return;
+  const doms=[...new Set(opps.map(o=>o.domain).filter(Boolean))].slice(0,100);if(!doms.length)return;
+  try{const j=await blGetJson(`https://openpagerank.com/api/v1.0/getPageRank?${doms.map(d=>'domains[]='+encodeURIComponent(d)).join('&')}`,{'API-OPR':key});
+    const m={};(j.response||[]).forEach(r=>{if(r.status_code===200)m[r.domain]=parseFloat(r.page_rank_decimal)||0;});opps.forEach(o=>{if(m[o.domain]!=null)o.rank=m[o.domain];});
+  }catch(e){console.warn('[OPR]',e.message);}
+}
+function blPickTarget(o,pages){const t=(o.title+' '+o.context).toLowerCase();return(pages.find(p=>t.includes(p.label.split(' ')[0].toLowerCase()))||pages.find(p=>/electrical/i.test(p.label))||pages[0]||{url:'https://eracore.com',label:'Eracore'});}
+function blAnchor(o,pg){return/data cent/i.test(o.title+o.context)&&/data/i.test(pg.label)?'BIM for data centers':pg.label.replace(/ Services$/,'').toLowerCase()+' services';}
+
 async function blRunScan(){
   if(blBusy)return;
   const selKws=[...document.querySelectorAll('#bl-kw-pills .bl-chip.on')].map(p=>blState.keywords[+p.dataset.ki]).filter(Boolean);
   const selPgs=[...document.querySelectorAll('#bl-pg-pills .bl-chip.on')].map(p=>blState.pages[+p.dataset.pi]).filter(Boolean);
   const selSrc=[...document.querySelectorAll('#bl-src-pills .bl-chip.on')].map(p=>p.dataset.src);
-  const minDA=+document.getElementById('bl-min-da').value,maxSpam=+document.getElementById('bl-max-spam').value,nRes=+document.getElementById('bl-results-n').value;
+  const minScore=+document.getElementById('bl-min-da').value,maxAge=+document.getElementById('bl-max-spam').value,nRes=+document.getElementById('bl-results-n').value;
   if(!selKws.length){toast('Select at least one keyword');return;}
   if(!selSrc.length){toast('Select at least one source type');return;}
-  if(!getApiKey()){toast('Add your Anthropic API key in Settings first');navTo('settings');return;}
   const btn=document.getElementById('bl-scan-btn'),txt=document.getElementById('bl-scan-txt'),prog=document.getElementById('bl-scan-prog'),fill=document.getElementById('bl-prog-fill'),lbl=document.getElementById('bl-prog-label'),out=document.getElementById('bl-scan-results');
-  blBusy=true;btn.disabled=true;prog.style.display='block';txt.textContent='Scanning…';
-  const targets=(selPgs.length?selPgs:blState.pages).map(p=>p.url).join(', ');
-  const found=[];let failed=0;
-  for(let i=0;i<selKws.length;i++){
-    const kw=selKws[i];
-    fill.style.width=Math.round((i+.5)/selKws.length*100)+'%';lbl.textContent=`Scanning "${kw}" (${i+1}/${selKws.length})…`;
-    out.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:1rem 0;color:var(--text2);font-size:13px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Scanning "${esc(kw)}"…</div>`;
-    const prompt=`You are a backlink opportunity researcher for Eracore, an electrical BIM and VDC preconstruction engineering firm serving US AEC and data center contractors.
-
-Find exactly ${nRes} backlink opportunities for the keyword: "${kw}"
-Source types: ${selSrc.join(', ')}
-Eracore target pages: ${targets}
-Industry context: MEP coordination, electrical BIM, VDC, clash detection, conduit routing, cable tray modeling, LOD 200-400, prefab electrical, data center construction
-
-Return real, specific places that exist in the AEC/BIM/construction space — actual subreddits, forum threads, directories, blogs. Estimate SEO metrics realistically.
-
-Return a raw JSON array only, no markdown:
-[{"title":"specific thread/page title","url":"full URL","domain":"root domain","type":"Reddit|Quora|Forum|Blog|Directory|Q&A|Guest","da":0-100,"pa":0-100,"tf":0-100,"cf":0-100,"spamScore":0-100,"traffic":number,"linkType":"dofollow|nofollow","context":"2 sentences: what the page is and why it fits Eracore","anchorSuggestion":"exact anchor text","targetPage":"one URL from the target pages list","opportunityScore":0-100}]`;
-    try{
-      const r=await blCallClaude(prompt);
-      (Array.isArray(r)?r:[]).filter(o=>(o.da||0)>=minDA&&(o.spamScore||0)<=maxSpam).forEach(o=>{o.kw=kw;o.id='bl'+Date.now()+Math.floor(Math.random()*1e6);o.status='new';found.push(o);});
-    }catch(e){failed++;console.error('[Backlink Bot]',kw,e);lbl.textContent=`"${kw}" failed: ${e.message}`;}
+  blBusy=true;btn.disabled=true;prog.style.display='block';txt.textContent='Scouting…';
+  const pages=selPgs.length?selPgs:blState.pages;
+  const found=[],fails=[];const engines=blEngines();
+  const jobs=[];
+  selKws.forEach(kw=>{
+    if(selSrc.includes('Reddit'))jobs.push(['Reddit · '+kw,()=>blScoutReddit(kw,nRes)]);
+    if(selSrc.includes('hackernews'))jobs.push(['Hacker News · '+kw,()=>blScoutHN(kw,nRes)]);
+    if(selSrc.includes('myforums'))(blState.forums||[]).forEach(f=>jobs.push([f.label+' · '+kw,()=>blScoutForum(f,kw,nRes)]));
+    if(engines.length){['Quora','Q&A sites','niche forums','blog comments','resource/directory pages','guest post opportunities'].filter(t=>selSrc.includes(t)).forEach(t=>jobs.push([t+' · '+kw,()=>blScoutFootprints(kw,t,nRes)]));
+      if(selSrc.includes('custom')&&(blState.footprints||[]).length)jobs.push(['Custom footprints · '+kw,()=>blScoutFootprints(kw,'custom',nRes)]);}
+  });
+  if(selSrc.includes('competitors')){const comps=(blState.competitors||[]);if(!comps.length)fails.push('Competitor backlinks: add competitor domains in Settings');else if(!getSemrushKey())fails.push('Competitor backlinks: connect SEMrush in Settings');else{const uncached=comps.filter(c=>!Store.get('ec-bl-comp-'+c,null));const cost=uncached.length*nRes*40;if(!cost||confirm(`Pull top ${nRes} dofollow backlinks for ${uncached.length} competitor${uncached.length>1?'s':''} from SEMrush? Costs ${cost} API units (cached 30 days).`))comps.forEach(c=>jobs.push(['Competitor backlinks · '+c,()=>blScoutCompetitor(c,nRes)]));}}
+  const needEngine=['Quora','Q&A sites','niche forums','blog comments','resource/directory pages','guest post opportunities','custom'].filter(t=>selSrc.includes(t));
+  if(needEngine.length&&!engines.length)fails.push(`${needEngine.join(', ')}: need a search engine key (Google or Brave) — free, see Settings`);
+  if(!jobs.length){blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';prog.style.display='none';toast(fails[0]||'Nothing to scan');out.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:1rem 0">${fails.map(esc).join('<br>')}</div>`;return;}
+  for(let i=0;i<jobs.length;i++){
+    const [name,fn]=jobs[i];fill.style.width=Math.round((i+.5)/jobs.length*100)+'%';lbl.textContent=`${name} (${i+1}/${jobs.length})…`;
+    out.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:1rem 0;color:var(--text2);font-size:13px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> ${esc(name)}</div>`;
+    try{const rows=await fn();const kw=name.startsWith('Competitor backlinks')?selKws[0]:name.split(' · ').slice(1).join(' · ');rows.forEach(o=>{o.kw=kw;found.push(o);});}catch(e){fails.push(name+': '+e.message);console.warn('[Scout]',name,e.message);}
+    await new Promise(r=>setTimeout(r,650)); // be polite to public APIs
   }
+  await blEnrichRank(found);
+  found.forEach(o=>{const pg=blPickTarget(o,pages);o.targetPage=pg.url;o.anchorSuggestion=blAnchor(o,pg);o.opportunityScore=blScore(o);o.id='bl'+Date.now()+Math.floor(Math.random()*1e6);o.status='new';});
+  const kept=found.filter(o=>o.opportunityScore>=minScore&&(o.ageDays==null||o.ageDays<=maxAge));
+  const seen=new Set(blState.opportunities.map(o=>o.url));const fresh=kept.filter(o=>!seen.has(o.url)&&(seen.add(o.url),true));
+  blState.opportunities=[...fresh,...blState.opportunities];agentSave();blRenderResults(blState.opportunities);
   fill.style.width='100%';
-  const seen=new Set(blState.opportunities.map(o=>o.domain+'|'+o.type+'|'+o.title));
-  const fresh=found.filter(o=>!seen.has(o.domain+'|'+o.type+'|'+o.title));
-  blState.opportunities=[...fresh,...blState.opportunities];
-  agentSave();blRenderResults(blState.opportunities);
-  lbl.textContent=`Scan complete — ${fresh.length} new opportunities${failed?` · ${failed} keyword${failed>1?'s':''} failed (see console)`:''}`;
-  blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';
-  toast(`Found ${fresh.length} new opportunities`);
-  if(typeof logActivity==='function')try{logActivity('agent_scan',`Backlink Bot scanned ${selKws.length} keywords → ${fresh.length} new`);}catch(e){}
+  lbl.innerHTML=`Done — <b>${fresh.length}</b> new opportunities from ${jobs.length} source queries${!engines.length?' · <a href="#" onclick="blSwitchTab(\'settings\',document.getElementById(\'bltab-btn-settings\'));return false" style="color:var(--blue)">add a free search key</a> to unlock footprints, Quora, directories &amp; non-Discourse forums':''}${fails.length?` · <span style="color:var(--amber)">${fails.length} skipped/failed</span> <span title="${esc(fails.join('\n'))}" style="cursor:help">ⓘ</span>`:''}`;
+  blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';toast(`Found ${fresh.length} new opportunities`);
 }
 const BL_TYPE_COLOR={Reddit:'#ff6830',Quora:'#c0392b',Forum:'var(--purple)',Blog:'var(--blue)',Directory:'var(--green)','Q&A':'var(--amber)',Guest:'var(--purple)'};
-function blMetric(k,v,c){return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 8px;text-align:center;min-width:46px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase">${k}</div><div style="font-size:12px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;}
+function blMetric(k,v,c,title){return`<div title="${esc(title||'')}" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 8px;text-align:center;min-width:46px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase">${k}</div><div style="font-size:12px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;}
 function blFmtN(n){return n>=1000?(n/1000).toFixed(1)+'k':String(n||0);}
+function blAge(d){return d==null?'—':d<1?'today':d<30?d+'d':d<365?Math.round(d/30)+'mo':Math.round(d/365)+'y';}
 function blRenderResults(opps){
   const out=document.getElementById('bl-scan-results');if(!out)return;
   const live=(opps||[]).filter(o=>o.status!=='skipped');
-  if(!live.length){out.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-radar" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>No opportunities yet — pick keywords and sources above, then scan.</div>`;return;}
+  if(!live.length){out.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-radar" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>No opportunities yet — pick keywords and sources above, then scan.<div style="font-size:11px;color:var(--text3);margin-top:6px">Discovery is free and uses real public data (Reddit, Hacker News, and Google Search if a key is added).</div></div>`;return;}
   const sorted=[...live].sort((a,b)=>(b.opportunityScore||0)-(a.opportunityScore||0));
-  out.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:.625rem">${sorted.length} opportunities · sorted by score</div>`+sorted.map(o=>{
-    const sc=o.opportunityScore||50,scC=sc>=70?'var(--green)':sc>=45?'var(--amber)':'var(--red)';
+  out.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:.625rem">${sorted.length} opportunities · sorted by score · <span style="color:var(--text3)">real engagement &amp; freshness, no estimates</span></div>`+sorted.map(o=>{
+    const sc=o.opportunityScore||0,scC=sc>=65?'var(--green)':sc>=40?'var(--amber)':'var(--red)';
     const inQ=blState.queue.some(q=>q.oppId===o.id);
     return`<div id="boc-${o.id}" style="background:var(--surface);border:1px solid ${inQ?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:1rem 1.125rem;margin-bottom:10px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;line-height:1.3">${esc(o.title)}</div><a href="${esc(o.url)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;word-break:break-all">${esc(o.url)}</a></div>
-        <span style="font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap;background:color-mix(in srgb,${BL_TYPE_COLOR[o.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[o.type]||'var(--text2)'}">${esc(o.type)}</span>
+        <span style="font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap;background:color-mix(in srgb,${BL_TYPE_COLOR[o.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[o.type]||'var(--text2)'}">${esc(o.site||o.type)}</span>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-        ${blMetric('DA',o.da,o.da>=40?'var(--green)':o.da>=20?'var(--amber)':'var(--red)')}${blMetric('PA',o.pa)}${blMetric('TF',o.tf)}${blMetric('CF',o.cf)}
-        ${blMetric('Spam',(o.spamScore||0)+'%',o.spamScore<=15?'var(--green)':o.spamScore<=30?'var(--amber)':'var(--red)')}${blMetric('Traffic',blFmtN(o.traffic))}
-        ${blMetric('Link',o.linkType,o.linkType==='dofollow'?'var(--green)':'var(--text2)')}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center">
+        ${blMetric('Relevance',o.relevance+'%',o.relevance>=70?'var(--green)':o.relevance>=40?'var(--amber)':'var(--red)','keyword + industry match in title/text')}
+        ${o.points!=null&&(o.points||o.comments)?blMetric('Engagement',blFmtN(o.points),'var(--text)','upvotes / points'):''}${o.comments!=null&&(o.points||o.comments)?blMetric('Comments',o.comments):''}
+        ${blMetric('Age',blAge(o.ageDays),o.ageDays!=null&&o.ageDays>180?'var(--amber)':'var(--text)','older threads get less traffic and may be locked')}
+        ${o.rank!=null?blMetric('Domain rank',o.rank.toFixed(1)+'/10',o.rank>=6?'var(--green)':o.rank>=4?'var(--amber)':'var(--text)','Open PageRank'):''}
+        ${blMetric('Link',o.linkType,o.linkType==='dofollow'?'var(--green)':'var(--text2)',o.linkType==='nofollow'?'Brand & referral value; not link equity':'')}
+        ${o.competitor?blMetric('Links to',o.competitor,'var(--red)','competitor domain this page already links to'):''}${o.points&&o.competitor?blMetric('Page AS',o.points,'var(--text)','SEMrush page authority score'):''}
         <div style="flex:1"></div>
         <div style="display:flex;align-items:center;gap:8px;min-width:160px"><span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase">Score</span><div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="width:${sc}%;height:100%;background:${scC}"></div></div><strong style="font-size:12px;color:${scC}">${sc}</strong></div>
       </div>
       <div style="background:var(--surface2);border-left:3px solid var(--blue);padding:8px 10px;font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:8px;border-radius:0 var(--r) var(--r) 0">${esc(o.context)}</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--text2)">Anchor <strong style="color:var(--text)">${esc(o.anchorSuggestion||'')}</strong> → <span style="color:var(--blue)">${esc((o.targetPage||'').replace(/^https?:\/\//,''))}</span> · kw: ${esc(o.kw||'')}</span>
+        <span style="font-size:11px;color:var(--text2)">Suggested anchor <strong style="color:var(--text)">${esc(o.anchorSuggestion||'')}</strong> → <span style="color:var(--blue)">${esc((o.targetPage||'').replace(/^https?:\/\//,''))}</span> · kw: ${esc(o.kw||'')}</span>
         <div style="flex:1"></div>
         ${inQ?`<span style="font-size:11px;color:var(--green);font-weight:600"><i class="ti ti-check"></i> In queue</span>`:
         `<button class="btn btn-sm" onclick="blSkipOpp('${o.id}')">Skip</button><button class="btn btn-sm" onclick="window.open('${esc(o.url)}','_blank')"><i class="ti ti-external-link"></i> Open</button><button class="btn btn-sm btn-primary" onclick="blApproveOpp('${o.id}')"><i class="ti ti-check"></i> Approve &amp; draft</button>`}
@@ -14922,27 +15083,32 @@ function blRenderResults(opps){
     </div>`;}).join('');
 }
 function blSkipOpp(id){const o=blState.opportunities.find(x=>x.id===id);if(o)o.status='skipped';agentSave();blRenderResults(blState.opportunities);}
+// ── Drafting: templates always available; Claude used only when a key exists ──
+function blTemplateDraft(o){
+  const pg=(blState.pages.find(p=>p.url===o.targetPage)||{label:'Eracore',url:o.targetPage});
+  const link=`[${o.anchorSuggestion}](${o.targetPage})`;
+  const T={
+    Reddit:{text:`Been on the MEP/electrical side of this for a while, so a couple of things that usually decide whether "${o.kw}" goes smoothly:\n\n1. Get the electrical model to LOD 300+ *before* coordination — conduit runs, cable tray and panel clearances are where most clashes hide.\n2. Run clash detection per trade pair, not one giant model; it's the only way the report stays actionable.\n\nWe wrote up how we approach ${pg.label.toLowerCase()} here if it helps: ${link} — happy to answer specifics in the thread.`,instructions:'Reply in the thread (not a new post). Read the last few comments first and tailor the two points to what was actually asked.'},
+    Forum:{text:`Adding a practitioner's view on ${o.kw}: the two things that save the most rework are modelling electrical to LOD 300+ before coordination starts, and running clash detection trade-pair by trade-pair rather than on the whole federated model.\n\nWe documented our process for ${pg.label.toLowerCase()}: ${o.targetPage}`,instructions:'Post as a reply. Some forums strip markdown — use the plain URL if the link doesn\'t render.'},
+    Quora:{text:`I work on the electrical BIM side of preconstruction, so from that angle: ${o.kw} comes down to model detail (LOD 300+ for conduit, cable tray, panels) and disciplined clash detection by trade pair. Most schedule slips come from one of those two being skipped.\n\nIf you want a concrete walkthrough of how ${pg.label.toLowerCase()} fits into a project, this covers it: ${o.targetPage}`,instructions:'Answer the question directly first; Quora collapses answers that read as promotional.'},
+    'Q&A':{text:`Short answer: model electrical to LOD 300+ before coordination and run clash detection per trade pair. Longer explanation with examples: ${o.targetPage}`,instructions:'Answer inline; add the link as a reference at the end.'},
+    Blog:{text:`Good breakdown. One thing we'd add from the electrical BIM side: most coordination problems trace back to conduit and cable tray being modelled too late or too coarse — LOD 300+ before clash detection makes a big difference. We've written about our approach to ${pg.label.toLowerCase()} here: ${o.targetPage}`,instructions:'Post in the article\'s comment section. Keep it under 80 words and reference something specific in the article.'},
+    Directory:{text:`Eracore — Electrical BIM & VDC Preconstruction Engineering\n\nEracore delivers electrical BIM modelling (LOD 200–400), MEP coordination and clash detection, conduit and cable tray routing, and prefabrication-ready shop drawings for US general and electrical contractors, with a focus on data center and mission-critical construction.\n\nWebsite: ${o.targetPage}\nServices: ${blState.pages.map(p=>p.label).join(', ')}`,instructions:'Submit via the directory\'s "add listing" form. Use the same NAP (name, address, phone) as the Google Business Profile.'},
+    Guest:{text:`Subject: Guest post idea — practical electrical BIM coordination for ${o.site||'your readers'}\n\nHi,\n\nI lead marketing at Eracore, an electrical BIM/VDC preconstruction firm working with US contractors on data center and commercial projects. I'd like to contribute a practical piece for your readers — working title: "Why electrical coordination fails at LOD 200 (and what LOD 300+ actually changes)". 1,200–1,500 words, original, with real clash-report examples.\n\nBackground on what we do: ${o.targetPage}\n\nWould that fit your editorial calendar?\n\nDaniyal Siddiqui\nMarketing Director, Eracore`,instructions:'Send to the editor / "write for us" contact on the page. Follow up once after 7 days.'}
+  };
+  return T[o.type]||T.Forum;
+}
 async function blApproveOpp(id){
   const o=blState.opportunities.find(x=>x.id===id);if(!o)return;
   const btn=document.querySelector(`#boc-${id} .btn-primary`);if(btn){btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Drafting…';btn.disabled=true;}
-  const prompt=`Write a natural, helpful ${o.type} post for a backlink opportunity.
-
-Platform: ${o.type}
-Page/thread: "${o.title}" — ${o.url}
-Keyword context: ${o.kw}
-Link to: ${o.targetPage}
-Anchor text: ${o.anchorSuggestion}
-Company: Eracore — electrical BIM and VDC preconstruction engineering firm (US AEC, data centers)
-
-Rules: fit the conversation, add genuine value, not spammy, include the link naturally with the anchor text, format for ${o.type} (Reddit markdown if Reddit, plain text for forums, professional business description for directories). 2-4 sentences for comments; longer for guest posts/directories.
-
-Return raw JSON only: {"text":"ready-to-post text with link","instructions":"one sentence on where exactly to paste this"}`;
-  try{
-    const r=await blCallClaude(prompt,1200);
-    blState.queue.push({id:'q'+Date.now(),oppId:id,title:o.title,url:o.url,type:o.type,domain:o.domain,da:o.da,spamScore:o.spamScore,traffic:o.traffic,opportunityScore:o.opportunityScore,kw:o.kw,targetPage:o.targetPage,anchorSuggestion:o.anchorSuggestion,text:r.text||'',instructions:r.instructions||'',status:'pending',addedAt:Date.now()});
-    o.status='approved';agentSave();blRenderResults(blState.opportunities);toast('Added to link queue');
-    if(typeof logActivity==='function')try{logActivity('agent_queue',`Backlink Bot queued: ${o.title}`);}catch(e){}
-  }catch(e){toast('Draft failed: '+e.message);if(btn){btn.innerHTML='<i class="ti ti-check"></i> Approve &amp; draft';btn.disabled=false;}}
+  let draft,mode='template';
+  if(getApiKey()){
+    try{const r=await blCallClaude(`Write a natural, helpful ${o.type} post for this backlink opportunity.\nPlatform: ${o.type} (${o.site||''})\nThread/page: "${o.title}" — ${o.url}\nWhat it's about: ${o.context}\nKeyword: ${o.kw}\nLink to: ${o.targetPage}\nAnchor text: ${o.anchorSuggestion}\nCompany: Eracore — electrical BIM and VDC preconstruction engineering (US AEC, data centers)\nRules: fit the conversation, add genuine value, not spammy, include the link naturally, format for ${o.type}. 2-4 sentences for comments; longer for guest posts/directories.\nReturn raw JSON only: {"text":"ready-to-post text","instructions":"one sentence on where to paste"}`,1200);draft={text:r.text||'',instructions:r.instructions||''};mode='claude';}
+    catch(e){console.warn('[Bot] Claude draft failed, using template:',e.message);}
+  }
+  if(!draft)draft=blTemplateDraft(o);
+  blState.queue.push({id:'q'+Date.now(),oppId:id,title:o.title,url:o.url,type:o.type,site:o.site,domain:o.domain,points:o.points,comments:o.comments,ageDays:o.ageDays,rank:o.rank,opportunityScore:o.opportunityScore,kw:o.kw,targetPage:o.targetPage,anchorSuggestion:o.anchorSuggestion,text:draft.text,instructions:draft.instructions,draftMode:mode,status:'pending',addedAt:Date.now()});
+  o.status='approved';agentSave();blRenderResults(blState.opportunities);toast(mode==='claude'?'Drafted with Claude — added to queue':'Template draft added — edit it in the queue before posting');
 }
 function blRenderQueue(){
   const el=document.getElementById('bl-queue-list');if(!el)return;
@@ -14954,12 +15120,12 @@ function blRenderQueue(){
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:.625rem">
       <div style="width:22px;height:22px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0">${i+1}</div>
       <div style="font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(q.title)}</div>
-      <span style="font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;background:color-mix(in srgb,${BL_TYPE_COLOR[q.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[q.type]||'var(--text2)'}">${esc(q.type)}</span>
+      <span style="font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;background:color-mix(in srgb,${BL_TYPE_COLOR[q.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[q.type]||'var(--text2)'}">${esc(q.site||q.type)}</span>
       <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:50%;background:${dot[q.status]}"></span>${lab[q.status]}</span>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.625rem;align-items:center">${blMetric('DA',q.da)}${blMetric('Spam',(q.spamScore||0)+'%')}${blMetric('Score',q.opportunityScore)}<span style="font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(q.addedAt)}</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.625rem;align-items:center">${q.points!=null?blMetric('Engagement',blFmtN(q.points)):''}${q.ageDays!=null?blMetric('Age',blAge(q.ageDays)):''}${q.rank!=null?blMetric('Domain rank',q.rank.toFixed(1)):''}${blMetric('Score',q.opportunityScore)}<span style="font-size:10px;color:var(--text3);margin-left:4px">${q.draftMode==='claude'?'<i class="ti ti-sparkles"></i> Claude draft':'<i class="ti ti-template"></i> template — edit before posting'}</span><span style="font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(q.addedAt)}</span></div>
     ${q.instructions?`<div style="font-size:11px;color:var(--blue-d);margin-bottom:6px;padding:6px 10px;background:var(--blue-l);border-radius:var(--r)"><i class="ti ti-map-pin"></i> ${esc(q.instructions)}</div>`:''}
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;margin-bottom:.625rem;max-height:170px;overflow-y:auto">${esc(q.text)}</div>
+    <textarea id="qtext-${q.id}" oninput="blEditQI('${q.id}',this.value)" style="width:100%;min-height:110px;max-height:260px;resize:vertical;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text);line-height:1.6;font-family:inherit;outline:none;margin-bottom:.625rem">${esc(q.text)}</textarea>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <button class="btn btn-sm" onclick="blCopyQI(this,'${q.id}')"><i class="ti ti-copy"></i> Copy text</button>
       <button class="btn btn-sm" onclick="window.open('${esc(q.url)}','_blank');blMarkOpen('${q.id}')"><i class="ti ti-external-link"></i> Open page</button>
@@ -14969,11 +15135,20 @@ function blRenderQueue(){
     </div>
   </div>`).join('');
 }
+function blEditQI(id,text){const q=blState.queue.find(x=>x.id===id);if(q){q.text=text;localStorage.setItem(BL_SK,JSON.stringify(blState));}}
 function blMarkOpen(id){const q=blState.queue.find(x=>x.id===id);if(q&&q.status==='pending'){q.status='open';agentSave();blRenderQueue();}}
 function blMarkDone(id){const q=blState.queue.find(x=>x.id===id);if(q){q.status='done';agentSave();blRenderQueue();toast('Marked done');if(typeof logActivity==='function')try{logActivity('agent_done',`Backlink placed: ${q.title}`);}catch(e){}}}
 function blRemoveQI(id){if(!confirm('Remove this item from the queue?'))return;blState.queue=blState.queue.filter(x=>x.id!==id);agentSave();blRenderQueue();}
 function blCopyQI(btn,id){const q=blState.queue.find(x=>x.id===id);if(!q)return;(navigator.clipboard?.writeText(q.text)||Promise.reject()).then(()=>{const o=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i> Copied';setTimeout(()=>btn.innerHTML=o,1600);}).catch(()=>toast('Copy failed — select the text manually'));}
+function blRenderForums(){const el=document.getElementById('bl-forum-list');if(!el)return;el.innerHTML=(blState.forums||[]).map((f,i)=>`<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 9px"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${esc(f.label)}</div><div style="font-size:10px;color:var(--text3)">${esc(f.host)} · ${f.engine==='discourse'?'<span style="color:var(--green)">Discourse — native search</span>':f.engine==='search'?'site: search':'not tested yet'}</div></div><button class="btn btn-sm btn-icon" onclick="blDelForum(${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No forums yet</div>';}
+function blAddForum(){let h=(document.getElementById('bl-new-forum-host')?.value||'').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,''),l=(document.getElementById('bl-new-forum-label')?.value||'').trim();if(!h){toast('Enter the forum host');return;}if((blState.forums||[]).some(f=>f.host===h)){toast('Already listed');return;}blState.forums.push({host:h,label:l||h,engine:'auto'});document.getElementById('bl-new-forum-host').value='';document.getElementById('bl-new-forum-label').value='';agentSave();blRenderForums();blRenderScanPills();toast('Forum added');}
+function blDelForum(i){blState.forums.splice(i,1);agentSave();blRenderForums();blRenderScanPills();}
+function blRenderComps(){const el=document.getElementById('bl-comp-list');if(!el)return;el.innerHTML=(blState.competitors||[]).map((c,i)=>{const cached=Store.get('ec-bl-comp-'+c,null);return`<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 9px"><span style="flex:1;font-size:12px">${esc(c)}</span>${cached?`<span style="font-size:10px;color:var(--text3)">${cached.rows.length} links · ${fmtDate(cached.fetched)}</span>`:''}<button class="btn btn-sm btn-icon" onclick="blDelComp(${i})"><i class="ti ti-x"></i></button></div>`;}).join('')||'<div style="font-size:12px;color:var(--text3)">Add 2–3 direct competitors (e.g. other electrical BIM / VDC firms)</div>';}
+function blAddComp(){const v=(document.getElementById('bl-new-comp')?.value||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');if(!v)return;if((blState.competitors||[]).includes(v)){toast('Already listed');return;}blState.competitors.push(v);document.getElementById('bl-new-comp').value='';agentSave();blRenderComps();blRenderScanPills();toast('Competitor added');}
+function blDelComp(i){blState.competitors.splice(i,1);agentSave();blRenderComps();blRenderScanPills();}
+function blSaveFootprints(){const v=(document.getElementById('bl-footprints')?.value||'');blState.footprints=v.split('\n').map(x=>x.trim()).filter(Boolean);agentSave();toast('Footprints saved');}
 function blRenderSettings(){
+  blRenderForums();blRenderComps();const fp=document.getElementById('bl-footprints');if(fp&&document.activeElement!==fp)fp.value=(blState.footprints||[]).join('\n');const bk=document.getElementById('bl-brave-key');if(bk)bk.value=localStorage.getItem('ec-brave-key')||'';
   const kl=document.getElementById('bl-kw-list');
   if(kl)kl.innerHTML=blState.keywords.map((k,i)=>`<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px"><span style="flex:1;font-size:13px">${esc(k)}</span><button class="btn btn-sm btn-icon" onclick="blDelKw(${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No keywords yet</div>';
   const pl=document.getElementById('bl-pg-list');
@@ -14984,8 +15159,9 @@ function blDelKw(i){blState.keywords.splice(i,1);agentSave();blRenderSettings();
 function blAddPage(){const l=(document.getElementById('bl-new-pg-label')?.value||'').trim(),u=(document.getElementById('bl-new-pg-url')?.value||'').trim();if(!l||!u){toast('Label and URL both needed');return;}blState.pages.push({label:l,url:/^https?:\/\//.test(u)?u:'https://'+u});document.getElementById('bl-new-pg-label').value='';document.getElementById('bl-new-pg-url').value='';agentSave();blRenderSettings();blRenderScanPills();toast('Page added');}
 function blDelPage(i){blState.pages.splice(i,1);agentSave();blRenderSettings();blRenderScanPills();}
 function blSaveSettings(){agentSave();toast('Saved');}
-function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)return;const has=!!getApiKey();b.textContent=has?'key saved':'no API key';b.style.background=has?'var(--green-l)':'var(--amber-l)';b.style.color=has?'var(--green)':'var(--amber)';}
-async function blTestConnection(){const m=document.getElementById('bl-conn-msg');if(!getApiKey()){if(m)m.innerHTML='<span style="color:var(--amber)">Add your Anthropic API key in Settings first.</span>';return;}if(m)m.textContent='Testing…';try{const r=await blCallClaude('Reply with raw JSON only: {"ok":true,"model":"<your model name>"}',60);if(m)m.innerHTML=`<span style="color:var(--green)">✓ Connected</span> <span style="color:var(--text3)">(${esc(r.model||'Claude')} via /proxy-post)</span>`;blConnStatus();}catch(e){if(m)m.innerHTML=`<span style="color:var(--red)">Failed: ${esc(e.message)}</span>`;}}
+function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)return;const has=!!getApiKey();b.textContent=has?'Claude drafting on':'templates (free)';b.style.background=has?'var(--green-l)':'var(--surface2)';b.style.color=has?'var(--green)':'var(--text2)';const g=document.getElementById('bl-gcse-key'),c=document.getElementById('bl-gcse-cx'),o=document.getElementById('bl-opr-key');if(g)g.value=localStorage.getItem('ec-gcse-key')||'';if(c)c.value=localStorage.getItem('ec-gcse-cx')||'';if(o)o.value=localStorage.getItem('ec-opr-key')||'';}
+function blSaveKeys(){const g=(document.getElementById('bl-gcse-key')?.value||'').trim(),c=(document.getElementById('bl-gcse-cx')?.value||'').trim(),o=(document.getElementById('bl-opr-key')?.value||'').trim(),b=(document.getElementById('bl-brave-key')?.value||'').trim();if(g)localStorage.setItem('ec-gcse-key',g);if(c)localStorage.setItem('ec-gcse-cx',c);if(o)localStorage.setItem('ec-opr-key',o);if(b)localStorage.setItem('ec-brave-key',b);toast('Keys saved');blRenderScanPills();}
+async function blTestConnection(){const m=document.getElementById('bl-conn-msg');if(!getApiKey()){if(m)m.innerHTML='<span style="color:var(--text2)">No Anthropic key — drafts will use templates. Discovery works regardless.</span>';return;}if(m)m.textContent='Testing…';try{const r=await blCallClaude('Reply with raw JSON only: {"ok":true,"model":"<your model name>"}',60);if(m)m.innerHTML=`<span style="color:var(--green)">✓ Connected</span> <span style="color:var(--text3)">(${esc(r.model||'Claude')} via /proxy-post)</span>`;blConnStatus();}catch(e){if(m)m.innerHTML=`<span style="color:var(--red)">Failed: ${esc(e.message)}</span>`;}}
 
 </script>
 </body>
