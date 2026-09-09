@@ -641,12 +641,11 @@ select.sm:focus{border-color:var(--blue)}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google Programmable Search <span style="font-size:10px;color:var(--green);font-weight:600">FREE · 100 searches/day</span></div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Covers Quora, forums, blogs, directories and "write for us" pages. Two values, both free: (1) <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" style="color:var(--blue)">create a search engine</a> set to "Search the entire web" → copy its <b>Search engine ID (cx)</b>; (2) in the same Google Cloud project as Search Console, enable <b>Custom Search API</b> and create an <b>API key</b>.</div>
-          <input type="password" id="bl-gcse-key" placeholder="API key — AIza…" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none;margin-bottom:6px">
-          <div style="display:flex;gap:6px"><input type="text" id="bl-gcse-cx" placeholder="Search engine ID (cx)" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-brand-google" style="color:#4285F4"></i> Google results via SerpApi <span style="font-size:10px;color:var(--green);font-weight:600">FREE · 100 searches/month · no card</span></div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Real Google SERPs, so <code>inurl:</code> / <code>intitle:</code> footprints behave exactly as in Google. (Google's own Programmable Search API is closed to new customers.) <a href="https://serpapi.com/users/sign_up" target="_blank" style="color:var(--blue)">Sign up</a> → Dashboard → copy the API key. Low quota: use 1–2 keywords per scan.</div>
+          <div style="display:flex;gap:6px"><input type="password" id="bl-serpapi-key" placeholder="SerpApi key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
           <div style="font-size:13px;font-weight:700;margin-bottom:.35rem"><i class="ti ti-search" style="color:#fb542b"></i> Brave Search <span style="font-size:10px;color:var(--green);font-weight:600">FREE · $5 credit/month ≈ 1,000 searches</span></div>
           <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">Independent index (not Google, not Bing — Bing's API was retired Aug 2025). Runs the same footprints as Google for a second set of results. <a href="https://api-dashboard.search.brave.com/register" target="_blank" style="color:var(--blue)">Get a key</a>.</div>
           <div style="display:flex;gap:6px"><input type="password" id="bl-brave-key" placeholder="Brave Search API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none"><button class="btn" onclick="blSaveKeys()"><i class="ti ti-check"></i> Save</button></div>
@@ -12869,7 +12868,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.8';
+const APP_HTML_VERSION='9.9';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -14884,7 +14883,7 @@ function blRenderScanPills(){
   const pp=document.getElementById('bl-pg-pills');
   if(pp)pp.innerHTML=blState.pages.map((p,i)=>`<span class="bl-chip on" data-pi="${i}" onclick="this.classList.toggle('on')" title="${esc(p.url)}">${esc(p.label)}</span>`).join('')||'<span style="font-size:12px;color:var(--text3)">Add pages in Settings</span>';
   document.querySelectorAll('#bl-src-pills .bl-chip').forEach(c=>{c.onclick=()=>c.classList.toggle('on');});
-  const en=document.getElementById('bl-engine-note');if(en){const e=blEngines();en.innerHTML=e.length?`Search engines: <b>${e.map(x=>x==='google'?'Google':'Brave').join(' + ')}</b> · ${(blState.forums||[]).length} forums · ${(blState.competitors||[]).length} competitors${getSemrushKey()?'':' <span style="color:var(--amber)">(SEMrush not connected)</span>'}`:`<span style="color:var(--amber)"><i class="ti ti-alert-circle"></i> No search engine key yet — only Reddit, Hacker News, Discourse forums and SEMrush work. Add a free Google or Brave key in Settings to unlock footprints.</span>`;}
+  const en=document.getElementById('bl-engine-note');if(en){const e=blEngines();en.innerHTML=e.length?`Search engines: <b>${e.map(x=>x==='serpapi'?'Google via SerpApi':'Brave').join(' + ')}</b> · ${(blState.forums||[]).length} forums · ${(blState.competitors||[]).length} competitors${getSemrushKey()?'':' <span style="color:var(--amber)">(SEMrush not connected)</span>'}`:`<span style="color:var(--amber)"><i class="ti ti-alert-circle"></i> No search engine key yet — only Reddit, Hacker News, Discourse forums and SEMrush work. Add a free SerpApi or Brave key in Settings to unlock footprints.</span>`;}
 }
 async function blCallClaude(prompt,maxTokens=2500){
   const key=getApiKey();
@@ -14943,13 +14942,13 @@ const BL_FOOTPRINTS={
 };
 const BL_TYPE_FOR={'Quora':'Quora','Q&A sites':'Q&A','niche forums':'Forum','blog comments':'Blog','resource/directory pages':'Directory','guest post opportunities':'Guest','custom':'Blog'};
 function blInferType(url,fallback){const u=(url||'').toLowerCase();if(/reddit\.com/.test(u))return'Reddit';if(/quora\.com/.test(u))return'Quora';if(/forum|thread|viewtopic|showthread|community\.|discourse|\/t\//.test(u))return'Forum';if(/directory|listing|\/companies|\/vendors|\/resources|\/links/.test(u))return'Directory';if(/write-for-us|guest-post|contribute/.test(u))return'Guest';if(/questions|answers/.test(u))return'Q&A';return fallback||'Blog';}
-function blEngines(){const e=[];if(localStorage.getItem('ec-gcse-key')&&localStorage.getItem('ec-gcse-cx'))e.push('google');if(localStorage.getItem('ec-brave-key'))e.push('brave');return e;}
+function blEngines(){const e=[];if(localStorage.getItem('ec-serpapi-key'))e.push('serpapi');if(localStorage.getItem('ec-brave-key'))e.push('brave');return e;}
 async function blWebSearch(q,n){ // fan out to every configured engine, dedupe by URL
   const out=[],seen=new Set();
   for(const eng of blEngines()){
     try{
       let items=[];
-      if(eng==='google'){const r=await fetch(`https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(localStorage.getItem('ec-gcse-key'))}&cx=${encodeURIComponent(localStorage.getItem('ec-gcse-cx'))}&q=${encodeURIComponent(q)}&num=${Math.min(10,n)}`);const j=await r.json();if(j.error)throw new Error('Google: '+(j.error.message||'').slice(0,100));items=(j.items||[]).map(it=>({title:it.title,url:it.link,snippet:it.snippet||'',site:it.displayLink,engine:'Google'}));}
+      if(eng==='serpapi'){const j=await blGetJson(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&num=${Math.min(10,n)}&api_key=${encodeURIComponent(localStorage.getItem('ec-serpapi-key'))}`);if(j.error)throw new Error('SerpApi: '+String(j.error).slice(0,100));items=(j.organic_results||[]).map(it=>({title:it.title,url:it.link,snippet:it.snippet||'',site:it.displayed_link||blDomain(it.link),engine:'Google (SerpApi)'}));}
       else if(eng==='brave'){const j=await blGetJson(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=${Math.min(20,n)}`,{'X-Subscription-Token':localStorage.getItem('ec-brave-key'),'Accept':'application/json'});if(j.error)throw new Error('Brave: '+(j.error.detail||j.error.message||'').slice(0,100));items=(j.web?.results||[]).map(it=>({title:it.title,url:it.url,snippet:it.description||'',site:blDomain(it.url),engine:'Brave',age:it.age}));}
       items.forEach(it=>{if(it.url&&!seen.has(it.url)){seen.add(it.url);out.push(it);}});
     }catch(e){console.warn('[Scout]',eng,e.message);if(blEngines().length===1)throw e;}
@@ -15029,7 +15028,7 @@ async function blRunScan(){
   });
   if(selSrc.includes('competitors')){const comps=(blState.competitors||[]);if(!comps.length)fails.push('Competitor backlinks: add competitor domains in Settings');else if(!getSemrushKey())fails.push('Competitor backlinks: connect SEMrush in Settings');else{const uncached=comps.filter(c=>!Store.get('ec-bl-comp-'+c,null));const cost=uncached.length*nRes*40;if(!cost||confirm(`Pull top ${nRes} dofollow backlinks for ${uncached.length} competitor${uncached.length>1?'s':''} from SEMrush? Costs ${cost} API units (cached 30 days).`))comps.forEach(c=>jobs.push(['Competitor backlinks · '+c,()=>blScoutCompetitor(c,nRes)]));}}
   const needEngine=['Quora','Q&A sites','niche forums','blog comments','resource/directory pages','guest post opportunities','custom'].filter(t=>selSrc.includes(t));
-  if(needEngine.length&&!engines.length)fails.push(`${needEngine.join(', ')}: need a search engine key (Google or Brave) — free, see Settings`);
+  if(needEngine.length&&!engines.length)fails.push(`${needEngine.join(', ')}: need a search engine key (SerpApi or Brave) — free, see Settings`);
   if(!jobs.length){blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';prog.style.display='none';toast(fails[0]||'Nothing to scan');out.innerHTML=`<div style="font-size:12px;color:var(--amber);padding:1rem 0">${fails.map(esc).join('<br>')}</div>`;return;}
   for(let i=0;i<jobs.length;i++){
     const [name,fn]=jobs[i];fill.style.width=Math.round((i+.5)/jobs.length*100)+'%';lbl.textContent=`${name} (${i+1}/${jobs.length})…`;
@@ -15043,7 +15042,7 @@ async function blRunScan(){
   const seen=new Set(blState.opportunities.map(o=>o.url));const fresh=kept.filter(o=>!seen.has(o.url)&&(seen.add(o.url),true));
   blState.opportunities=[...fresh,...blState.opportunities];agentSave();blRenderResults(blState.opportunities);
   fill.style.width='100%';
-  lbl.innerHTML=`Done — <b>${fresh.length}</b> new opportunities from ${jobs.length} source queries${!engines.length?' · <a href="#" onclick="blSwitchTab(\'settings\',document.getElementById(\'bltab-btn-settings\'));return false" style="color:var(--blue)">add a free search key</a> to unlock footprints, Quora, directories &amp; non-Discourse forums':''}${fails.length?` · <span style="color:var(--amber)">${fails.length} skipped/failed</span> <span title="${esc(fails.join('\n'))}" style="cursor:help">ⓘ</span>`:''}`;
+  lbl.innerHTML=`Done — <b>${fresh.length}</b> new opportunities from ${jobs.length} source queries${!engines.length?' · <a href="#" onclick="blSwitchTab(\'settings\',document.getElementById(\'bltab-btn-settings\'));return false" style="color:var(--blue)">add a free search key</a> (SerpApi — no card, or Brave) to unlock footprints, Quora, directories &amp; non-Discourse forums':''}${fails.length?` · <span style="color:var(--amber)">${fails.length} skipped/failed</span> <span title="${esc(fails.join('\n'))}" style="cursor:help">ⓘ</span>`:''}`;
   blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';toast(`Found ${fresh.length} new opportunities`);
 }
 const BL_TYPE_COLOR={Reddit:'#ff6830',Quora:'#c0392b',Forum:'var(--purple)',Blog:'var(--blue)',Directory:'var(--green)','Q&A':'var(--amber)',Guest:'var(--purple)'};
@@ -15159,8 +15158,8 @@ function blDelKw(i){blState.keywords.splice(i,1);agentSave();blRenderSettings();
 function blAddPage(){const l=(document.getElementById('bl-new-pg-label')?.value||'').trim(),u=(document.getElementById('bl-new-pg-url')?.value||'').trim();if(!l||!u){toast('Label and URL both needed');return;}blState.pages.push({label:l,url:/^https?:\/\//.test(u)?u:'https://'+u});document.getElementById('bl-new-pg-label').value='';document.getElementById('bl-new-pg-url').value='';agentSave();blRenderSettings();blRenderScanPills();toast('Page added');}
 function blDelPage(i){blState.pages.splice(i,1);agentSave();blRenderSettings();blRenderScanPills();}
 function blSaveSettings(){agentSave();toast('Saved');}
-function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)return;const has=!!getApiKey();b.textContent=has?'Claude drafting on':'templates (free)';b.style.background=has?'var(--green-l)':'var(--surface2)';b.style.color=has?'var(--green)':'var(--text2)';const g=document.getElementById('bl-gcse-key'),c=document.getElementById('bl-gcse-cx'),o=document.getElementById('bl-opr-key');if(g)g.value=localStorage.getItem('ec-gcse-key')||'';if(c)c.value=localStorage.getItem('ec-gcse-cx')||'';if(o)o.value=localStorage.getItem('ec-opr-key')||'';}
-function blSaveKeys(){const g=(document.getElementById('bl-gcse-key')?.value||'').trim(),c=(document.getElementById('bl-gcse-cx')?.value||'').trim(),o=(document.getElementById('bl-opr-key')?.value||'').trim(),b=(document.getElementById('bl-brave-key')?.value||'').trim();if(g)localStorage.setItem('ec-gcse-key',g);if(c)localStorage.setItem('ec-gcse-cx',c);if(o)localStorage.setItem('ec-opr-key',o);if(b)localStorage.setItem('ec-brave-key',b);toast('Keys saved');blRenderScanPills();}
+function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)return;const has=!!getApiKey();b.textContent=has?'Claude drafting on':'templates (free)';b.style.background=has?'var(--green-l)':'var(--surface2)';b.style.color=has?'var(--green)':'var(--text2)';const sp=document.getElementById('bl-serpapi-key'),o=document.getElementById('bl-opr-key');if(sp)sp.value=localStorage.getItem('ec-serpapi-key')||'';if(o)o.value=localStorage.getItem('ec-opr-key')||'';}
+function blSaveKeys(){const sp=(document.getElementById('bl-serpapi-key')?.value||'').trim(),o=(document.getElementById('bl-opr-key')?.value||'').trim(),b=(document.getElementById('bl-brave-key')?.value||'').trim();if(sp)localStorage.setItem('ec-serpapi-key',sp);if(o)localStorage.setItem('ec-opr-key',o);if(b)localStorage.setItem('ec-brave-key',b);toast('Keys saved');blRenderScanPills();}
 async function blTestConnection(){const m=document.getElementById('bl-conn-msg');if(!getApiKey()){if(m)m.innerHTML='<span style="color:var(--text2)">No Anthropic key — drafts will use templates. Discovery works regardless.</span>';return;}if(m)m.textContent='Testing…';try{const r=await blCallClaude('Reply with raw JSON only: {"ok":true,"model":"<your model name>"}',60);if(m)m.innerHTML=`<span style="color:var(--green)">✓ Connected</span> <span style="color:var(--text3)">(${esc(r.model||'Claude')} via /proxy-post)</span>`;blConnStatus();}catch(e){if(m)m.innerHTML=`<span style="color:var(--red)">Failed: ${esc(e.message)}</span>`;}}
 
 </script>
