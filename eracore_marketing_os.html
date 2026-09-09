@@ -8818,7 +8818,7 @@ async function fetchLiveData(){
   // Fetch top pages
   try{
     const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
-      body:JSON.stringify({startDate,endDate,dimensions:['page'],rowLimit:100,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
+      body:JSON.stringify({startDate,endDate,dimensions:['page'],rowLimit:500,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
     const d=await res.json();
     googleStats.pages=(d.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));
   }catch(e){console.log('GSC pages error',e);}
@@ -8883,14 +8883,14 @@ async function fetchLiveData(){
     siteCountries:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'country'}],metrics:[{name:'activeUsers'}],orderBys:[{metric:{metricName:'activeUsers'},desc:true}],limit:60});googleStats.site.countries=ga4TwoRange(j);},
     sitePages:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'pageTitle'}],metrics:[{name:'screenPageViews'}],orderBys:[{metric:{metricName:'screenPageViews'},desc:true}],limit:40});googleStats.site.pages=ga4TwoRange(j);},
     siteChannels:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'sessionDefaultChannelGroup'}],metrics:[{name:'sessions'}],orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:20});googleStats.site.channels=ga4TwoRange(j);},
-    prevPages:async()=>{const j=await gsc({startDate:prevStart,endDate:prevEnd,dimensions:['page'],rowLimit:100});googleStats.prevPages=(j.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));},
-    ga4PagesPrev:async()=>{const j=await ga4({dateRanges:[{startDate:gaPrevStart,endDate:gaPrevEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'keyEvents'}],dimensionFilter:organic,limit:100});googleStats.ga4PagesPrev=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,conversions:mv(r,1)||0}));},
+    prevPages:async()=>{const j=await gsc({startDate:prevStart,endDate:prevEnd,dimensions:['page'],rowLimit:500});googleStats.prevPages=(j.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));},
+    ga4PagesPrev:async()=>{const j=await ga4({dateRanges:[{startDate:gaPrevStart,endDate:gaPrevEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'keyEvents'}],dimensionFilter:organic,limit:250});googleStats.ga4PagesPrev=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,conversions:mv(r,1)||0}));},
     aiReferrals:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'sessionSource'},{name:'landingPage'}],metrics:[{name:'sessions'},{name:'engagedSessions'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:aiRef,limit:200});
       const m={};(j.rows||[]).forEach(r=>{const src=r.dimensionValues[0].value,page=r.dimensionValues[1].value,range=r.dimensionValues[2]?.value||'cur';const k=src+'|'+page;m[k]=m[k]||{source:src,page,cur:{sessions:0,engaged:0,dur:0,keyEvents:0},prev:{sessions:0,engaged:0,dur:0,keyEvents:0}};const t=m[k][range==='prev'?'prev':'cur'];const sess=parseInt(r.metricValues[0].value)||0;t.sessions+=sess;t.engaged+=parseInt(r.metricValues[1].value)||0;t.dur+=(parseFloat(r.metricValues[2].value)||0)*sess;t.keyEvents+=parseFloat(r.metricValues[3].value)||0;});
       const rows=Object.values(m);const tot=k=>rows.reduce((t,r)=>t+r[k].sessions,0);googleStats.ai.rows=rows;googleStats.ai.total={cur:tot('cur'),prev:tot('prev')};},
     aiDaily:async()=>{const j=await ga4({dateRanges:[{startDate:gaD28,endDate:gaEnd}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:aiRef,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.ai.daily=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
     allSessions:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],metrics:[{name:'sessions'}]});const o={cur:0,prev:0};(j.rows||[]).forEach(r=>{o[(r.dimensionValues?.[0]?.value)==='prev'?'prev':'cur']+=parseInt(r.metricValues[0].value)||0;});googleStats.ai.allSessions=o;},
-    landingPages:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
+    landingPages:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:250});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
   };
   const results=await Promise.allSettled(Object.entries(feeds).map(async([k,fn])=>{try{await fn();}catch(e){googleStats.feedErrors[k]=e.message;console.error('[SEO feed]',k,e.message);}}));
   console.log('[SEO feeds] done',Object.keys(googleStats.feedErrors).length?googleStats.feedErrors:'all OK');
@@ -9368,8 +9368,9 @@ function seoChangeCard(){
   const ai=g.ai||{};if(ai.total&&(ai.total.cur||ai.total.prev))b.push(`AI-assistant referrals <strong>${ai.total.cur}</strong> sessions${pfArrow(ai.total.cur,ai.total.prev,true)}${ai.rows?.length?` — top: ${aiPlatform([...ai.rows].sort((x,y)=>y.cur.sessions-x.cur.sessions)[0].source).name}`:''}`);
   // Primary money page
   const ebs='/electrical-bim-services';
-  const ebsC=(g.pages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.clicks,0),ebsP=(g.prevPages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.clicks,0);
-  const ebsS=(g.ga4Pages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.sessions,0),ebsPS=(g.ga4PagesPrev||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.sessions,0);
+  const ebsPg=SEO_PAGE_GROUPS.money.pages[0];const ebsAll=[...new Set([...(g.pages||[]),...(g.prevPages||[]),...(g.ga4Pages||[]),...(g.ga4PagesPrev||[])].map(r=>seoPath(r.page)))];const ebsUrls=new Set(seoMoneyPageUrls(ebsPg,ebsAll));
+  const ebsC=(g.pages||[]).filter(r=>ebsUrls.has(seoPath(r.page))).reduce((t,r)=>t+r.clicks,0),ebsP=(g.prevPages||[]).filter(r=>ebsUrls.has(seoPath(r.page))).reduce((t,r)=>t+r.clicks,0);
+  const ebsS=(g.ga4Pages||[]).filter(r=>ebsUrls.has(seoPath(r.page))).reduce((t,r)=>t+r.sessions,0),ebsPS=(g.ga4PagesPrev||[]).filter(r=>ebsUrls.has(seoPath(r.page))).reduce((t,r)=>t+r.sessions,0);
   if(g.pages.length||g.ga4Pages.length)b.push(`<strong>Electrical BIM Services</strong> (primary money page): <strong>${ebsC}</strong> clicks${pfArrow(ebsC,ebsP,true)} · <strong>${ebsS}</strong> organic sessions${pfArrow(ebsS,ebsPS,true)}${!ebsC&&!ebsS?' <span style="color:var(--red)">— zero organic traffic to the money page</span>':''}`);
   // Keyword movers
   const latest=semrushData[0];
@@ -9481,12 +9482,12 @@ function seoAITrafficSection(){
 // ── Page taxonomy: what each URL is FOR. Electrical BIM is the primary money page. ──
 const SEO_PAGE_GROUPS={
   money:{label:'Money',color:'var(--green)',bg:'var(--green-l)',pages:[
-    {path:'/electrical-bim-services',label:'Electrical BIM Services',primary:true},
-    {path:'/mechanical-bim-services',label:'Mechanical BIM Services'},
-    {path:'/plumbing-bim-services',label:'Plumbing BIM Services'},
-    {path:'/mep-bim',label:'MEP BIM'},
-    {path:'/vdc-services',label:'VDC Services'}
-  ],match:/bim-services|\/vdc|\/mep-bim|coordination|clash-detection/i},
+    {path:'/electrical-bim-services',label:'Electrical BIM Services',primary:true,re:/electrical/i},
+    {path:'/mechanical-bim-services',label:'Mechanical BIM Services',re:/mechanical|hvac/i},
+    {path:'/plumbing-bim-services',label:'Plumbing BIM Services',re:/plumbing/i},
+    {path:'/mep-bim',label:'MEP BIM',re:/\/mep(-|$)/i},
+    {path:'/vdc-services',label:'VDC Services',re:/\/vdc/i}
+  ],match:/bim-services|\/vdc|\/mep-bim|coordination|clash-detection|electrical|mechanical|plumbing/i},
   support:{label:'Support',color:'var(--blue)',bg:'var(--blue-l)',pages:[
     {path:'/data-centers',label:'Data Centers'},{path:'/portfolio',label:'Portfolio'},{path:'/contact',label:'Contact'},{path:'/about',label:'About'},{path:'/case-studies',label:'Case studies'},{path:'/blog',label:'Blog'}
   ],match:/data-center|portfolio|contact|about|case-stud|blog|insights|resources|faq/i},
@@ -9495,7 +9496,12 @@ const SEO_PAGE_GROUPS={
   ],match:/training|career|job|apply|internship/i}
 };
 function seoPath(url){return String(url||'').replace(/^https?:\/\/[^/]+/,'').replace(/[?#].*$/,'').replace(/\/$/,'')||'/';}
-function seoPageGroup(url){const p=seoPath(url).toLowerCase();if(p==='/')return'home';for(const [k,g] of Object.entries(SEO_PAGE_GROUPS)){if(g.pages.some(x=>p===x.path||p.startsWith(x.path+'/'))||g.match.test(p))return k;}return'other';}
+const SEO_CONTENT_RE=/\/(blog|insights|news|articles?|resources|case-stud)/i;   // editorial paths are never money pages
+let _seoOverrides=null;function seoOverrides(){if(!_seoOverrides)_seoOverrides=(typeof Store!=='undefined'&&Store.get('ec-seo-page-groups-v1',null))||{};return _seoOverrides;}
+function seoSetPageGroup(path,group){const o=seoOverrides();if(group==='auto')delete o[path];else o[path]=group;Store.set('ec-seo-page-groups-v1',o);renderSEOOverview();toast(group==='auto'?'Back to automatic':'Tagged as '+group);}
+function seoPageGroup(url){const p=seoPath(url).toLowerCase();const ov=seoOverrides();if(ov[p])return ov[p];if(p==='/')return'home';if(SEO_CONTENT_RE.test(p))return'support';for(const [k,g] of Object.entries(SEO_PAGE_GROUPS)){if(g.pages.some(x=>p===x.path||p.startsWith(x.path+'/'))||g.match.test(p))return k;}return'other';}
+// Which URLs belong to a named money page: explicit override → exact path → fuzzy keyword (excluding editorial)
+function seoMoneyPageUrls(pg,paths){const ov=seoOverrides();return paths.filter(p=>{const lp=p.toLowerCase();if(ov[lp]&&ov[lp]!=='money')return false;if(lp===pg.path||lp.startsWith(pg.path+'/'))return true;if(!ov[lp]&&SEO_CONTENT_RE.test(lp))return false;return !!(pg.re&&pg.re.test(lp));});}
 function seoGroupChip(k){const g=SEO_PAGE_GROUPS[k];if(!g)return k==='home'?'<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:var(--surface2);color:var(--text3);font-weight:700">HOME</span>':'';return`<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:${g.bg};color:${g.color};font-weight:700;text-transform:uppercase">${g.label}</span>`;}
 // ── Overview helpers ──────────────────────────────────────────
 function seoCard(title,sub,body,actions='',style=''){
@@ -9591,16 +9597,25 @@ function renderSEOOverview(){
   const th='font-size:10px;font-weight:600;color:var(--text2);padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap',td='font-size:12px;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap';
   const byPath=(arr,key='page')=>{const m={};(arr||[]).forEach(r=>{const k=seoPath(r[key]);if(m[k]){m[k].clicks=(m[k].clicks||0)+(r.clicks||0);m[k].impressions=(m[k].impressions||0)+(r.impressions||0);m[k].sessions=(m[k].sessions||0)+(r.sessions||0);m[k].conversions=(m[k].conversions||0)+(r.conversions||0);}else m[k]={...r};});return m;};
   const gscCur=byPath(g.pages),gscPrev=byPath(g.prevPages),gaCur=byPath(g.ga4Pages),gaPrev=byPath(g.ga4PagesPrev);
-  const pRow=(pg,primary)=>{const c=gscCur[pg.path]||{},pc=gscPrev[pg.path]||{},a=gaCur[pg.path]||{},pa=gaPrev[pg.path]||{};
+  const allPaths=[...new Set([...Object.keys(gscCur),...Object.keys(gscPrev),...Object.keys(gaCur),...Object.keys(gaPrev)])];
+  const agg=(m,paths)=>{const o={clicks:0,impressions:0,sessions:0,conversions:0,brW:0,durW:0,posW:0,n:0};paths.forEach(p=>{const r=m[p];if(!r)return;o.n++;o.clicks+=r.clicks||0;o.impressions+=r.impressions||0;o.sessions+=r.sessions||0;o.conversions+=r.conversions||0;if(r.bounceRate!=null){o.brW+=r.bounceRate*(r.sessions||0);}if(r.avgDuration!=null){o.durW+=r.avgDuration*(r.sessions||0);}if(r.position!=null){o.posW+=parseFloat(r.position)*(r.impressions||0);}});o.bounceRate=o.sessions?o.brW/o.sessions:null;o.avgDuration=o.sessions?o.durW/o.sessions:null;o.position=o.impressions?(o.posW/o.impressions).toFixed(1):null;return o.n?o:null;};
+  const pRow=(pg,primary)=>{const urls=seoMoneyPageUrls(pg,allPaths);const c=agg(gscCur,urls)||{},pc=agg(gscPrev,urls)||{},a=agg(gaCur,urls)||{},pa=agg(gaPrev,urls)||{};
     const ctr=c.impressions?(c.clicks/c.impressions*100).toFixed(1)+'%':'—';
-    return`<tr style="${primary?'background:var(--green-l)':''}"><td style="${td};font-weight:${primary?700:600}">${primary?'<i class="ti ti-star-filled" style="color:var(--green);font-size:11px"></i> ':''}${esc(pg.label)}<div style="font-size:10px;color:var(--text3);font-weight:400">${esc(pg.path)}</div></td>
+    const urlNote=urls.length?`<span title="${esc(urls.join('\n'))}" style="cursor:help">${urls.length} URL${urls.length>1?'s':''}${urls.length===1?': '+esc(urls[0]):''}</span>`:`<span style="color:var(--red)">no matching URL in this period</span>`;
+    return`<tr style="${primary?'background:var(--green-l)':''}"><td style="${td};font-weight:${primary?700:600}">${primary?'<i class="ti ti-star-filled" style="color:var(--green);font-size:11px"></i> ':''}${esc(pg.label)}<div style="font-size:10px;color:var(--text3);font-weight:400">${urlNote}</div></td>
       <td style="${td};text-align:right;font-weight:700">${c.clicks!=null?c.clicks:'—'}${dChip(c.clicks,pc.clicks)}</td><td style="${td};text-align:right;color:var(--text2)">${c.impressions!=null?c.impressions.toLocaleString():'—'}${dChip(c.impressions,pc.impressions)}</td><td style="${td};text-align:right;color:var(--blue)">${ctr}</td><td style="${td};text-align:right;color:var(--text2)">${c.position||'—'}</td>
       <td style="${td};text-align:right;font-weight:600">${a.sessions!=null?a.sessions:'—'}${dChip(a.sessions,pa.sessions)}</td><td style="${td};text-align:right;color:${a.bounceRate==null?'var(--text3)':a.bounceRate>0.75?'var(--red)':a.bounceRate>0.6?'var(--amber)':'var(--green)'}">${a.bounceRate!=null?(a.bounceRate*100).toFixed(0)+'%':'—'}</td><td style="${td};text-align:right;color:var(--text2)">${a.avgDuration!=null?fmtDur(a.avgDuration):'—'}</td><td style="${td};text-align:right;font-weight:700;color:${a.conversions?'var(--green)':'var(--text3)'}">${a.conversions!=null?Math.round(a.conversions):'—'}</td></tr>`;};
   const groupTotals=k=>{const paths=new Set([...Object.keys(gscCur),...Object.keys(gaCur),...Object.keys(gscPrev),...Object.keys(gaPrev)].filter(p=>seoPageGroup(p)===k));const sum=(m,f)=>[...paths].reduce((t,p)=>t+((m[p]||{})[f]||0),0);return{clicks:sum(gscCur,'clicks'),pc:sum(gscPrev,'clicks'),sessions:sum(gaCur,'sessions'),ps:sum(gaPrev,'sessions'),conv:sum(gaCur,'conversions'),n:[...paths].filter(p=>gscCur[p]||gaCur[p]).length};};
   const mT=groupTotals('money'),sT=groupTotals('support'),rT=groupTotals('recruit');
+  const covClicks=Object.values(gscCur).reduce((t,r)=>t+(r.clicks||0),0),covSess=Object.values(gaCur).reduce((t,r)=>t+(r.sessions||0),0);
+  const coverage=`<div style="font-size:11px;color:var(--text2);margin-top:.5rem;display:flex;gap:14px;flex-wrap:wrap"><span>URLs seen: <b>${allPaths.length}</b></span><span>Clicks across all URLs: <b>${covClicks}</b> of ${g.clicks!=null?g.clicks:'—'} site total</span><span>Organic sessions across all landing pages: <b>${covSess}</b> of ${g.sessions!=null?g.sessions:'—'}</span><a href="#" onclick="document.getElementById('seo-all-urls').style.display=document.getElementById('seo-all-urls').style.display==='none'?'block':'none';return false" style="color:var(--blue)">Show every URL &amp; re-tag →</a></div>`;
+  const grpOpts=cur=>['auto','money','support','recruit','other'].map(v=>`<option value="${v}"${cur===v?' selected':''}>${v}</option>`).join('');
+  const urlRows=allPaths.map(p=>({p,c:gscCur[p]||{},pc:gscPrev[p]||{},a:gaCur[p]||{},grp:seoPageGroup(p),ov:seoOverrides()[p]})).sort((x,y)=>((y.c.clicks||0)+(y.a.sessions||0))-((x.c.clicks||0)+(x.a.sessions||0)));
+  const allUrls=`<div id="seo-all-urls" style="display:none;margin-top:.625rem;max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:var(--r)"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">URL (every variant Search Console / GA4 reported)</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">Org. sessions</th><th style="${th};text-align:left">Group</th></tr></thead><tbody>${urlRows.map(r=>`<tr><td style="${td};max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.p)}">${seoGroupChip(r.grp)} ${esc(r.p)}</td><td style="${td};text-align:right;font-weight:600">${r.c.clicks??'—'}${dChip(r.c.clicks,r.pc.clicks)}</td><td style="${td};text-align:right;color:var(--text2)">${r.c.impressions!=null?r.c.impressions.toLocaleString():'—'}</td><td style="${td};text-align:right">${r.a.sessions??'—'}</td><td style="${td}"><select class="sm" style="height:24px;font-size:11px" onchange="seoSetPageGroup('${esc(r.p)}',this.value)">${grpOpts(r.ov||'auto')}</select></td></tr>`).join('')}</tbody></table><div style="font-size:10px;color:var(--text3);padding:6px 8px">Assigning a group here overrides the automatic rule for that URL. Tell me the real money-page URLs and I'll bake them in.</div></div>`;
   const moneyBody=(g.pages.length||g.ga4Pages.length)?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Page</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">CTR</th><th style="${th};text-align:right">Pos</th><th style="${th};text-align:right">Org. sessions</th><th style="${th};text-align:right">Bounce</th><th style="${th};text-align:right">Avg time</th><th style="${th};text-align:right">Key events</th></tr></thead><tbody>${SEO_PAGE_GROUPS.money.pages.map(pg=>pRow(pg,pg.primary)).join('')}</tbody></table></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:.75rem">${[['money',mT],['support',sT],['recruit',rT]].map(([k,t])=>`<div style="background:${SEO_PAGE_GROUPS[k].bg};border-radius:var(--r);padding:.6rem .75rem"><div style="font-size:10px;font-weight:700;color:${SEO_PAGE_GROUPS[k].color};text-transform:uppercase;letter-spacing:.04em">${SEO_PAGE_GROUPS[k].label} pages · ${t.n}</div><div style="display:flex;gap:12px;margin-top:3px;font-size:12px;flex-wrap:wrap"><span>Clicks <b>${t.clicks}</b>${dChip(t.clicks,t.pc)}</span><span>Sessions <b>${t.sessions}</b>${dChip(t.sessions,t.ps)}</span>${t.conv?`<span>Key events <b style="color:var(--green)">${Math.round(t.conv)}</b></span>`:''}</div></div>`).join('')}</div>
-    <div style="font-size:10px;color:var(--text3);margin-top:.5rem">Organic only. Clicks/impressions from Search Console${g.ranges?` (${g.ranges.gsc.start.slice(5)} → ${g.ranges.gsc.end.slice(5)})`:''}; sessions, bounce, key events from GA4${g.ranges?` (${g.ranges.ga4.start.slice(5)} → ${g.ranges.ga4.end.slice(5)})`:''}. Deltas vs prior 7 days.</div>`
+    ${coverage}${allUrls}
+    <div style="font-size:10px;color:var(--text3);margin-top:.5rem">Organic only. Each money page aggregates every URL variant (slash, www, anchors, params) that matches it. Clicks/impressions from Search Console${g.ranges?` (${g.ranges.gsc.start.slice(5)} → ${g.ranges.gsc.end.slice(5)})`:''}; sessions, bounce, key events from GA4${g.ranges?` (${g.ranges.ga4.start.slice(5)} → ${g.ranges.ga4.end.slice(5)})`:''}. Deltas vs prior 7 days.</div>`
     :`<div style="font-size:12px;color:var(--text3)">Connect Google to see money-page performance.</div>`;
   html+=`<div style="margin-bottom:1rem">${seoCard('<i class="ti ti-coin" style="color:var(--green)"></i> Money pages','the pages that earn — Electrical BIM first',moneyBody)}</div>`;
   const fe=g.feedErrors||{};
@@ -12802,7 +12817,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.5';
+const APP_HTML_VERSION='9.6';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
