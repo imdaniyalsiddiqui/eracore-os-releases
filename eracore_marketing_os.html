@@ -619,7 +619,11 @@ select.sm:focus{border-color:var(--blue)}
           </div>
         </div>
       </div>
-      <div style="font-size:12px;color:var(--text3);margin-top:1rem">Uses the Anthropic API key saved in Settings. Data lives locally in this app.</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-top:12px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:8px">Connection <span id="bl-conn-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">—</span></div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.625rem">The bot calls Claude through the app's local proxy using the Anthropic API key saved in <a href="#" onclick="navTo('settings');return false" style="color:var(--blue)">Settings</a>. Scans use roughly 2–4k tokens per keyword.</div>
+        <div style="display:flex;gap:8px;align-items:center"><button class="btn" onclick="blTestConnection()"><i class="ti ti-plug"></i> Test connection</button><span id="bl-conn-msg" style="font-size:12px;color:var(--text2)"></span></div>
+      </div>
     </div>
   </div></div>
 </div>
@@ -1388,14 +1392,27 @@ select.sm:focus{border-color:var(--blue)}
       </div>
     </div>
 
+    <!-- Google Business Profile -->
+    <div id="settings-gbp" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem;display:flex;align-items:center;gap:6px"><i class="ti ti-map-pin" style="color:#EA4335"></i> Google Business Profile <span id="gbp-settings-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">unknown</span></div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:.5rem">Uses the same Google login as Search Console. Three one-time steps, all in the <b>same Google Cloud project</b> as your Search Console OAuth app:</div>
+      <ol style="font-size:12px;color:var(--text2);line-height:1.7;margin:0 0 .5rem 1.25rem;padding:0">
+        <li><b>Re-authorise Google</b> so the token carries the Business Profile permission — <a href="#" onclick="navTo('seodash');setTimeout(()=>connectGSC(true),150);return false" style="color:var(--blue)">do it now</a>.</li>
+        <li><b>Enable three APIs</b> in Google Cloud → APIs &amp; Services → Library: <a href="https://console.cloud.google.com/apis/library/mybusinessaccountmanagement.googleapis.com" target="_blank" style="color:var(--blue)">My Business Account Management</a>, <a href="https://console.cloud.google.com/apis/library/mybusinessbusinessinformation.googleapis.com" target="_blank" style="color:var(--blue)">My Business Business Information</a>, <a href="https://console.cloud.google.com/apis/library/businessprofileperformance.googleapis.com" target="_blank" style="color:var(--blue)">Business Profile Performance</a>.</li>
+        <li><b>Request API access</b> — Google keeps quota at 0 until this form is approved (usually 2–5 days). Needs the project owner: <a href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" style="color:var(--blue)">access request form</a>. Use the Cloud project number and describe it as internal reporting for your own listing.</li>
+      </ol>
+      <div style="display:flex;gap:8px;align-items:center"><button class="btn btn-primary" onclick="fetchGBP(true).then(()=>gbpSettingsStatus())"><i class="ti ti-plug"></i> Test connection</button><span id="gbp-settings-msg" style="font-size:12px;color:var(--text2)"></span></div>
+    </div>
+
     <!-- PageSpeed Insights -->
     <div id="settings-psi" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
       <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-gauge" style="color:#4285F4"></i> PageSpeed Insights (Core Web Vitals)</div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;line-height:1.5">Free key, no billing. In the same Google Cloud project as the Search Console OAuth app: <b>APIs &amp; Services → Enable "PageSpeed Insights API" → Credentials → Create credentials → API key</b>. Without a key Google's shared anonymous quota runs out within minutes.</div>
       <div style="display:flex;gap:8px">
         <input type="password" id="psi-key-input" placeholder="AIza…" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
-        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('psi-key-input').value.trim();if(!v)return;localStorage.setItem('ec-psi-key',v);toast('PageSpeed key saved — running Lighthouse…');fetchPageSpeed(true);})()"><i class="ti ti-check"></i> Save &amp; run</button>
+        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('psi-key-input').value.trim();if(!v)return;localStorage.setItem('ec-psi-key',v);toast('PageSpeed key saved — running Lighthouse…');fetchPageSpeed(true).then(()=>psiSettingsStatus());})()"><i class="ti ti-check"></i> Save &amp; run</button>
       </div>
+      <div id="psi-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
     </div>
 
     <!-- SEMrush -->
@@ -6836,6 +6853,7 @@ function initSettings(){
   const srKey=localStorage.getItem('ec-semrush-key');
   const srCid=localStorage.getItem('ec-semrush-campaign-id');
   const psiEl=document.getElementById('psi-key-input');if(psiEl)psiEl.value=localStorage.getItem('ec-psi-key')||'';
+  seoSourcesLoad();psiSettingsStatus();gbpSettingsStatus();
   const srKeyEl=document.getElementById('semrush-key-input');
   const srCidEl=document.getElementById('semrush-campaign-id-input');
   if(srKeyEl&&srKey)srKeyEl.value=srKey;
@@ -8569,7 +8587,7 @@ function loadSEO(){
   try{const d=localStorage.getItem('ec-aieo-v1');if(d)aieoWeeks=JSON.parse(d);}catch(e){}
   try{const d=localStorage.getItem('ec-deliv-v1');if(d)deliverables=JSON.parse(d);}catch(e){}
   try{gscToken=localStorage.getItem('ec-gsc-token');}catch(e){}
-  try{const d=localStorage.getItem('ec-google-stats');if(d){const parsed=JSON.parse(d);googleStats={...GOOGLE_STATS_DEFAULTS,...parsed};['pages','countries','queries','ga4Countries','ga4Pages','daily','dailySessions'].forEach(k=>{if(!Array.isArray(googleStats[k]))googleStats[k]=[];});if(!googleStats.site||typeof googleStats.site!=='object')googleStats.site={countries:[],pages:[],channels:[]};}}catch(e){}
+  try{const d=localStorage.getItem('ec-google-stats');if(d){const parsed=JSON.parse(d);googleStats={...GOOGLE_STATS_DEFAULTS,...parsed};['pages','countries','queries','ga4Countries','ga4Pages','daily','dailySessions','prevPages','ga4PagesPrev'].forEach(k=>{if(!Array.isArray(googleStats[k]))googleStats[k]=[];});if(!googleStats.site||typeof googleStats.site!=='object')googleStats.site={countries:[],pages:[],channels:[]};if(!googleStats.ai||typeof googleStats.ai!=='object')googleStats.ai={rows:[],daily:[],total:{cur:0,prev:0},allSessions:{cur:0,prev:0}};}}catch(e){}
   if(gscToken)updateGSCConnectedState();
 }
 function saveSEO(){
@@ -8760,7 +8778,7 @@ const GOOGLE_STATS_DEFAULTS={
   clicks:null,impressions:null,sessions:null,
   pages:[],countries:[],queries:[],
   bounceRate:null,avgSessionDuration:null,pagesPerSession:null,
-  ga4Countries:[],ga4Pages:[],daily:[],dailySessions:[],site:{countries:[],pages:[],channels:[]},
+  ga4Countries:[],ga4Pages:[],daily:[],dailySessions:[],site:{countries:[],pages:[],channels:[]},prevPages:[],ga4PagesPrev:[],ranges:null,ai:{rows:[],daily:[],total:{cur:0,prev:0},allSessions:{cur:0,prev:0}},
   prevClicks:null,prevImpressions:null,prevSessions:null,
   prevBounceRate:null,prevAvgSessionDuration:null,prevPagesPerSession:null,
   fetchedAt:null
@@ -8770,10 +8788,23 @@ let googleStats={...GOOGLE_STATS_DEFAULTS};
 async function fetchLiveData(){
   if(!gscToken){const ok=await refreshAccessToken();if(!ok)return;}
   if(!ga4Token)await refreshGA4Token();
-  const endDate=new Date().toISOString().slice(0,10);
-  const startDate=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
   const gscBase=`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent('https://eracore.com/')}/searchAnalytics/query`;
   const gscHeaders={Authorization:`Bearer ${gscToken}`,'Content-Type':'application/json'};
+  const iso=d=>new Date(d).toISOString().slice(0,10),DAY=86400000;
+  const shift=(dateStr,days)=>iso(new Date(dateStr+'T00:00:00Z').getTime()+days*DAY);
+  // Search Console publishes with a 2–3 day lag. Anchor its 7-day window on the latest date that
+  // actually has data (exactly what the GSC UI does) — otherwise "7d" silently becomes 4–5 days.
+  let gscEnd=iso(Date.now()-3*DAY);
+  try{
+    const probe=await fetch(gscBase,{method:'POST',headers:gscHeaders,body:JSON.stringify({startDate:iso(Date.now()-14*DAY),endDate:iso(Date.now()),dimensions:['date'],rowLimit:20})});
+    if(probe.status===401){const ok=await refreshAccessToken();if(ok)return fetchLiveData();return;}
+    const pj=await probe.json();const dates=(pj.rows||[]).map(r=>r.keys[0]).sort();
+    if(dates.length)gscEnd=dates[dates.length-1];
+  }catch(e){console.log('GSC date probe error',e);}
+  const endDate=gscEnd,startDate=shift(gscEnd,-6);                 // GSC: 7 complete days
+  const gaEnd=iso(Date.now()-DAY),gaStart=shift(gaEnd,-6);          // GA4: 7 complete days through yesterday
+  const gaPrevEnd=shift(gaStart,-1),gaPrevStart=shift(gaPrevEnd,-6);
+  googleStats.ranges={gsc:{start:startDate,end:endDate},ga4:{start:gaStart,end:gaEnd}};
   // Fetch overall totals
   try{
     const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
@@ -8787,7 +8818,7 @@ async function fetchLiveData(){
   // Fetch top pages
   try{
     const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,
-      body:JSON.stringify({startDate,endDate,dimensions:['page'],rowLimit:20,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
+      body:JSON.stringify({startDate,endDate,dimensions:['page'],rowLimit:100,orderBy:[{fieldName:'clicks',sortOrder:'DESCENDING'}]})});
     const d=await res.json();
     googleStats.pages=(d.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));
   }catch(e){console.log('GSC pages error',e);}
@@ -8810,13 +8841,13 @@ async function fetchLiveData(){
     if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('No GA4 token');}
     let ga4Res=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
       method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({dateRanges:[{startDate,endDate}],metrics:[{name:'sessions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}})
+      body:JSON.stringify({dateRanges:[{startDate:gaStart,endDate:gaEnd}],metrics:[{name:'sessions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}})
     });
     if(ga4Res.status===401||ga4Res.status===403){
       const ok=await refreshGA4Token();
       if(ok)ga4Res=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
         method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-        body:JSON.stringify({dateRanges:[{startDate,endDate}],metrics:[{name:'sessions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}})
+        body:JSON.stringify({dateRanges:[{startDate:gaStart,endDate:gaEnd}],metrics:[{name:'sessions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}})
       });
     }
     if(ga4Res.ok){
@@ -8829,6 +8860,7 @@ async function fetchLiveData(){
   googleStats.feedErrors={};
   const GA4URL=`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`;
   const organic={filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}};
+  const aiRef={filter:{fieldName:'sessionSource',stringFilter:{matchType:'PARTIAL_REGEXP',value:AI_SOURCE_REGEX,caseSensitive:false}}};
   const ga4=async body=>{
     if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('GA4 not authorised — reconnect Google');}
     let r=await fetch(GA4URL,{method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -8836,23 +8868,29 @@ async function fetchLiveData(){
     const j=await r.json();if(j.error)throw new Error(j.error.message||JSON.stringify(j.error).slice(0,160));return j;
   };
   const gsc=async body=>{const r=await fetch(gscBase,{method:'POST',headers:gscHeaders,body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error.message||'GSC error');return j;};
-  const prevEnd=new Date(new Date(startDate+'T00:00:00Z')-86400000).toISOString().slice(0,10);
-  const prevStart=new Date(new Date(prevEnd+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
-  const d28=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
+  const prevEnd=shift(startDate,-1),prevStart=shift(prevEnd,-6);   // GSC prior 7 days
+  const d28=shift(endDate,-27),gaD28=shift(gaEnd,-27);
   const mv=(row,i)=>parseFloat(row?.metricValues?.[i]?.value);
   const ga4TwoRange=j=>{const m={};(j.rows||[]).forEach(r=>{const name=r.dimensionValues[0].value,range=r.dimensionValues[1]?.value||'cur';m[name]=m[name]||{name,cur:0,prev:0};m[name][range==='prev'?'prev':'cur']+=parseFloat(r.metricValues[0].value)||0;});return Object.values(m).sort((a,b)=>b.cur-a.cur);};
   const feeds={
-    engagement:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.bounceRate=mv(r,0)||null;googleStats.avgSessionDuration=mv(r,1)||null;googleStats.pagesPerSession=mv(r,2)||null;},
-    prevGA4:async()=>{const j=await ga4({dateRanges:[{startDate:prevStart,endDate:prevEnd}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.prevSessions=parseInt(r.metricValues[0].value)||null;googleStats.prevBounceRate=mv(r,1)||null;googleStats.prevAvgSessionDuration=mv(r,2)||null;googleStats.prevPagesPerSession=mv(r,3)||null;},
+    engagement:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd}],metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.bounceRate=mv(r,0)||null;googleStats.avgSessionDuration=mv(r,1)||null;googleStats.pagesPerSession=mv(r,2)||null;},
+    prevGA4:async()=>{const j=await ga4({dateRanges:[{startDate:gaPrevStart,endDate:gaPrevEnd}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.prevSessions=parseInt(r.metricValues[0].value)||null;googleStats.prevBounceRate=mv(r,1)||null;googleStats.prevAvgSessionDuration=mv(r,2)||null;googleStats.prevPagesPerSession=mv(r,3)||null;},
     prevGSC:async()=>{const j=await gsc({startDate:prevStart,endDate:prevEnd,rowLimit:1});const t=(j.rows||[]).reduce((s,r)=>({c:s.c+r.clicks,i:s.i+r.impressions}),{c:0,i:0});googleStats.prevClicks=Math.round(t.c);googleStats.prevImpressions=Math.round(t.i);},
-    countries:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'country'}],metrics:[{name:'sessions'},{name:'bounceRate'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Countries=(j.rows||[]).map(r=>({country:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0}));},
+    countries:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd}],dimensions:[{name:'country'}],metrics:[{name:'sessions'},{name:'bounceRate'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Countries=(j.rows||[]).map(r=>({country:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0}));},
     dailyGSC:async()=>{const j=await gsc({startDate:d28,endDate,dimensions:['date'],rowLimit:100});googleStats.daily=(j.rows||[]).map(r=>({d:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions)})).sort((a,b)=>a.d.localeCompare(b.d));},
-    dailyGA4:async()=>{const j=await ga4({dateRanges:[{startDate:d28,endDate}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:organic,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.dailySessions=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
+    dailyGA4:async()=>{const j=await ga4({dateRanges:[{startDate:gaD28,endDate:gaEnd}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:organic,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.dailySessions=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
     // All-channel site panels (GA4 home parity): two date ranges in one report → rows carry a dateRange dimension
-    siteCountries:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'country'}],metrics:[{name:'activeUsers'}],orderBys:[{metric:{metricName:'activeUsers'},desc:true}],limit:60});googleStats.site.countries=ga4TwoRange(j);},
-    sitePages:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'pageTitle'}],metrics:[{name:'screenPageViews'}],orderBys:[{metric:{metricName:'screenPageViews'},desc:true}],limit:40});googleStats.site.pages=ga4TwoRange(j);},
-    siteChannels:async()=>{const j=await ga4({dateRanges:[{startDate,endDate,name:'cur'},{startDate:prevStart,endDate:prevEnd,name:'prev'}],dimensions:[{name:'sessionDefaultChannelGroup'}],metrics:[{name:'sessions'}],orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:20});googleStats.site.channels=ga4TwoRange(j);},
-    landingPages:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
+    siteCountries:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'country'}],metrics:[{name:'activeUsers'}],orderBys:[{metric:{metricName:'activeUsers'},desc:true}],limit:60});googleStats.site.countries=ga4TwoRange(j);},
+    sitePages:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'pageTitle'}],metrics:[{name:'screenPageViews'}],orderBys:[{metric:{metricName:'screenPageViews'},desc:true}],limit:40});googleStats.site.pages=ga4TwoRange(j);},
+    siteChannels:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'sessionDefaultChannelGroup'}],metrics:[{name:'sessions'}],orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:20});googleStats.site.channels=ga4TwoRange(j);},
+    prevPages:async()=>{const j=await gsc({startDate:prevStart,endDate:prevEnd,dimensions:['page'],rowLimit:100});googleStats.prevPages=(j.rows||[]).map(r=>({page:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions),ctr:(r.ctr*100).toFixed(1),position:r.position.toFixed(1)}));},
+    ga4PagesPrev:async()=>{const j=await ga4({dateRanges:[{startDate:gaPrevStart,endDate:gaPrevEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'keyEvents'}],dimensionFilter:organic,limit:100});googleStats.ga4PagesPrev=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,conversions:mv(r,1)||0}));},
+    aiReferrals:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],dimensions:[{name:'sessionSource'},{name:'landingPage'}],metrics:[{name:'sessions'},{name:'engagedSessions'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:aiRef,limit:200});
+      const m={};(j.rows||[]).forEach(r=>{const src=r.dimensionValues[0].value,page=r.dimensionValues[1].value,range=r.dimensionValues[2]?.value||'cur';const k=src+'|'+page;m[k]=m[k]||{source:src,page,cur:{sessions:0,engaged:0,dur:0,keyEvents:0},prev:{sessions:0,engaged:0,dur:0,keyEvents:0}};const t=m[k][range==='prev'?'prev':'cur'];const sess=parseInt(r.metricValues[0].value)||0;t.sessions+=sess;t.engaged+=parseInt(r.metricValues[1].value)||0;t.dur+=(parseFloat(r.metricValues[2].value)||0)*sess;t.keyEvents+=parseFloat(r.metricValues[3].value)||0;});
+      const rows=Object.values(m);const tot=k=>rows.reduce((t,r)=>t+r[k].sessions,0);googleStats.ai.rows=rows;googleStats.ai.total={cur:tot('cur'),prev:tot('prev')};},
+    aiDaily:async()=>{const j=await ga4({dateRanges:[{startDate:gaD28,endDate:gaEnd}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:aiRef,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.ai.daily=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
+    allSessions:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd,name:'cur'},{startDate:gaPrevStart,endDate:gaPrevEnd,name:'prev'}],metrics:[{name:'sessions'}]});const o={cur:0,prev:0};(j.rows||[]).forEach(r=>{o[(r.dimensionValues?.[0]?.value)==='prev'?'prev':'cur']+=parseInt(r.metricValues[0].value)||0;});googleStats.ai.allSessions=o;},
+    landingPages:async()=>{const j=await ga4({dateRanges:[{startDate:gaStart,endDate:gaEnd}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
   };
   const results=await Promise.allSettled(Object.entries(feeds).map(async([k,fn])=>{try{await fn();}catch(e){googleStats.feedErrors[k]=e.message;console.error('[SEO feed]',k,e.message);}}));
   console.log('[SEO feeds] done',Object.keys(googleStats.feedErrors).length?googleStats.feedErrors:'all OK');
@@ -9199,7 +9237,7 @@ async function autoRefreshBing(){
 // ══════════════════════════════════════════════════════════════
 const PSI_KEY='ec-pagespeed-v1',BL_OV_KEY='ec-backlinks-v1',GBP_KEY='ec-gbp-v1';
 let psiData=null,blOverview=null,gbpData=null,_seoSrcLoaded=false;
-function seoSourcesLoad(){if(_seoSrcLoaded)return;_seoSrcLoaded=true;psiData=Store.get(PSI_KEY,null);blOverview=Store.get(BL_OV_KEY,null);gbpData=Store.get(GBP_KEY,null);}
+function seoSourcesLoad(){if(_seoSrcLoaded)return;_seoSrcLoaded=true;psiData=Store.get(PSI_KEY,null);blOverview=Store.get(BL_OV_KEY,null);gbpData=Store.get(GBP_KEY,null);blRefDomains=Store.get('ec-backlinks-refdomains-v1',null);}
 let psiBusy=false,blOvBusy=false,gbpBusy=false;
 
 // PageSpeed Insights — public Google API, CORS-enabled, no key required.
@@ -9256,6 +9294,22 @@ async function fetchBacklinksOverview(force=false){
   Store.set(BL_OV_KEY,blOverview);blOvBusy=false;renderSEOOverview();
 }
 
+function psiSettingsStatus(){const el=document.getElementById('psi-settings-msg');if(!el)return;const p=psiData;if(!p){el.textContent='Not run yet.';return;}const m=p.mobile,d=p.desktop;if(m?.error||d?.error){el.innerHTML=`<span style="color:var(--red)">Last run failed: ${esc((m?.error||d?.error||'').slice(0,120))}</span>`;return;}el.innerHTML=`✓ Last run ${fmtDate(p.fetched)} · mobile <b style="color:${seoScoreColor(m.perf)}">${m.perf}</b> · desktop <b style="color:${seoScoreColor(d.perf)}">${d.perf}</b> · ${localStorage.getItem('ec-psi-key')?'using your API key':'anonymous quota'}`;}
+function gbpSettingsStatus(){const b=document.getElementById('gbp-settings-badge'),m=document.getElementById('gbp-settings-msg');if(!b)return;const g=gbpData;if(!g){b.textContent='not tested';b.style.background='var(--surface2)';b.style.color='var(--text3)';if(m)m.textContent='';return;}if(g.ok){b.textContent='connected';b.style.background='var(--green-l)';b.style.color='var(--green)';if(m)m.innerHTML=`✓ ${esc(g.title||'')} · ${g.searchImpr+g.mapsImpr} impressions / 28d`;return;}b.textContent=g.gate==='scope'?'step 1 needed':g.gate==='approval'?'step 2–3 needed':'error';b.style.background='var(--amber-l)';b.style.color='var(--amber)';if(m)m.innerHTML=`<span style="color:var(--amber)">${g.gate==='scope'?'Token lacks the Business Profile scope — do step 1.':g.gate==='approval'?'API not enabled or quota is 0 — do steps 2 and 3.':''}</span> <span style="color:var(--text3)">API said: ${esc((g.error||'').slice(0,140))}</span>`;}
+// SEMrush referring domains — 40 units per line, manual only, cached 30d
+let blRefDomains=null;
+async function fetchRefDomains(){
+  const key=getSemrushKey();if(!key){toast('Connect SEMrush first');return;}
+  if(!confirm('Load top 10 referring domains from SEMrush? Costs 400 API units (cached 30 days).'))return;
+  try{
+    const u=`https://api.semrush.com/analytics/v1/?key=${key}&type=backlinks_refdomains&target=eracore.com&target_type=root_domain&display_limit=10&display_sort=backlinks_num_desc&export_columns=domain_ascore,domain,backlinks_num,ip,country,first_seen,last_seen`;
+    const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}`);const txt=await r.text();
+    if(/^ERROR/i.test(txt.trim()))throw new Error(txt.trim());
+    const [h,...rows]=txt.trim().split('\n').map(l=>l.split(';'));
+    blRefDomains={fetched:Date.now(),rows:rows.filter(r=>r.length>=3).map(r=>{const o={};h.forEach((k,i)=>o[k.trim()]=r[i]);return o;})};
+    Store.set('ec-backlinks-refdomains-v1',blRefDomains);renderSEOOverview();toast('Referring domains loaded');
+  }catch(e){toast('SEMrush: '+e.message);}
+}
 // Google Business Profile — Performance API (needs business.manage scope + Google API access approval)
 async function fetchGBP(force=false){
   if(gbpBusy)return;
@@ -9310,6 +9364,13 @@ function seoChangeCard(){
     b.push(`Bounce rate <strong>${br.toFixed(1)}%</strong>${pfArrow(g.bounceRate,g.prevBounceRate,false)}${br>75?' <span style="color:var(--red)">— high, landing pages may not match intent</span>':br<45?' <span style="color:var(--green)">— healthy</span>':''}`);
   }
   if(g.avgSessionDuration!=null)b.push(`Avg session <strong>${fmtSec(g.avgSessionDuration)}</strong>${pfArrow(g.avgSessionDuration,g.prevAvgSessionDuration,true)}${g.avgSessionDuration<60?' <span style="color:var(--amber)">— under 1 min</span>':''}`);
+  // AI referrals
+  const ai=g.ai||{};if(ai.total&&(ai.total.cur||ai.total.prev))b.push(`AI-assistant referrals <strong>${ai.total.cur}</strong> sessions${pfArrow(ai.total.cur,ai.total.prev,true)}${ai.rows?.length?` — top: ${aiPlatform([...ai.rows].sort((x,y)=>y.cur.sessions-x.cur.sessions)[0].source).name}`:''}`);
+  // Primary money page
+  const ebs='/electrical-bim-services';
+  const ebsC=(g.pages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.clicks,0),ebsP=(g.prevPages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.clicks,0);
+  const ebsS=(g.ga4Pages||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.sessions,0),ebsPS=(g.ga4PagesPrev||[]).filter(r=>seoPath(r.page)===ebs).reduce((t,r)=>t+r.sessions,0);
+  if(g.pages.length||g.ga4Pages.length)b.push(`<strong>Electrical BIM Services</strong> (primary money page): <strong>${ebsC}</strong> clicks${pfArrow(ebsC,ebsP,true)} · <strong>${ebsS}</strong> organic sessions${pfArrow(ebsS,ebsPS,true)}${!ebsC&&!ebsS?' <span style="color:var(--red)">— zero organic traffic to the money page</span>':''}`);
   // Keyword movers
   const latest=semrushData[0];
   if(latest&&(latest.keywords||[]).length){
@@ -9340,7 +9401,8 @@ function seoChangeCard(){
     if(parts.length)b.push(`Geo split: ${parts.join(' · ')}`);
   }
   if(!b.length)return'';
-  const pTo=new Date(Date.now()-8*86400000).toISOString().slice(0,10),pFrom=new Date(Date.now()-15*86400000).toISOString().slice(0,10);
+  const sh=(d,n)=>new Date(new Date(d+'T00:00:00Z').getTime()+n*86400000).toISOString().slice(0,10);
+  const pTo=g.ranges?sh(g.ranges.gsc.start,-1):new Date(Date.now()-8*86400000).toISOString().slice(0,10),pFrom=sh(pTo,-6);
   return pfChangeCard(b,pFrom,pTo);
 }
 const SEO_ISO3={usa:'United States',ukr:'Ukraine',egy:'Egypt',sau:'Saudi Arabia',are:'United Arab Emirates',jor:'Jordan',kwt:'Kuwait',qat:'Qatar',bhr:'Bahrain',lbn:'Lebanon',mar:'Morocco',tun:'Tunisia',pak:'Pakistan',ind:'India',gbr:'United Kingdom',bra:'Brazil',pol:'Poland',col:'Colombia',mkd:'North Macedonia',can:'Canada',aus:'Australia',deu:'Germany',fra:'France',esp:'Spain',ita:'Italy',nld:'Netherlands',tur:'Türkiye',sgp:'Singapore',vnm:'Vietnam',bgd:'Bangladesh',phl:'Philippines',idn:'Indonesia',mex:'Mexico',arg:'Argentina',nga:'Nigeria',zaf:'South Africa',ken:'Kenya',irq:'Iraq',omn:'Oman',dza:'Algeria',lby:'Libya',syr:'Syria',yem:'Yemen',pse:'Palestine',irn:'Iran',rou:'Romania',cze:'Czechia',swe:'Sweden',nor:'Norway',dnk:'Denmark',fin:'Finland',irl:'Ireland',prt:'Portugal',che:'Switzerland',aut:'Austria',bel:'Belgium',grc:'Greece',hun:'Hungary',srb:'Serbia',hrv:'Croatia',bgr:'Bulgaria',ltu:'Lithuania',lva:'Latvia',est:'Estonia',geo:'Georgia',kaz:'Kazakhstan',uzb:'Uzbekistan',aze:'Azerbaijan',arm:'Armenia',mda:'Moldova',blr:'Belarus',rus:'Russia',chn:'China',jpn:'Japan',kor:'South Korea',twn:'Taiwan',hkg:'Hong Kong',mys:'Malaysia',tha:'Thailand',npl:'Nepal',lka:'Sri Lanka',nzl:'New Zealand',chl:'Chile',per:'Peru',ecu:'Ecuador',ven:'Venezuela',isr:'Israel',eth:'Ethiopia',gha:'Ghana',zzz:'Unknown'};
@@ -9364,6 +9426,77 @@ async function seoRenderGeoMap(countries){
     host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${feats.map(f=>{const n=f.properties.name;const v=val[n]||0;return`<path d="${path(f)}" fill="${color(v)}" stroke="var(--surface)" stroke-width=".5"><title>${esc(n)}: ${v.toLocaleString()} users</title></path>`;}).join('')}</svg>`;
   }catch(e){console.warn('[geo map]',e.message);host.innerHTML=`<div style="font-size:11px;color:var(--text3)">Map unavailable (needs internet)</div>`;}
 }
+// ── AI assistants that send referral traffic (GA4 sessionSource) ──
+const AI_PLATFORMS=[
+  {name:'ChatGPT',re:/chatgpt|openai/i,color:'#10a37f'},{name:'Perplexity',re:/perplexity/i,color:'#20808d'},{name:'Copilot / Bing AI',re:/copilot|bing\.com\/chat|edgeservices/i,color:'#0078d4'},
+  {name:'Gemini',re:/gemini|bard\.google/i,color:'#4e8df5'},{name:'Claude',re:/claude|anthropic/i,color:'#d97757'},{name:'Grok',re:/grok|x\.ai/i,color:'#333'},
+  {name:'DeepSeek',re:/deepseek/i,color:'#4d6bfe'},{name:'Meta AI',re:/meta\.ai/i,color:'#0866ff'},{name:'Mistral',re:/mistral/i,color:'#ff7000'},{name:'You.com',re:/you\.com/i,color:'#6c5ce7'},{name:'Phind',re:/phind/i,color:'#8e44ad'},{name:'Poe',re:/poe\.com/i,color:'#5d5fef'}
+];
+const AI_SOURCE_REGEX='chatgpt|openai|perplexity|copilot|bing\\.com/chat|edgeservices|gemini|bard\\.google|claude|anthropic|grok|x\\.ai|deepseek|meta\\.ai|mistral|you\\.com|phind|poe\\.com';
+function aiPlatform(src){const p=AI_PLATFORMS.find(x=>x.re.test(src||''));return p||{name:src,color:'var(--text3)'};}
+
+function seoAITrafficSection(){
+  const g=googleStats,ai=g.ai||{rows:[],daily:[],total:{cur:0,prev:0},allSessions:{cur:0,prev:0}};
+  const dChip=(cur,prev,goodUp=true)=>{if(cur==null||!prev)return'';const p=(cur-prev)/prev*100,up=p>0,good=goodUp?up:!up;return`<span style="font-size:11px;font-weight:700;color:${good?'var(--green)':'var(--red)'};margin-left:5px">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;};
+  const fe=g.feedErrors||{};
+  if(!localStorage.getItem('ec-gsc-token'))return seoCard('<i class="ti ti-sparkles" style="color:var(--purple)"></i> AI referral traffic','GA4',`<div style="font-size:12px;color:var(--text3)">Connect Google to see traffic arriving from ChatGPT, Perplexity, Copilot, Gemini and other assistants.</div>`);
+  if(fe.aiReferrals)return seoCard('<i class="ti ti-sparkles" style="color:var(--purple)"></i> AI referral traffic','GA4',`<div style="font-size:12px;color:var(--red)">Feed failed: ${esc(fe.aiReferrals)}</div>`);
+  const rows=ai.rows||[];
+  const cur=ai.total.cur,prev=ai.total.prev;
+  const engaged=rows.reduce((t,r)=>t+r.cur.engaged,0),keyEv=rows.reduce((t,r)=>t+r.cur.keyEvents,0),durW=rows.reduce((t,r)=>t+r.cur.dur,0);
+  const share=ai.allSessions.cur?cur/ai.allSessions.cur*100:null,prevShare=ai.allSessions.prev?prev/ai.allSessions.prev*100:null;
+  const orgShare=g.sessions&&cur?cur/g.sessions*100:null;
+  // by platform
+  const byP={};rows.forEach(r=>{const p=aiPlatform(r.source);byP[p.name]=byP[p.name]||{name:p.name,color:p.color,cur:0,prev:0,keyEvents:0,sources:new Set()};byP[p.name].cur+=r.cur.sessions;byP[p.name].prev+=r.prev.sessions;byP[p.name].keyEvents+=r.cur.keyEvents;byP[p.name].sources.add(r.source);});
+  const plats=Object.values(byP).sort((a,b)=>b.cur-a.cur);const pMax=plats[0]?.cur||1;
+  // by landing page
+  const byPg={};rows.forEach(r=>{const k=seoPath(r.page);byPg[k]=byPg[k]||{path:k,cur:0,prev:0,keyEvents:0,engaged:0};byPg[k].cur+=r.cur.sessions;byPg[k].prev+=r.prev.sessions;byPg[k].keyEvents+=r.cur.keyEvents;byPg[k].engaged+=r.cur.engaged;});
+  const pages=Object.values(byPg).sort((a,b)=>b.cur-a.cur).slice(0,10);
+  const grp={money:0,support:0,recruit:0,home:0,other:0};pages.forEach(p=>{grp[seoPageGroup(p.path)]=(grp[seoPageGroup(p.path)]||0)+p.cur;});
+  const tile=(l,v,chip,sub,c)=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.75rem .875rem"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div><div style="font-size:1.25rem;font-weight:700;color:${c||'var(--text)'};display:flex;align-items:baseline;flex-wrap:wrap">${v}${chip||''}</div><div style="font-size:10px;color:var(--text3)">${sub}</div></div>`;
+  const th='font-size:10px;font-weight:600;color:var(--text2);padding:5px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap',td='font-size:12px;padding:5px 8px;border-bottom:1px solid var(--border);white-space:nowrap';
+  const body=`
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:1rem">
+      ${tile('AI referral sessions',cur.toLocaleString(),dChip(cur,prev),'7d · ChatGPT, Perplexity, Copilot, Gemini…','var(--purple)')}
+      ${tile('Share of all traffic',share!=null?share.toFixed(2)+'%':'—',dChip(share,prevShare),orgShare!=null?`= ${orgShare.toFixed(0)}% the size of organic search`:'of all GA4 sessions')}
+      ${tile('Engaged rate',cur?Math.round(engaged/cur*100)+'%':'—','',`${engaged} engaged sessions`,cur&&engaged/cur>0.6?'var(--green)':'var(--text)')}
+      ${tile('Avg session',cur?fmtDur(durW/cur):'—','','time on site from AI visitors')}
+      ${tile('Key events',Math.round(keyEv),'','conversions from AI traffic',keyEv?'var(--green)':'var(--text3)')}
+    </div>
+    ${!cur?`<div style="background:var(--surface2);border-radius:var(--r);padding:.75rem 1rem;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:1rem"><b>No AI-assistant referrals in this window.</b> GA4 only sees these when a user clicks a citation inside ChatGPT/Perplexity/etc. and the referrer survives — so this is a floor, not the true figure. SEMrush AI visibility below measures the other side: how often Eracore is <i>cited</i> at all.</div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:12px;margin-bottom:1rem">
+      <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">By assistant</div>
+        ${plats.length?plats.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)"><div style="width:110px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc([...p.sources].join(', '))}">${esc(p.name)}</div><div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${(p.cur/pMax*100).toFixed(1)}%;height:100%;background:${p.color};opacity:.85"></div></div><div style="width:40px;text-align:right;font-size:12px;font-weight:700">${p.cur}</div><div style="width:56px;text-align:right">${dChip(p.cur,p.prev)||'<span style="font-size:10px;color:var(--text3)">—</span>'}</div>${p.keyEvents?`<div style="width:30px;text-align:right;font-size:11px;color:var(--green);font-weight:700" title="key events">★${Math.round(p.keyEvents)}</div>`:'<div style="width:30px"></div>'}</div>`).join(''):'<div style="font-size:12px;color:var(--text3)">—</div>'}
+        <div style="margin-top:.75rem"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">28-day trend</div>${seoLineChart([{days:(ai.daily||[]).map(d=>({d:d.d,v:d.sessions})),color:'var(--purple)',label:'AI referral sessions / day'}],640,120)}</div>
+      </div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Where AI sends people</div>
+        ${pages.length?`<table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Landing page</th><th style="${th};text-align:right">Sessions</th><th style="${th};text-align:right">Engaged</th><th style="${th};text-align:right">Key ev.</th></tr></thead><tbody>${pages.map(p=>`<tr><td style="${td};max-width:260px;overflow:hidden;text-overflow:ellipsis">${seoGroupChip(seoPageGroup(p.path))} ${esc(p.path)}</td><td style="${td};text-align:right;font-weight:700">${p.cur}${dChip(p.cur,p.prev)}</td><td style="${td};text-align:right;color:var(--text2)">${p.cur?Math.round(p.engaged/p.cur*100)+'%':'—'}</td><td style="${td};text-align:right;font-weight:700;color:${p.keyEvents?'var(--green)':'var(--text3)'}">${Math.round(p.keyEvents)||'—'}</td></tr>`).join('')}</tbody></table>
+        <div style="display:flex;gap:10px;margin-top:.625rem;font-size:11px;color:var(--text2);flex-wrap:wrap">${['money','support','recruit','home'].filter(k=>grp[k]).map(k=>`<span>${k==='home'?'<b style="font-size:9px;background:var(--surface2);color:var(--text3);padding:1px 5px;border-radius:8px">HOME</b>':seoGroupChip(k)} <b>${grp[k]}</b> (${Math.round(grp[k]/Math.max(1,cur)*100)}%)</span>`).join('')}</div>
+        ${grp.money===0&&cur?`<div style="font-size:11px;color:var(--amber);margin-top:6px"><i class="ti ti-alert-circle"></i> AI assistants are not yet sending anyone to a money page — the Backlink Bot and AIEO content work should target /electrical-bim-services citations.</div>`:''}`:'<div style="font-size:12px;color:var(--text3)">—</div>'}
+      </div>
+    </div>
+    <div style="font-size:10px;color:var(--text3)">GA4 sessions where the referrer is an AI assistant (${AI_PLATFORMS.length} platforms matched)${g.ranges?` · ${g.ranges.ga4.start.slice(5)} → ${g.ranges.ga4.end.slice(5)} vs prior 7 days`:''}.</div>`;
+  return seoCard('<i class="ti ti-sparkles" style="color:var(--purple)"></i> AI referral traffic','how much business the assistants actually send · GA4',body,`<button class="btn btn-sm btn-icon" onclick="fetchLiveData();toast('Refreshing…')"><i class="ti ti-refresh"></i></button>`);
+}
+// ── Page taxonomy: what each URL is FOR. Electrical BIM is the primary money page. ──
+const SEO_PAGE_GROUPS={
+  money:{label:'Money',color:'var(--green)',bg:'var(--green-l)',pages:[
+    {path:'/electrical-bim-services',label:'Electrical BIM Services',primary:true},
+    {path:'/mechanical-bim-services',label:'Mechanical BIM Services'},
+    {path:'/plumbing-bim-services',label:'Plumbing BIM Services'},
+    {path:'/mep-bim',label:'MEP BIM'},
+    {path:'/vdc-services',label:'VDC Services'}
+  ],match:/bim-services|\/vdc|\/mep-bim|coordination|clash-detection/i},
+  support:{label:'Support',color:'var(--blue)',bg:'var(--blue-l)',pages:[
+    {path:'/data-centers',label:'Data Centers'},{path:'/portfolio',label:'Portfolio'},{path:'/contact',label:'Contact'},{path:'/about',label:'About'},{path:'/case-studies',label:'Case studies'},{path:'/blog',label:'Blog'}
+  ],match:/data-center|portfolio|contact|about|case-stud|blog|insights|resources|faq/i},
+  recruit:{label:'Recruitment',color:'var(--amber)',bg:'var(--amber-l)',pages:[
+    {path:'/training-program',label:'Training Program'},{path:'/careers',label:'Careers'}
+  ],match:/training|career|job|apply|internship/i}
+};
+function seoPath(url){return String(url||'').replace(/^https?:\/\/[^/]+/,'').replace(/[?#].*$/,'').replace(/\/$/,'')||'/';}
+function seoPageGroup(url){const p=seoPath(url).toLowerCase();if(p==='/')return'home';for(const [k,g] of Object.entries(SEO_PAGE_GROUPS)){if(g.pages.some(x=>p===x.path||p.startsWith(x.path+'/'))||g.match.test(p))return k;}return'other';}
+function seoGroupChip(k){const g=SEO_PAGE_GROUPS[k];if(!g)return k==='home'?'<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:var(--surface2);color:var(--text3);font-weight:700">HOME</span>':'';return`<span style="font-size:9px;padding:1px 5px;border-radius:8px;background:${g.bg};color:${g.color};font-weight:700;text-transform:uppercase">${g.label}</span>`;}
 // ── Overview helpers ──────────────────────────────────────────
 function seoCard(title,sub,body,actions='',style=''){
   return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem;${style}">
@@ -9435,11 +9568,11 @@ function renderSEOOverview(){
   // ── Row A: KPI tiles with sparklines ──
   const bingStale=bingData[0]?.stale;
   const tiles=[
-    ['Google clicks',gClicks!=null?gClicks.toLocaleString():'—',dChip(gClicks,g.prevClicks),d7.map(d=>d.clicks),'var(--blue)','Search Console · 7d'],
+    ['Google clicks',gClicks!=null?gClicks.toLocaleString():'—',dChip(gClicks,g.prevClicks),d7.map(d=>d.clicks),'var(--blue)',g.ranges?`GSC · ${g.ranges.gsc.start.slice(5).replace('-','/')}–${g.ranges.gsc.end.slice(5).replace('-','/')}`:'Search Console · 7d'],
     ['Google impressions',gImpressions!=null?gImpressions.toLocaleString():'—',dChip(gImpressions,g.prevImpressions),d7.map(d=>d.impressions),'var(--amber)','Search Console · 7d'],
     ['CTR',gCTR!=null?gCTR.toFixed(2)+'%':'—',dChip(gCTR,(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:null),d7.map(d=>d.impressions?d.clicks/d.impressions*100:0),'var(--green)','Google Search'],
     ['Bing clicks',bu?bu.totalClicks7.toLocaleString():(bingStale?'…':'—'),bu?dChip(bu.totalClicks7,bu.prevClicks7):'',bu?bu.dailyRows.slice(-7).map(d=>d.clicks):null,'var(--purple)',bu?`${bu.totalImpressions7.toLocaleString()} impr · 7d`:bingStale?'refreshing real 7d data':'Bing not connected'],
-    ['Organic sessions',gSessions!=null?gSessions.toLocaleString():'—',dChip(gSessions,g.prevSessions),sess7.map(d=>d.sessions),'var(--purple)','GA4 · 7d'],
+    ['Organic sessions',gSessions!=null?gSessions.toLocaleString():'—',dChip(gSessions,g.prevSessions),sess7.map(d=>d.sessions),'var(--purple)',g.ranges?`GA4 · ${g.ranges.ga4.start.slice(5).replace('-','/')}–${g.ranges.ga4.end.slice(5).replace('-','/')}`:'GA4 · 7d'],
     ['Bounce rate',g.bounceRate!=null?(g.bounceRate*100).toFixed(1)+'%':'—',dChip(g.bounceRate,g.prevBounceRate,false),null,g.bounceRate>0.75?'var(--red)':g.bounceRate>0.6?'var(--amber)':'var(--green)','GA4 organic'],
     ['Avg session',fmtDur(g.avgSessionDuration),dChip(g.avgSessionDuration,g.prevAvgSessionDuration),null,'var(--teal)','GA4 organic'],
     ['Organic leads',leads.loaded?leads.total:'—',dChip(leads.total,leads.forms.reduce((t,f)=>t+f.prev,0)),null,'var(--green)','Forms + calls · 7d'],
@@ -9453,9 +9586,26 @@ function renderSEOOverview(){
 
   // ── Row B: What changed ──
   html+=seoChangeCard();
+
+  // ── Row B2: Money pages — the pages that actually earn ──
+  const th='font-size:10px;font-weight:600;color:var(--text2);padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap',td='font-size:12px;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap';
+  const byPath=(arr,key='page')=>{const m={};(arr||[]).forEach(r=>{const k=seoPath(r[key]);if(m[k]){m[k].clicks=(m[k].clicks||0)+(r.clicks||0);m[k].impressions=(m[k].impressions||0)+(r.impressions||0);m[k].sessions=(m[k].sessions||0)+(r.sessions||0);m[k].conversions=(m[k].conversions||0)+(r.conversions||0);}else m[k]={...r};});return m;};
+  const gscCur=byPath(g.pages),gscPrev=byPath(g.prevPages),gaCur=byPath(g.ga4Pages),gaPrev=byPath(g.ga4PagesPrev);
+  const pRow=(pg,primary)=>{const c=gscCur[pg.path]||{},pc=gscPrev[pg.path]||{},a=gaCur[pg.path]||{},pa=gaPrev[pg.path]||{};
+    const ctr=c.impressions?(c.clicks/c.impressions*100).toFixed(1)+'%':'—';
+    return`<tr style="${primary?'background:var(--green-l)':''}"><td style="${td};font-weight:${primary?700:600}">${primary?'<i class="ti ti-star-filled" style="color:var(--green);font-size:11px"></i> ':''}${esc(pg.label)}<div style="font-size:10px;color:var(--text3);font-weight:400">${esc(pg.path)}</div></td>
+      <td style="${td};text-align:right;font-weight:700">${c.clicks!=null?c.clicks:'—'}${dChip(c.clicks,pc.clicks)}</td><td style="${td};text-align:right;color:var(--text2)">${c.impressions!=null?c.impressions.toLocaleString():'—'}${dChip(c.impressions,pc.impressions)}</td><td style="${td};text-align:right;color:var(--blue)">${ctr}</td><td style="${td};text-align:right;color:var(--text2)">${c.position||'—'}</td>
+      <td style="${td};text-align:right;font-weight:600">${a.sessions!=null?a.sessions:'—'}${dChip(a.sessions,pa.sessions)}</td><td style="${td};text-align:right;color:${a.bounceRate==null?'var(--text3)':a.bounceRate>0.75?'var(--red)':a.bounceRate>0.6?'var(--amber)':'var(--green)'}">${a.bounceRate!=null?(a.bounceRate*100).toFixed(0)+'%':'—'}</td><td style="${td};text-align:right;color:var(--text2)">${a.avgDuration!=null?fmtDur(a.avgDuration):'—'}</td><td style="${td};text-align:right;font-weight:700;color:${a.conversions?'var(--green)':'var(--text3)'}">${a.conversions!=null?Math.round(a.conversions):'—'}</td></tr>`;};
+  const groupTotals=k=>{const paths=new Set([...Object.keys(gscCur),...Object.keys(gaCur),...Object.keys(gscPrev),...Object.keys(gaPrev)].filter(p=>seoPageGroup(p)===k));const sum=(m,f)=>[...paths].reduce((t,p)=>t+((m[p]||{})[f]||0),0);return{clicks:sum(gscCur,'clicks'),pc:sum(gscPrev,'clicks'),sessions:sum(gaCur,'sessions'),ps:sum(gaPrev,'sessions'),conv:sum(gaCur,'conversions'),n:[...paths].filter(p=>gscCur[p]||gaCur[p]).length};};
+  const mT=groupTotals('money'),sT=groupTotals('support'),rT=groupTotals('recruit');
+  const moneyBody=(g.pages.length||g.ga4Pages.length)?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Page</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">CTR</th><th style="${th};text-align:right">Pos</th><th style="${th};text-align:right">Org. sessions</th><th style="${th};text-align:right">Bounce</th><th style="${th};text-align:right">Avg time</th><th style="${th};text-align:right">Key events</th></tr></thead><tbody>${SEO_PAGE_GROUPS.money.pages.map(pg=>pRow(pg,pg.primary)).join('')}</tbody></table></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:.75rem">${[['money',mT],['support',sT],['recruit',rT]].map(([k,t])=>`<div style="background:${SEO_PAGE_GROUPS[k].bg};border-radius:var(--r);padding:.6rem .75rem"><div style="font-size:10px;font-weight:700;color:${SEO_PAGE_GROUPS[k].color};text-transform:uppercase;letter-spacing:.04em">${SEO_PAGE_GROUPS[k].label} pages · ${t.n}</div><div style="display:flex;gap:12px;margin-top:3px;font-size:12px;flex-wrap:wrap"><span>Clicks <b>${t.clicks}</b>${dChip(t.clicks,t.pc)}</span><span>Sessions <b>${t.sessions}</b>${dChip(t.sessions,t.ps)}</span>${t.conv?`<span>Key events <b style="color:var(--green)">${Math.round(t.conv)}</b></span>`:''}</div></div>`).join('')}</div>
+    <div style="font-size:10px;color:var(--text3);margin-top:.5rem">Organic only. Clicks/impressions from Search Console${g.ranges?` (${g.ranges.gsc.start.slice(5)} → ${g.ranges.gsc.end.slice(5)})`:''}; sessions, bounce, key events from GA4${g.ranges?` (${g.ranges.ga4.start.slice(5)} → ${g.ranges.ga4.end.slice(5)})`:''}. Deltas vs prior 7 days.</div>`
+    :`<div style="font-size:12px;color:var(--text3)">Connect Google to see money-page performance.</div>`;
+  html+=`<div style="margin-bottom:1rem">${seoCard('<i class="ti ti-coin" style="color:var(--green)"></i> Money pages','the pages that earn — Electrical BIM first',moneyBody)}</div>`;
   const fe=g.feedErrors||{};
   if(Object.keys(fe).length){
-    const nice={engagement:'GA4 engagement (bounce/duration)',prevGA4:'GA4 prior period',prevGSC:'GSC prior period',countries:'GA4 countries',dailyGSC:'GSC 28-day trend',dailyGA4:'GA4 28-day sessions',landingPages:'GA4 landing pages',siteCountries:'GA4 users by country',sitePages:'GA4 page views',siteChannels:'GA4 channels'};
+    const nice={engagement:'GA4 engagement (bounce/duration)',prevGA4:'GA4 prior period',prevGSC:'GSC prior period',countries:'GA4 countries',dailyGSC:'GSC 28-day trend',dailyGA4:'GA4 28-day sessions',landingPages:'GA4 landing pages',siteCountries:'GA4 users by country',sitePages:'GA4 page views',siteChannels:'GA4 channels',prevPages:'GSC prior-period pages',ga4PagesPrev:'GA4 prior-period landing pages',aiReferrals:'GA4 AI referral traffic',aiDaily:'GA4 AI referral trend',allSessions:'GA4 total sessions'};
     html+=`<div style="background:var(--amber-l);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--rl);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;line-height:1.6">
       <div style="font-weight:700;color:var(--amber);margin-bottom:2px"><i class="ti ti-alert-triangle"></i> ${Object.keys(fe).length} data feed${Object.keys(fe).length>1?'s':''} failed on last refresh</div>
       ${Object.entries(fe).map(([k,m])=>`<div>· <b>${nice[k]||k}</b>: ${esc(m)}</div>`).join('')}
@@ -9511,7 +9661,8 @@ function renderSEOOverview(){
     return`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:.625rem">${big('Authority score',bl.ascore,'var(--blue)',bl.prev?.ascore)}${big('Backlinks',bl.total,'var(--text)',bl.prev?.total)}${big('Referring domains',bl.domains,'var(--green)',bl.prev?.domains)}</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Dofollow <b>${fp}%</b> · ${fol.toLocaleString()} follow / ${nof.toLocaleString()} nofollow · ${(bl.ips_num||0).toLocaleString()} IPs</div>
     <div style="height:6px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${fp}%;height:100%;background:var(--green)"></div></div>
-    <div style="font-size:10px;color:var(--text3);margin-top:.5rem">SEMrush Backlink Analytics · ${fmtDate(bl.fetched)} · 40 units/refresh, cached 7d${bl.error?` · <span style="color:var(--amber)">last refresh failed</span>`:''}</div>`;
+    ${blRefDomains?.rows?.length?`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin:.625rem 0 3px">Top referring domains <span style="font-weight:400">· ${fmtDate(blRefDomains.fetched)}</span></div>${blRefDomains.rows.slice(0,10).map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="width:26px;text-align:center;font-weight:700;color:var(--blue);background:var(--blue-l);border-radius:4px;font-size:10px" title="Authority score">${esc(r.domain_ascore||'—')}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.domain||'')}</span><span style="color:var(--text2)">${esc(r.backlinks_num||'')} links</span></div>`).join('')}`:`<button class="btn btn-sm" style="margin-top:.625rem" onclick="fetchRefDomains()"><i class="ti ti-list"></i> Load top referring domains <span style="color:var(--text3);font-size:10px">400 units</span></button>`}
+    <div style="font-size:10px;color:var(--text3);margin-top:.5rem">SEMrush Backlink Analytics · ${fmtDate(bl.fetched)} · 40 units/refresh, cached 7d${bl.error?` · <span style="color:var(--amber)">last refresh failed</span>`:''}. Search Console's Links report has no API, so backlink data comes from SEMrush only.</div>`;
   })();
   const gbpBody=(()=>{
     if(!localStorage.getItem('ec-gsc-token'))return`<div style="font-size:12px;color:var(--text3)">Connect Google first.</div>`;
@@ -9542,9 +9693,8 @@ function renderSEOOverview(){
   // ── Row E: Page performance + Organic funnel ──
   const ga4ByPath={};g.ga4Pages.forEach(p=>{ga4ByPath[(p.page||'').replace(/\/$/,'')||'/']=p;});
   const pageRows=(g.pages||[]).slice(0,10).map(p=>{const path=(p.page||'').replace(/^https?:\/\/[^/]+/,'').replace(/\/$/,'')||'/';const a=ga4ByPath[path]||{};return{path,clicks:p.clicks,impr:p.impressions,ctr:p.ctr,pos:p.position,sessions:a.sessions,br:a.bounceRate,dur:a.avgDuration,conv:a.conversions};});
-  const th='font-size:10px;font-weight:600;color:var(--text2);padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap',td='font-size:12px;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap';
   const pageTable=pageRows.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Page</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">CTR</th><th style="${th};text-align:right">Pos</th><th style="${th};text-align:right">Sessions</th><th style="${th};text-align:right">Bounce</th><th style="${th};text-align:right">Avg time</th></tr></thead>
-    <tbody>${pageRows.map(r=>`<tr><td style="${td};max-width:220px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.path)}">${esc(r.path)}</td><td style="${td};text-align:right;font-weight:600">${r.clicks.toLocaleString()}</td><td style="${td};text-align:right;color:var(--text2)">${r.impr.toLocaleString()}</td><td style="${td};text-align:right;color:var(--blue)">${r.ctr}%</td><td style="${td};text-align:right;color:var(--text2)">${r.pos}</td><td style="${td};text-align:right">${r.sessions!=null?r.sessions:'—'}</td><td style="${td};text-align:right;color:${r.br==null?'var(--text3)':r.br>0.75?'var(--red)':r.br>0.6?'var(--amber)':'var(--green)'}">${r.br!=null?(r.br*100).toFixed(0)+'%':'—'}</td><td style="${td};text-align:right;color:var(--text2)">${r.dur!=null?fmtDur(r.dur):'—'}</td></tr>`).join('')}</tbody></table></div>`
+    <tbody>${pageRows.map(r=>`<tr><td style="${td};max-width:240px;overflow:hidden;text-overflow:ellipsis" title="${esc(r.path)}">${seoGroupChip(seoPageGroup(r.path))} ${esc(r.path)}</td><td style="${td};text-align:right;font-weight:600">${r.clicks.toLocaleString()}</td><td style="${td};text-align:right;color:var(--text2)">${r.impr.toLocaleString()}</td><td style="${td};text-align:right;color:var(--blue)">${r.ctr}%</td><td style="${td};text-align:right;color:var(--text2)">${r.pos}</td><td style="${td};text-align:right">${r.sessions!=null?r.sessions:'—'}</td><td style="${td};text-align:right;color:${r.br==null?'var(--text3)':r.br>0.75?'var(--red)':r.br>0.6?'var(--amber)':'var(--green)'}">${r.br!=null?(r.br*100).toFixed(0)+'%':'—'}</td><td style="${td};text-align:right;color:var(--text2)">${r.dur!=null?fmtDur(r.dur):'—'}</td></tr>`).join('')}</tbody></table></div>`
     :`<div style="font-size:12px;color:var(--text3);padding:1rem 0">Connect Google to see page-level performance.</div>`;
   const funnelStages=[{label:'Impressions',sublabel:'TOFU',value:combinedImpressions||null,color:'#A32D2D'},{label:'Clicks',sublabel:'MOFU',value:combinedClicks||null,color:'#185FA5'},{label:'Sessions',sublabel:'MOFU',value:gSessions,color:'#0C447C'},{label:'Leads',sublabel:'BOFU',value:leads.loaded?leads.total:null,color:'#3B6D11'}];
   const funnelBody=buildJourneyFunnel(funnelStages,{width:420,barHeight:96})+`<div style="margin-top:.75rem;border-top:1px solid var(--border);padding-top:.5rem">
@@ -9584,8 +9734,10 @@ function renderSEOOverview(){
   const queries=(g.queries||[]).slice(0,8);
   const qBody=queries.length?`<table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Query</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">CTR</th><th style="${th};text-align:right">Pos</th></tr></thead><tbody>${queries.map(q=>`<tr><td style="${td};max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(q.query||'')}</td><td style="${td};text-align:right;font-weight:600">${(q.clicks||0).toLocaleString()}</td><td style="${td};text-align:right;color:var(--text2)">${(q.impressions||0).toLocaleString()}</td><td style="${td};text-align:right;color:var(--blue)">${q.ctr}%</td><td style="${td};text-align:right;color:var(--text2)">${q.position}</td></tr>`).join('')}</tbody></table>`
     :`<div style="font-size:12px;color:var(--text3)">Connect Google to see search queries.</div>`;
+  const aiT=g.ai?.total||{cur:0,prev:0};
+  const aieoBody2=`<div style="display:flex;gap:10px;margin-bottom:.75rem;font-size:12px;background:var(--surface2);border-radius:var(--r);padding:.5rem .75rem;align-items:center"><i class="ti ti-sparkles" style="color:var(--purple)"></i><span>AI referral sessions (7d): <b>${aiT.cur}</b>${dChip(aiT.cur,aiT.prev)}</span><span style="flex:1"></span><a href="#" onclick="switchSEOTab('aieo',document.querySelector('#page-seodash .itab:nth-child(6)'));return false" style="color:var(--blue);font-size:11px">Deep dive →</a></div>`+aieoBody;
   html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
-    ${seoCard('<i class="ti ti-brain" style="color:var(--purple)"></i> AI visibility',latestAIEO?latestAIEO.week:'AIEO',aieoBody,`<button class="btn btn-sm btn-icon" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i></button><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log</button>`)}
+    ${seoCard('<i class="ti ti-brain" style="color:var(--purple)"></i> AI visibility',latestAIEO?latestAIEO.week:'AIEO',aieoBody2,`<button class="btn btn-sm btn-icon" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i></button><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log</button>`)}
     ${seoCard('Top search queries','GSC · 7d',qBody)}
   </div>`;
 
@@ -9682,6 +9834,12 @@ async function fetchAIEOData(){
 
 function renderAIEO(){
   const el=document.getElementById('seo-aieo');if(!el)return;
+  el.innerHTML='<div id="seo-aieo-ai" style="margin-bottom:1rem"></div><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:.25rem 0 .5rem">AI search visibility · SEMrush</div><div id="seo-aieo-semrush"></div>';
+  document.getElementById('seo-aieo-ai').innerHTML=seoAITrafficSection();
+  renderAIEOSemrush();
+}
+function renderAIEOSemrush(){
+  const el=document.getElementById('seo-aieo-semrush');if(!el)return;
   const latest=aieoWeeks[0];
   const hasApiData=latest?.fetchedFromApi||latest?.aioKeywords!=null;
 
@@ -12644,7 +12802,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.3';
+const APP_HTML_VERSION='9.5';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -14651,7 +14809,7 @@ function blSwitchTab(tab,el){
   document.querySelectorAll('#agent-bot-backlink .itab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
   ['scanner','queue','settings'].forEach(t=>document.getElementById('bltab-'+t)?.classList.toggle('active',t===tab));
-  if(tab==='queue')blRenderQueue();if(tab==='settings')blRenderSettings();if(tab==='scanner')blRenderScanPills();
+  if(tab==='queue')blRenderQueue();if(tab==='settings'){blRenderSettings();blConnStatus();}if(tab==='scanner')blRenderScanPills();
 }
 function blRenderScanPills(){
   const kp=document.getElementById('bl-kw-pills');
@@ -14811,6 +14969,8 @@ function blDelKw(i){blState.keywords.splice(i,1);agentSave();blRenderSettings();
 function blAddPage(){const l=(document.getElementById('bl-new-pg-label')?.value||'').trim(),u=(document.getElementById('bl-new-pg-url')?.value||'').trim();if(!l||!u){toast('Label and URL both needed');return;}blState.pages.push({label:l,url:/^https?:\/\//.test(u)?u:'https://'+u});document.getElementById('bl-new-pg-label').value='';document.getElementById('bl-new-pg-url').value='';agentSave();blRenderSettings();blRenderScanPills();toast('Page added');}
 function blDelPage(i){blState.pages.splice(i,1);agentSave();blRenderSettings();blRenderScanPills();}
 function blSaveSettings(){agentSave();toast('Saved');}
+function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)return;const has=!!getApiKey();b.textContent=has?'key saved':'no API key';b.style.background=has?'var(--green-l)':'var(--amber-l)';b.style.color=has?'var(--green)':'var(--amber)';}
+async function blTestConnection(){const m=document.getElementById('bl-conn-msg');if(!getApiKey()){if(m)m.innerHTML='<span style="color:var(--amber)">Add your Anthropic API key in Settings first.</span>';return;}if(m)m.textContent='Testing…';try{const r=await blCallClaude('Reply with raw JSON only: {"ok":true,"model":"<your model name>"}',60);if(m)m.innerHTML=`<span style="color:var(--green)">✓ Connected</span> <span style="color:var(--text3)">(${esc(r.model||'Claude')} via /proxy-post)</span>`;blConnStatus();}catch(e){if(m)m.innerHTML=`<span style="color:var(--red)">Failed: ${esc(e.message)}</span>`;}}
 
 </script>
 </body>
