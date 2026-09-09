@@ -633,6 +633,7 @@ select.sm:focus{border-color:var(--blue)}
   </div>
   <div class="itabs">
     <button class="itab active" onclick="switchSEOTab('overview',this)">Overview</button>
+    <button class="itab" onclick="switchSEOTab('whatchanged',this)" id="seo-tab-whatchanged"><i class="ti ti-sparkles" style="font-size:11px"></i> What changed</button>
     <button class="itab" onclick="switchSEOTab('gsc',this)">Google</button>
     <button class="itab" onclick="switchSEOTab('bing',this)">Bing</button>
     <button class="itab" onclick="switchSEOTab('semrush',this)">SEMrush</button>
@@ -641,6 +642,7 @@ select.sm:focus{border-color:var(--blue)}
     <button class="itab" onclick="switchSEOTab('deliverables',this)">Deliverables</button>
   </div>
   <div id="seo-overview" class="itab-pane active"></div>
+  <div id="seo-whatchanged" class="itab-pane"></div>
   <div id="seo-gsc" class="itab-pane"></div>
   <div id="seo-bing" class="itab-pane"></div>
   <div id="seo-semrush" class="itab-pane"></div>
@@ -8590,7 +8592,15 @@ async function exchangeGSCCode(){
     toast('Exchange failed: '+e.message);
   }
 }
-let googleStats={clicks:null,impressions:null,sessions:null,pages:[],countries:[],queries:[]};
+let googleStats={
+  clicks:null,impressions:null,sessions:null,
+  pages:[],countries:[],queries:[],
+  bounceRate:null,avgSessionDuration:null,pagesPerSession:null,
+  ga4Countries:[],
+  prevClicks:null,prevImpressions:null,prevSessions:null,
+  prevBounceRate:null,prevAvgSessionDuration:null,prevPagesPerSession:null,
+  fetchedAt:null
+};
 
 async function fetchLiveData(){
   if(!gscToken){const ok=await refreshAccessToken();if(!ok)return;}
@@ -8649,6 +8659,87 @@ async function fetchLiveData(){
       googleStats.sessions=(ga4Data.rows||[]).reduce((s,r)=>s+parseInt(r.metricValues[0].value),0);
     }
   }catch(e){console.log('GA4 error',e);}
+
+  // ── GA4: Engagement metrics (bounce rate, session duration, pages/session) ──
+  try{
+    if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('No GA4 token');}
+    const engRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
+      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        dateRanges:[{startDate,endDate}],
+        metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],
+        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}
+      })
+    });
+    if(engRes.ok){
+      const engData=await engRes.json();
+      const row=(engData.rows||[])[0];
+      if(row){
+        googleStats.bounceRate=parseFloat(row.metricValues[0].value)||null;
+        googleStats.avgSessionDuration=parseFloat(row.metricValues[1].value)||null;
+        googleStats.pagesPerSession=parseFloat(row.metricValues[2].value)||null;
+      }
+    }
+  }catch(e){console.log('GA4 engagement error',e);}
+
+  // ── Prior equal period (for "What changed" deltas) ──
+  try{
+    const prevEnd=new Date(new Date(startDate+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+    const prevStart=new Date(new Date(prevEnd+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
+    // Prior GSC clicks/impressions
+    const gscPrevRes=await fetch(gscBase,{method:'POST',headers:gscHeaders,
+      body:JSON.stringify({startDate:prevStart,endDate:prevEnd,rowLimit:1})});
+    if(gscPrevRes.ok){
+      const gscPrevData=await gscPrevRes.json();
+      const tot=(gscPrevData.rows||[]).reduce((s,r)=>({clicks:s.clicks+r.clicks,impressions:s.impressions+r.impressions}),{clicks:0,impressions:0});
+      googleStats.prevClicks=Math.round(tot.clicks);
+      googleStats.prevImpressions=Math.round(tot.impressions);
+    }
+    // Prior GA4 engagement
+    const prevEngRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
+      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        dateRanges:[{startDate:prevStart,endDate:prevEnd}],
+        metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],
+        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}
+      })
+    });
+    if(prevEngRes.ok){
+      const prevEngData=await prevEngRes.json();
+      const row=(prevEngData.rows||[])[0];
+      if(row){
+        googleStats.prevSessions=parseInt(row.metricValues[0].value)||null;
+        googleStats.prevBounceRate=parseFloat(row.metricValues[1].value)||null;
+        googleStats.prevAvgSessionDuration=parseFloat(row.metricValues[2].value)||null;
+        googleStats.prevPagesPerSession=parseFloat(row.metricValues[3].value)||null;
+      }
+    }
+  }catch(e){console.log('GA4 prev-period error',e);}
+
+  // ── GA4: Country breakdown (organic — surfaces Ukraine / MENA) ──
+  try{
+    const ctrRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
+      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        dateRanges:[{startDate,endDate}],
+        dimensions:[{name:'country'}],
+        metrics:[{name:'sessions'},{name:'bounceRate'}],
+        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}},
+        orderBys:[{metric:{metricName:'sessions'},desc:true}],
+        limit:25
+      })
+    });
+    if(ctrRes.ok){
+      const ctrData=await ctrRes.json();
+      googleStats.ga4Countries=(ctrData.rows||[]).map(r=>({
+        country:r.dimensionValues[0].value,
+        sessions:parseInt(r.metricValues[0].value)||0,
+        bounceRate:parseFloat(r.metricValues[1].value)||0
+      }));
+    }
+  }catch(e){console.log('GA4 country error',e);}
+
+  googleStats.fetchedAt=Date.now();
   updateSEOTopCounters();
   localStorage.setItem('ec-google-stats',JSON.stringify(googleStats));
   renderSEOOverview();
@@ -8665,9 +8756,10 @@ function updateSEOTopCounters(){
 }
 function switchSEOTab(tab,el){
   document.querySelectorAll('#page-seodash .itab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['overview','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
+  ['overview','whatchanged','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
   const active=document.getElementById('seo-'+tab);if(active)active.classList.add('active');
   if(tab==='overview')renderSEOOverview();
+  else if(tab==='whatchanged')renderSEOWhatChanged();
   else if(tab==='gsc')renderGSCTab();
   else if(tab==='bing')renderBingTab();
   else if(tab==='semrush')renderSEMrushTab();
@@ -8963,21 +9055,59 @@ function loadBingData(){
 function renderSEOOverview(){
   const el=document.getElementById('seo-overview');if(!el)return;
   let html='';
-
-  // ── Engine breakdown: Google, Bing, Combined ──
-  const gClicks=googleStats.clicks,gImpressions=googleStats.impressions,gSessions=googleStats.sessions;
+  const g=googleStats;
+  const gClicks=g.clicks,gImpressions=g.impressions,gSessions=g.sessions;
   const bClicks=bingData.length?bingData[0].totalClicks7:null;
   const bImpressions=bingData.length?bingData[0].totalImpressions7:null;
   const combinedClicks=(gClicks||0)+(bClicks||0);
   const combinedImpressions=(gImpressions||0)+(bImpressions||0);
+  const gCTR=(gClicks&&gImpressions)?(gClicks/gImpressions*100):null;
 
+  // ── delta helper ──
+  function dChip(cur,prev,goodUp=true){
+    if(cur===null||cur===undefined||!prev)return'';
+    const p=(cur-prev)/prev*100,up=p>0,good=goodUp?up:!up;
+    return`<span style="font-size:10px;font-weight:700;color:${good?'var(--green)':'var(--red)'};margin-left:4px">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;
+  }
+
+  // ── 7 KPI tiles ──
+  const latest=semrushData[0];const latestAIEO=aieoWeeks[0];
+  let top10=0,semVis=null,semVisDiff=null,aioKwCount=null;
+  if(latest){
+    const ranking=(latest.keywords||[]).filter(k=>k.position!==null&&k.position!==undefined);
+    top10=ranking.filter(k=>k.position<=10).length;
+    semVis=latest.visibility??null;semVisDiff=latest.visibilityDiff??null;
+    const top10el=document.getElementById('seo-top10');if(top10el)top10el.textContent=top10;
+  }
+  aioKwCount=latestAIEO?.aioKeywords??null;
+
+  html+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:1.25rem">
+    ${[
+      ['Organic Clicks',combinedClicks?combinedClicks.toLocaleString():'—','var(--text)','Google+Bing · 7d',dChip(g.clicks,g.prevClicks,true)],
+      ['Impressions',combinedImpressions?combinedImpressions.toLocaleString():'—','var(--text)','All engines · 7d',dChip(g.impressions,g.prevImpressions,true)],
+      ['GA4 Sessions',gSessions!=null?gSessions.toLocaleString():'—','var(--green)','Organic · 7d',dChip(gSessions,g.prevSessions,true)],
+      ['GSC CTR',gCTR!=null?gCTR.toFixed(2)+'%':'—','var(--blue)','Google Search',''],
+      ['Top 10 Kwds',top10||'—','var(--blue)','SEMrush tracked',''],
+      ['AI Overview Kwds',aioKwCount!=null?aioKwCount:'—','var(--purple)','AIEO · SEMrush',''],
+      ['Visibility',semVis!=null?semVis+'%':'—',semVisDiff>0?'var(--green)':semVisDiff<0?'var(--red)':'var(--text)','SEMrush',semVisDiff!=null?`<span style="font-size:10px;color:${semVisDiff>0?'var(--green)':'var(--red)'};margin-left:4px">${semVisDiff>0?'▲':'▼'}${Math.abs(semVisDiff).toFixed(1)}%</span>`:''],
+    ].map(([l,v,c,sub,chip])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+      <div style="font-size:10px;color:var(--text2);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div>
+      <div style="font-size:1.3rem;font-weight:700;color:${c};display:flex;align-items:baseline;gap:0">${v}${chip}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${sub}</div>
+    </div>`).join('')}
+  </div>`;
+
+  // ── Engine breakdown: Google · Bing · Combined ──
   html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.25rem">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
       <div style="font-size:12px;font-weight:600;color:var(--blue-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.875rem;display:flex;align-items:center;gap:5px"><i class="ti ti-brand-google" style="font-size:13px"></i>Google · last 7d</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Clicks (GSC)</span><strong>${gClicks!==null?gClicks.toLocaleString():'—'}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Impressions (GSC)</span><strong>${gImpressions!==null?gImpressions.toLocaleString():'—'}</strong></div>
-        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Sessions (GA4)</span><strong>${gSessions!==null?gSessions.toLocaleString():'—'}</strong></div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Clicks (GSC)</span><strong>${gClicks!=null?gClicks.toLocaleString():'—'}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Impressions</span><strong>${gImpressions!=null?gImpressions.toLocaleString():'—'}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">CTR</span><strong style="color:var(--blue)">${gCTR!=null?gCTR.toFixed(2)+'%':'—'}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">GA4 sessions</span><strong style="color:var(--green)">${gSessions!=null?gSessions.toLocaleString():'—'}</strong></div>
+        ${g.bounceRate!=null?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Bounce rate</span><strong style="color:${g.bounceRate>0.75?'var(--red)':g.bounceRate>0.60?'var(--amber)':'var(--green)'}">${(g.bounceRate*100).toFixed(1)}%</strong></div>`:''}
+        ${g.avgSessionDuration!=null?`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">Avg session</span><strong>${(()=>{const s=g.avgSessionDuration,m=Math.floor(s/60);return m>0?m+'m '+(Math.round(s%60))+'s':Math.round(s)+'s';})()}</strong></div>`:''}
       </div>
       ${gClicks===null?`<button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:.875rem" onclick="connectGSC()"><i class="ti ti-plug"></i> Connect Google</button>`:''}
     </div>
@@ -9000,75 +9130,226 @@ function renderSEOOverview(){
     </div>
   </div>`;
 
-  // ── SEMrush ──
-  const latest=semrushData[0];const latestAIEO=aieoWeeks[0];
+  // ── SEMrush keyword position summary ──
   if(latest){
-    const ranking=latest.keywords.filter(k=>k.position!==null&&k.position!==undefined);
-    const top3=ranking.filter(k=>k.position<=3).length;const top10=ranking.filter(k=>k.position<=10).length;
-    const top20=ranking.filter(k=>k.position<=20).length;const aiOv=ranking.filter(k=>(k.type||'').toLowerCase().includes('ai overview')).length;
-    const improved=latest.keywords.filter(k=>k.diff!==null&&k.diff!==undefined&&k.diff>0).length;const dropped=latest.keywords.filter(k=>k.diff!==null&&k.diff!==undefined&&k.diff<0).length;
-    const top10el=document.getElementById('seo-top10');if(top10el)top10el.textContent=top10;
-    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
-      <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">SEMrush — ${latest.date}</div>
-      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
-        ${[['Top 3',top3,'var(--green)'],['Top 10',top10,'var(--blue)'],['Top 20',top20,'var(--text)'],['AI Overview',aiOv,'var(--purple)'],['↑ Improved',improved,'var(--green)'],['↓ Dropped',dropped,'var(--red)']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem;text-align:center"><div style="font-size:20px;font-weight:700;color:${c}">${v}</div><div style="font-size:11px;color:var(--text2)">${l}</div></div>`).join('')}
-      </div></div>`;
-  } else {
-    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:2rem;text-align:center;margin-bottom:1rem"><i class="ti ti-upload" style="font-size:28px;color:var(--text3);display:block;margin-bottom:.5rem"></i><div style="font-size:13px;color:var(--text2)">Upload a SEMrush CSV to see keyword data</div></div>`;
+    const ranking=(latest.keywords||[]).filter(k=>k.position!==null&&k.position!==undefined);
+    const top3=ranking.filter(k=>k.position<=3).length;
+    const top10r=ranking.filter(k=>k.position<=10).length;
+    const top20=ranking.filter(k=>k.position<=20).length;
+    const aiOv=ranking.filter(k=>(k.type||'').toLowerCase().includes('ai overview')).length;
+    const improved=(latest.keywords||[]).filter(k=>k.diff>0).length;
+    const dropped=(latest.keywords||[]).filter(k=>k.diff<0).length;
+    const movers=(latest.keywords||[]).filter(k=>k.diff!=null&&k.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)).slice(0,5);
+    const top10el=document.getElementById('seo-top10');if(top10el)top10el.textContent=top10r;
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+        <div style="font-size:13px;font-weight:700">SEMrush — ${latest.date}</div>
+        <button class="btn btn-sm" onclick="fetchSemrush()"><i class="ti ti-refresh"></i> Refresh</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:.875rem">
+        ${[['Top 3',top3,'var(--green)'],['Top 10',top10r,'var(--blue)'],['Top 20',top20,'var(--text)'],['AI Overview',aiOv,'var(--purple)'],['↑ Improved',improved,'var(--green)'],['↓ Dropped',dropped,'var(--red)']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.5rem;text-align:center"><div style="font-size:18px;font-weight:700;color:${c}">${v}</div><div style="font-size:10px;color:var(--text2);margin-top:2px">${l}</div></div>`).join('')}
+      </div>
+      ${movers.length?`<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Biggest movers</div>${movers.map(k=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">${esc(k.keyword)}</span><span style="display:flex;align-items:center;gap:6px;flex-shrink:0"><span style="color:var(--text3)">#${k.position}</span><span style="font-weight:700;color:${k.diff>0?'var(--green)':'var(--red)'}">${k.diff>0?'▲':'▼'}${Math.abs(k.diff)}</span></span></div>`).join('')}`:''}
+    </div>`;
+  }else{
+    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No SEMrush data yet</span><button class="btn btn-sm" onclick="fetchSemrush()"><i class="ti ti-plug"></i> Connect SEMrush</button></div>`;
   }
 
-  // ── AIEO ──
-  if(latestAIEO){
-    // Support both old field names (overall/chatgpt) and new ones (aioKeywords/score)
-    const isNewFormat=latestAIEO.fetchedFromApi||latestAIEO.aioKeywords!=null||latestAIEO.score!=null;
-    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
-        <div style="font-size:14px;font-weight:600">AIEO — ${latestAIEO.week}</div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i></button>
-          <button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log</button>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
-        ${[
-          ['AI Overview Kws', latestAIEO.aioKeywords??'—', 'var(--blue)'],
-          ['Ask AI Kws', latestAIEO.aaiKeywords??'—', 'var(--green)'],
-          ['AI Mode Kws', latestAIEO.aimKeywords??'—', 'var(--amber)'],
-          ['Score /100', latestAIEO.score??'—', 'var(--text)'],
-        ].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.5rem;text-align:center">
-          <div style="font-size:18px;font-weight:700;color:${c}">${v}</div>
-          <div style="font-size:10px;color:var(--text3)">${l}</div>
-        </div>`).join('')}
-      </div>
-      ${latestAIEO.mentions!=null?`<div style="font-size:11px;color:var(--text2);margin-top:.625rem">Mentions: <b>${latestAIEO.mentions}</b> · Citations: <b>${latestAIEO.citations??'—'}</b> · Cited Pages: <b>${latestAIEO.citedPages??'—'}</b></div>`:''}
-    </div>`;
-  } else {
-    html+=`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.5rem;text-align:center;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-plug"></i> Fetch</button></div>`;
+  // ── AIEO + Geo in 2-col grid ──
+  const aieoHtml=latestAIEO?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem">
+      <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><i class="ti ti-brain" style="color:var(--purple)"></i> AIEO — ${latestAIEO.week}</div>
+      <div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-refresh"></i></button><button class="btn btn-sm" onclick="openAIEOLog()"><i class="ti ti-plus"></i> Log</button></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      ${[['AI Overview',latestAIEO.aioKeywords??'—','var(--blue)'],['Ask AI',latestAIEO.aaiKeywords??'—','var(--green)'],['AI Mode',latestAIEO.aimKeywords??'—','var(--amber)'],['Score /100',latestAIEO.score??'—','var(--text)']].map(([l,v,c])=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.5rem;text-align:center"><div style="font-size:17px;font-weight:700;color:${c}">${v}</div><div style="font-size:10px;color:var(--text3);margin-top:2px">${l}</div></div>`).join('')}
+    </div>
+    ${latestAIEO.mentions!=null?`<div style="font-size:11px;color:var(--text2);margin-top:.5rem">Mentions: <b>${latestAIEO.mentions}</b> · Citations: <b>${latestAIEO.citations??'—'}</b></div>`:''}
+  </div>`:`<div style="background:var(--surface2);border:1px dashed var(--border2);border-radius:var(--rl);padding:1.25rem;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--text2)">No AIEO data yet</span><button class="btn btn-sm" onclick="fetchAIEOData()"><i class="ti ti-plug"></i> Fetch</button></div>`;
+
+  const MENA_OV=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
+  const geoSrc=googleStats.ga4Countries.length?googleStats.ga4Countries.map(c=>({country:c.country,val:c.sessions,br:c.bounceRate})):(googleStats.countries||[]).map(c=>({country:c.country,val:c.clicks,br:null}));
+  const geoTot=geoSrc.reduce((t,c)=>t+c.val,0)||1;
+  const geoHtml=geoSrc.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:6px"><i class="ti ti-world" style="color:var(--teal)"></i> Traffic by country <span style="font-size:11px;color:var(--text3);font-weight:400">${googleStats.ga4Countries.length?'GA4 organic':'GSC'} · 7d</span></div>
+    ${geoSrc.slice(0,10).map(c=>{const p=c.val/geoTot*100;const isUA=c.country==='Ukraine';const isMENA=MENA_OV.includes(c.country);const tag=isUA?`<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">UA</span>`:isMENA?`<span style="font-size:9px;background:var(--blue-l);color:var(--blue);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">MENA</span>`:'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:110px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.country)}${tag}</div><div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,p).toFixed(1)}%;height:100%;background:${isUA?'var(--amber)':isMENA?'var(--blue)':'var(--text3)'};opacity:.7;border-radius:3px"></div></div><div style="width:48px;text-align:right;font-size:12px;font-weight:600">${c.val.toLocaleString()}</div>${c.br!=null?`<div style="width:40px;text-align:right;font-size:10px;color:${c.br>0.75?'var(--red)':c.br>0.6?'var(--amber)':'var(--text3)'}">${(c.br*100).toFixed(0)}%br</div>`:''}</div>`;}).join('')}
+    <div style="display:flex;gap:8px;margin-top:.5rem;font-size:11px;color:var(--text3)"><span><span style="background:var(--amber-l);color:var(--amber);padding:1px 4px;border-radius:4px;font-weight:700">UA</span> Ukraine</span><span><span style="background:var(--blue-l);color:var(--blue);padding:1px 4px;border-radius:4px;font-weight:700">MENA</span> MENA region</span></div>
+  </div>`:`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem"><div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:6px"><i class="ti ti-world" style="color:var(--teal)"></i> Traffic by country</div><div style="font-size:12px;color:var(--text3)">Connect Google to see country breakdown.</div></div>`;
+
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem"><div>${aieoHtml}</div><div>${geoHtml}</div></div>`;
+
+  // ── Top GSC queries ──
+  const queries=(googleStats.queries||[]).slice(0,8);
+  if(queries.length){
+    const td='font-size:12px;padding:5px 8px;border-bottom:1px solid var(--border)';
+    const th='font-size:10px;font-weight:600;color:var(--text2);padding:5px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em';
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:1rem"><div style="font-size:13px;font-weight:700;padding:.75rem 1rem .25rem">Top search queries (GSC · 7d)</div><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Query</th><th style="${th};text-align:right">Clicks</th><th style="${th};text-align:right">Impr</th><th style="${th};text-align:right">CTR</th><th style="${th};text-align:right">Pos</th></tr></thead><tbody>${queries.map(q=>`<tr><td style="${td}">${esc(q.query||q.keys?.[0]||'')}</td><td style="${td};text-align:right;font-weight:600">${(q.clicks||0).toLocaleString()}</td><td style="${td};text-align:right;color:var(--text2)">${(q.impressions||0).toLocaleString()}</td><td style="${td};text-align:right;color:var(--blue)">${q.ctr||'—'}%</td><td style="${td};text-align:right;color:var(--text2)">${q.position||'—'}</td></tr>`).join('')}</tbody></table></div>`;
   }
 
   // ── Bing 8-week trend ──
   if(bingData.length){
-    const b=bingData[0];
-    const recentWeeks=(b.weeks||[]).slice(0,8);
-    const maxClicks=recentWeeks.length?Math.max(...recentWeeks.map(w=>w.clicks),1):1;
-    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
-      <div style="font-size:14px;font-weight:600;margin-bottom:.875rem">Bing — last 8 weeks</div>
-      ${recentWeeks.length?`<div style="display:flex;gap:8px;align-items:flex-end;height:80px;margin-bottom:.75rem">
-        ${recentWeeks.slice().reverse().map(w=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <div style="width:100%;background:var(--purple);border-radius:3px 3px 0 0;height:${Math.max(4,(w.clicks/maxClicks)*60)}px" title="${w.clicks} clicks"></div>
-          <div style="font-size:9px;color:var(--text3)">${new Date(w.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
-        </div>`).join('')}
-      </div>`:'<div style="font-size:12px;color:var(--text3);margin-bottom:.75rem">Weekly trend available after CSV upload</div>'}
-      <div style="display:flex;gap:16px;font-size:12px;color:var(--text2)">
-        <span>Last 7d: <strong style="color:var(--purple)">${Math.round(b.totalClicks7||0)} clicks</strong></span>
-        <span>Impressions: <strong>${Math.round(b.totalImpressions7||0).toLocaleString()}</strong></span>
-        <span>${(b.dailyRows||b.queries||[]).length} ${b.source==='oauth'?'queries':'days'} loaded</span>
-      </div>
-    </div>`;
+    const b=bingData[0];const recentWeeks=(b.weeks||[]).slice(0,8);const maxClicks=recentWeeks.length?Math.max(...recentWeeks.map(w=>w.clicks),1):1;
+    html+=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem"><div style="font-size:13px;font-weight:700;margin-bottom:.875rem">Bing — last 8 weeks</div>${recentWeeks.length?`<div style="display:flex;gap:6px;align-items:flex-end;height:64px;margin-bottom:.625rem">${recentWeeks.slice().reverse().map(w=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;background:var(--purple);border-radius:2px 2px 0 0;height:${Math.max(3,(w.clicks/maxClicks)*50)}px" title="${w.clicks} clicks"></div><div style="font-size:9px;color:var(--text3)">${new Date(w.date+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div></div>`).join('')}</div>`:'<div style="font-size:12px;color:var(--text3);margin-bottom:.5rem">Weekly trend available after CSV upload</div>'}<div style="display:flex;gap:14px;font-size:12px;color:var(--text2)"><span>Last 7d: <strong style="color:var(--purple)">${Math.round(b.totalClicks7||0)} clicks</strong></span><span>Impressions: <strong>${Math.round(b.totalImpressions7||0).toLocaleString()}</strong></span></div></div>`;
   }
 
   el.innerHTML=html;
 }
+// ══════════════════════════════════════════════════════════════
+// SEO "WHAT CHANGED" TAB — plain-language attention panel
+// Traffic · Engagement · Keyword movers · Organic BOFU · Geo intel
+// ══════════════════════════════════════════════════════════════
+function renderSEOWhatChanged(){
+  const el=document.getElementById('seo-whatchanged');if(!el)return;
+  const g=googleStats;
+  const hasGoogle=g.clicks!==null;
+
+  function pct(cur,prev){if(cur===null||cur===undefined||!prev)return null;return((cur-prev)/prev*100);}
+  function fmtSec(s){if(s===null||s===undefined)return'—';const m=Math.floor(s/60),sec=Math.round(s%60);return m>0?`${m}m ${sec}s`:`${sec}s`;}
+  function deltaChip(cur,prev,goodUp=true){
+    if(cur===null||prev===null||cur===undefined||prev===undefined)return'';
+    const p=pct(cur,prev);if(p===null)return'';
+    const up=p>0,good=goodUp?up:!up;
+    return`<span style="font-size:11px;font-weight:700;color:${good?'var(--green)':'var(--red)'};margin-left:5px">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;
+  }
+  function mRow(label,val,chip,note=''){
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--text2)">${label}</div><div style="display:flex;align-items:center"><strong style="font-size:13px">${val}</strong>${chip}${note?`<span style="font-size:11px;color:var(--text3);margin-left:8px">${note}</span>`:''}</div></div>`;
+  }
+
+  const alerts=[];
+  function flag(level,text){alerts.push({level,text});}
+
+  // ── Traffic pulse ──────────────────────────────────────────
+  const curCTR=(g.clicks&&g.impressions)?g.clicks/g.impressions*100:null;
+  const prevCTR=(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:null;
+  const clicksPct=pct(g.clicks,g.prevClicks);
+  if(clicksPct!==null){
+    if(clicksPct<-15)flag('red',`Organic clicks dropped ${Math.abs(clicksPct).toFixed(1)}% vs prior 7 days — investigate ranking changes or seasonality`);
+    else if(clicksPct>15)flag('green',`Organic clicks up ${clicksPct.toFixed(1)}% vs prior period`);
+  }
+  if(curCTR!==null&&curCTR<2)flag('amber',`GSC CTR is ${curCTR.toFixed(2)}% — below 2% threshold, review meta titles on top impression pages`);
+  else if(pct(curCTR,prevCTR)!==null&&pct(curCTR,prevCTR)<-10)flag('amber',`GSC CTR fell ${Math.abs(pct(curCTR,prevCTR)).toFixed(1)}% — title/description relevance may have slipped`);
+
+  const trafficSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-trending-up" style="color:var(--blue)"></i> Traffic pulse <span style="font-size:11px;color:var(--text3);font-weight:400">last 7d vs prior 7d</span></div>
+    ${hasGoogle?`
+      ${mRow('Organic clicks',g.clicks!=null?g.clicks.toLocaleString():'—',deltaChip(g.clicks,g.prevClicks,true))}
+      ${mRow('Impressions',g.impressions!=null?g.impressions.toLocaleString():'—',deltaChip(g.impressions,g.prevImpressions,true))}
+      ${mRow('GSC CTR',curCTR!=null?curCTR.toFixed(2)+'%':'—',deltaChip(curCTR,prevCTR,true),curCTR!=null&&curCTR<2?'⚠ below 2%':'')}
+      ${mRow('GA4 organic sessions',g.sessions!=null?g.sessions.toLocaleString():'—',deltaChip(g.sessions,g.prevSessions,true))}
+    `:`<div style="font-size:12px;color:var(--text3)">Connect Google (GSC + GA4) to see traffic comparison.</div>`}
+  </div>`;
+
+  // ── Engagement health ──────────────────────────────────────
+  if(g.bounceRate!==null){
+    if(g.bounceRate>0.75)flag('red',`Bounce rate is ${(g.bounceRate*100).toFixed(1)}% — high bounce on organic, landing pages may not match search intent`);
+    else if(g.bounceRate>0.60)flag('amber',`Bounce rate ${(g.bounceRate*100).toFixed(1)}% — moderate, check top landing pages for relevance`);
+    else flag('green',`Bounce rate ${(g.bounceRate*100).toFixed(1)}% — healthy organic engagement`);
+  }
+  if(g.avgSessionDuration!==null&&g.avgSessionDuration<60)flag('amber',`Avg session duration ${fmtSec(g.avgSessionDuration)} — under 1 min, users may not be finding value quickly`);
+
+  const engSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-activity" style="color:var(--green)"></i> Engagement health <span style="font-size:11px;color:var(--text3);font-weight:400">organic sessions · GA4</span></div>
+    ${g.bounceRate!==null?`
+      ${mRow('Bounce rate',(g.bounceRate*100).toFixed(1)+'%',deltaChip(g.bounceRate,g.prevBounceRate,false),g.bounceRate>0.75?'⚠ high':g.bounceRate<0.45?'✓ strong':'')}
+      ${mRow('Avg session duration',fmtSec(g.avgSessionDuration),deltaChip(g.avgSessionDuration,g.prevAvgSessionDuration,true),g.avgSessionDuration!=null&&g.avgSessionDuration<60?'⚠ under 1 min':'')}
+      ${mRow('Pages / session',g.pagesPerSession!=null?g.pagesPerSession.toFixed(1):'—',deltaChip(g.pagesPerSession,g.prevPagesPerSession,true))}
+    `:`<div style="font-size:12px;color:var(--text3)">Engagement metrics load after Google is connected and refreshed.</div>`}
+  </div>`;
+
+  // ── Keyword movers ─────────────────────────────────────────
+  const latest=semrushData[0];
+  let kwSection='';
+  if(latest&&(latest.keywords||[]).length){
+    const movers=(latest.keywords||[]).filter(k=>k.diff!=null&&k.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
+    const climbers=movers.filter(k=>k.diff>0).slice(0,5);
+    const droppers=movers.filter(k=>k.diff<0).slice(0,5);
+    if(droppers.length&&droppers[0].diff<-5)flag('red',`"${droppers[0].keyword}" dropped ${Math.abs(droppers[0].diff)} positions — largest ranking fall`);
+    else if(climbers.length&&climbers[0].diff>5)flag('green',`"${climbers[0].keyword}" gained ${climbers[0].diff} positions — biggest keyword win`);
+    const kRow=(k,up)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.keyword)}</div><div style="display:flex;align-items:center;gap:7px;flex-shrink:0"><span style="font-size:11px;color:var(--text3)">pos ${k.position}</span><span style="font-size:12px;font-weight:700;color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(k.diff)}</span></div></div>`;
+    kwSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-arrows-sort" style="color:var(--amber)"></i> Keyword movers <span style="font-size:11px;color:var(--text3);font-weight:400">SEMrush · ${latest.date||'last snapshot'}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div><div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">↑ Climbers</div>${climbers.length?climbers.map(k=>kRow(k,true)).join(''):'<div style="font-size:12px;color:var(--text3)">No significant gains</div>'}</div>
+        <div><div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">↓ Droppers</div>${droppers.length?droppers.map(k=>kRow(k,false)).join(''):'<div style="font-size:12px;color:var(--text3)">No significant drops ✓</div>'}</div>
+      </div>
+    </div>`;
+  }else{
+    kwSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem"><div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:7px"><i class="ti ti-arrows-sort" style="color:var(--amber)"></i> Keyword movers</div><div style="font-size:12px;color:var(--text3)">Upload a SEMrush CSV or connect SEMrush to see position changes.</div></div>`;
+  }
+
+  // ── Organic BOFU — 3 conversion forms + calls ──────────────
+  const ORGANIC_FORMS=[
+    {label:'Contact form (2-step)',paths:['/contact-form-success/'],icon:'ti-mail',color:'var(--blue)'},
+    {label:'RFP popup (3-step)',paths:['/srfp-success/','/rfp-short-submission/','/rfp-long-submission'],icon:'ti-file-description',color:'var(--purple)'},
+    {label:'Calendly booking',paths:['/calendly-booking-success/'],icon:'ti-calendar-check',color:'var(--green)'},
+  ];
+  function formCountByPath(paths,byUrl){
+    return(byUrl||[]).reduce((t,c)=>{const matched=paths.some(p=>(c.path||'').includes(p.replace(/^\/|\/$/g,'')));return t+(matched?c.count:0);},0);
+  }
+  const curByUrl=conversionStats.byUrl||[];
+  const prevByUrl=prevConversionStats.byUrl||[];
+  const totalOrgForms=ORGANIC_FORMS.reduce((t,f)=>t+formCountByPath(f.paths,curByUrl),0);
+  const prevTotalOrgForms=ORGANIC_FORMS.reduce((t,f)=>t+formCountByPath(f.paths,prevByUrl),0);
+  const callsCount=getRecentCallsCount();
+  if(totalOrgForms===0&&conversionStats.loaded)flag('amber','No organic form submissions recorded — check GA4 conversion events are firing');
+  else if(totalOrgForms>0)flag('green',`${totalOrgForms} organic lead${totalOrgForms!==1?'s':''} from forms this period${prevTotalOrgForms?` (${totalOrgForms>=prevTotalOrgForms?'+':''}${totalOrgForms-prevTotalOrgForms} vs prior)`:''}`);
+
+  const bofuSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:7px"><i class="ti ti-funnel" style="color:var(--purple)"></i> Organic BOFU <span style="font-size:11px;color:var(--text3);font-weight:400">forms + calls · 7d</span></div>
+      <div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="openCallsInput()"><i class="ti ti-phone"></i> Log calls</button>${!conversionStats.loaded?`<button class="btn btn-sm" onclick="fetchConversionData()"><i class="ti ti-refresh"></i> Load</button>`:''}</div>
+    </div>
+    ${ORGANIC_FORMS.map(f=>{const cur=formCountByPath(f.paths,curByUrl);const prev=formCountByPath(f.paths,prevByUrl);const d=prev?((cur-prev)/prev*100):null;const dHtml=d!==null?`<span style="font-size:11px;font-weight:700;color:${d>=0?'var(--green)':'var(--red)'};margin-left:5px">${d>=0?'▲':'▼'}${Math.abs(d).toFixed(0)}%</span>`:'';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ${f.icon}" style="color:${f.color};font-size:14px"></i><span style="font-size:13px">${f.label}</span></div><div style="display:flex;align-items:center"><strong style="font-size:15px;color:${cur>0?f.color:'var(--text3)'}">${cur}</strong>${dHtml}${prev?`<span style="font-size:10px;color:var(--text3);margin-left:6px">was ${prev}</span>`:''}</div></div>`;}).join('')}
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-phone" style="color:var(--amber);font-size:14px"></i><span style="font-size:13px">Phone calls (manual log)</span></div><strong style="font-size:15px;color:${callsCount>0?'var(--amber)':'var(--text3)'}">${callsCount}</strong></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><span style="font-size:12px;font-weight:600;color:var(--text2)">Total organic leads</span><strong style="font-size:16px;color:var(--green)">${totalOrgForms+callsCount}</strong></div>
+    ${!conversionStats.loaded?`<div style="font-size:12px;color:var(--text3);margin-top:.25rem">Connect Google to auto-fetch conversion data.</div>`:''}
+  </div>`;
+
+  // ── Geographic intel ────────────────────────────────────────
+  const MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
+  const geoSrc=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,val:c.sessions,br:c.bounceRate})):(g.countries||[]).map(c=>({country:c.country,val:c.clicks,br:null}));
+  const geoTotal=geoSrc.reduce((t,c)=>t+c.val,0)||1;
+  const ukraine=geoSrc.find(c=>c.country==='Ukraine');
+  const menaTotal=geoSrc.filter(c=>MENA.includes(c.country)).reduce((t,c)=>t+c.val,0);
+  if(ukraine){const ukPct=ukraine.val/geoTotal*100;if(ukPct>20)flag('amber',`Ukraine is ${ukPct.toFixed(1)}% of organic traffic — confirm this is training programme traffic, not inflating B2B metrics`);else flag('green',`Ukraine: ${ukraine.val.toLocaleString()} organic sessions — training programme audience visible`);}
+  if(menaTotal>0){const menaPct=menaTotal/geoTotal*100;flag('green',`MENA: ${menaTotal.toLocaleString()} organic sessions (${menaPct.toFixed(1)}% of total) — MENA campaign generating organic signal`);}
+
+  const geoSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-world" style="color:var(--teal)"></i> Geographic intel <span style="font-size:11px;color:var(--text3);font-weight:400">${g.ga4Countries.length?'GA4 organic':'GSC'} · 7d</span></div>
+    ${geoSrc.length?geoSrc.slice(0,12).map(c=>{const p=c.val/geoTotal*100;const maxP=geoSrc[0].val/geoTotal*100||1;const isUA=c.country==='Ukraine';const isMENA=MENA.includes(c.country);const tag=isUA?`<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">UA</span>`:isMENA?`<span style="font-size:9px;background:var(--blue-l);color:var(--blue);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">MENA</span>`:'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:120px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.country)}${tag}</div><div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,p/maxP*100).toFixed(1)}%;height:100%;background:${isUA?'var(--amber)':isMENA?'var(--blue)':'var(--text3)'};opacity:.7;border-radius:3px"></div></div><div style="width:52px;text-align:right;font-size:12px;font-weight:600">${c.val.toLocaleString()}</div><div style="width:36px;text-align:right;font-size:11px;color:var(--text3)">${p.toFixed(1)}%</div>${c.br!=null?`<div style="width:44px;text-align:right;font-size:10px;color:${c.br>0.75?'var(--red)':c.br>0.6?'var(--amber)':'var(--text3)'}">${(c.br*100).toFixed(0)}%br</div>`:''}</div>`;}).join(''):`<div style="font-size:12px;color:var(--text3)">Connect Google to see country-level data.</div>`}
+    <div style="display:flex;gap:10px;margin-top:.5rem;font-size:11px;color:var(--text3)"><span><span style="background:var(--amber-l);color:var(--amber);padding:1px 4px;border-radius:4px;font-weight:700">UA</span> Ukraine (training programme)</span><span><span style="background:var(--blue-l);color:var(--blue);padding:1px 4px;border-radius:4px;font-weight:700">MENA</span> MENA region</span></div>
+  </div>`;
+
+  // ── Priority attention list ─────────────────────────────────
+  if(!alerts.length)flag('green','All organic metrics look stable — no urgent actions needed');
+  const alertBg={red:'var(--red-l)',amber:'var(--amber-l)',green:'var(--green-l)'};
+  const alertBd={red:'var(--red)',amber:'var(--amber)',green:'var(--green)'};
+  const alertIco={red:'ti-alert-triangle',amber:'ti-alert-circle',green:'ti-circle-check'};
+  const sorted=alerts.sort((a,b)=>({red:0,amber:1,green:2}[a.level]-({red:0,amber:1,green:2}[b.level])));
+  const attentionSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
+    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-sparkles" style="color:var(--blue)"></i> What needs attention</div>
+    <div style="display:flex;flex-direction:column;gap:6px">${sorted.map(a=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:var(--r);background:${alertBg[a.level]};border:1px solid color-mix(in srgb,${alertBd[a.level]} 30%,transparent)"><i class="ti ${alertIco[a.level]}" style="color:${alertBd[a.level]};font-size:14px;margin-top:1px;flex-shrink:0"></i><div style="font-size:13px;line-height:1.5;color:var(--text)">${a.text}</div></div>`).join('')}</div>
+  </div>`;
+
+  const redCount=alerts.filter(a=>a.level==='red').length;
+  const amberCount=alerts.filter(a=>a.level==='amber').length;
+  const tabBtn=document.getElementById('seo-tab-whatchanged');
+  if(tabBtn){const existing=tabBtn.querySelector('.itab-badge');if(existing)existing.remove();if(redCount+amberCount>0)tabBtn.insertAdjacentHTML('beforeend',`<span class="itab-badge" style="background:${redCount>0?'var(--red)':'var(--amber)'};color:white">${redCount+amberCount}</span>`);}
+  const headerColor=redCount>0?'var(--red)':amberCount>0?'var(--amber)':'var(--green)';
+  const headerLabel=redCount>0?`${redCount} issue${redCount!==1?'s':''} need attention`:amberCount>0?`${amberCount} item${amberCount!==1?'s':''} to review`:'All clear';
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.125rem;border-radius:var(--rl);background:color-mix(in srgb,${headerColor} 8%,var(--surface));border:1px solid color-mix(in srgb,${headerColor} 25%,var(--border));margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:10px">
+        <i class="ti ti-sparkles" style="color:${headerColor};font-size:18px"></i>
+        <div><div style="font-size:14px;font-weight:700;color:${headerColor}">${headerLabel}</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Organic SEO · last 7 days · auto-generated</div></div>
+      </div>
+      <button class="btn btn-sm" onclick="fetchLiveData();fetchConversionData();toast('Refreshing…')"><i class="ti ti-refresh"></i> Refresh all</button>
+    </div>
+    ${attentionSection}${trafficSection}${engSection}${kwSection}${bofuSection}${geoSection}
+  `;
+}
+
 function renderKeywordTable(){
   const el=document.getElementById('seo-keywords');if(!el)return;
   const latest=semrushData[0];
@@ -12109,7 +12390,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='8.7';
+const APP_HTML_VERSION='8.8';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
