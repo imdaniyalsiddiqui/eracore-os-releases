@@ -69,6 +69,10 @@ select.sm:focus{border-color:var(--blue)}
 .pill-moreinfo{background:var(--blue-l);color:var(--blue-d)}
 .pill-blocker{background:var(--red-l);color:var(--red)}
 .pill-open{background:var(--surface2);color:var(--text2)}
+.bl-chip{font-size:12px;padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;user-select:none;transition:all .1s}
+.bl-chip:hover{border-color:var(--border2);color:var(--text)}
+.bl-chip.on{background:var(--blue-l);border-color:var(--blue);color:var(--blue);font-weight:600}
+.agent-bot-pane{display:none}.agent-bot-pane.active{display:block}
 .pill-pending{background:var(--amber-l);color:var(--amber)}
 .pill-reviewed{background:var(--blue-l);color:var(--blue-d)}
 .pill-approved{background:var(--green-l);color:var(--green)}
@@ -386,6 +390,14 @@ select.sm:focus{border-color:var(--blue)}
     <div class="nav-sub-item" onclick="navToSub('dashboard','timeline',this)"><i class="ti ti-timeline"></i> Timeline</div>
   </div>
 
+  <div class="nav-item" id="nav-marketingperf" onclick="navTo('marketingperf',this)"><i class="ti ti-chart-dots"></i> Marketing Performance</div>
+  <div class="nav-sub" id="nsub-marketingperf">
+    <div class="nav-sub-item" onclick="navToSub('marketingperf','master',this)"><i class="ti ti-filter"></i> Master view</div>
+    <div class="nav-sub-item" onclick="navToSub('marketingperf','seo',this)"><i class="ti ti-search"></i> SEO / AIEO</div>
+    <div class="nav-sub-item" onclick="navToSub('marketingperf','paid',this)"><i class="ti ti-chart-bar"></i> Paid</div>
+    <div class="nav-sub-item" onclick="navToSub('marketingperf','social',this)"><i class="ti ti-brand-linkedin"></i> Social</div>
+  </div>
+
   <div class="nav-item" id="nav-mktmgmt" onclick="navTo('mktmgmt',this)"><i class="ti ti-layout-list"></i> Marketing Management <span class="nav-badge" id="nb-mktmgmt">0</span></div>
   <div class="nav-sub" id="nsub-mktmgmt">
     <div class="nav-sub-item" onclick="navToSub('mktmgmt','overview',this)"><i class="ti ti-layout-grid"></i> Overview</div>
@@ -404,18 +416,14 @@ select.sm:focus{border-color:var(--blue)}
   <div class="nav-item" id="nav-inventory" onclick="navTo('inventory',this)"><i class="ti ti-archive"></i> Inventory <span class="nav-badge" id="nb-inventory">0</span></div>
 
   <div class="nav-lbl" style="margin-top:.5rem">Sales</div>
-  <div class="nav-item" id="nav-outreach" onclick="navTo('outreach',this)"><i class="ti ti-funnel"></i> Outreach</div>
-  <div class="nav-item" id="nav-presales" onclick="navTo('presales',this)"><i class="ti ti-rocket"></i> Pre-Sales</div>
-
-  <div class="nav-lbl" style="margin-top:.5rem">Performance</div>
-
-  <div class="nav-item" id="nav-marketingperf" onclick="navTo('marketingperf',this)"><i class="ti ti-chart-dots"></i> Marketing Performance</div>
-  <div class="nav-sub" id="nsub-marketingperf">
-    <div class="nav-sub-item" onclick="navToSub('marketingperf','master',this)"><i class="ti ti-filter"></i> Master view</div>
-    <div class="nav-sub-item" onclick="navToSub('marketingperf','seo',this)"><i class="ti ti-search"></i> SEO / AIEO</div>
-    <div class="nav-sub-item" onclick="navToSub('marketingperf','paid',this)"><i class="ti ti-chart-bar"></i> Paid</div>
-    <div class="nav-sub-item" onclick="navToSub('marketingperf','social',this)"><i class="ti ti-brand-linkedin"></i> Social</div>
+  <div class="nav-item" id="nav-sales" onclick="navTo('outreach',this)"><i class="ti ti-briefcase"></i> Sales</div>
+  <div class="nav-sub" id="nsub-sales">
+    <div class="nav-sub-item" onclick="navTo('outreach',this)"><i class="ti ti-funnel"></i> Outreach</div>
+    <div class="nav-sub-item" onclick="navTo('presales',this)"><i class="ti ti-rocket"></i> Pre-Sales</div>
   </div>
+
+  <div class="nav-lbl" style="margin-top:.5rem">Agents</div>
+  <div class="nav-item" id="nav-agents" onclick="navTo('agents',this)"><i class="ti ti-robot"></i> Agents <span class="nav-badge" id="nb-agents">0</span></div>
 
   <div class="nav-lbl" style="margin-top:.5rem">Reporting</div>
 
@@ -519,6 +527,101 @@ select.sm:focus{border-color:var(--blue)}
     <div id="inv-cat-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
   </div>
   <div id="inv-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px"></div>
+</div>
+
+<!-- ═══════════════════════════════ AGENTS ═══════════════════════════════ -->
+<div id="page-agents" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px">
+    <div><div class="pt">Agents</div><div class="ps">AI bots that run recurring marketing work · powered by Claude</div></div>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap" id="agent-chips">
+    <button onclick="agentSelectBot('backlink')" id="abot-backlink" style="height:34px;padding:0 14px;border-radius:100px;border:1px solid var(--text);background:var(--text);color:var(--surface);font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-link"></i> Backlink Bot</button>
+    <button disabled style="height:34px;padding:0 14px;border-radius:100px;border:1px dashed var(--border2);background:transparent;color:var(--text3);font-size:13px;cursor:default;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-plus"></i> More bots coming</button>
+  </div>
+
+  <div id="agent-bot-backlink" class="agent-bot-pane active">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:36px;height:36px;border-radius:var(--r);background:var(--blue-l);display:flex;align-items:center;justify-content:center"><i class="ti ti-link" style="color:var(--blue);font-size:18px"></i></div>
+        <div><div style="font-size:14px;font-weight:700">Backlink Bot</div><div style="font-size:12px;color:var(--text2)">Finds link opportunities for target keywords · drafts ready-to-post text · tracks a queue to completion</div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px">Found <strong id="bl-s-found">0</strong></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px">Queue <strong id="bl-s-queue">0</strong></div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;font-size:12px">Done <strong id="bl-s-done" style="color:var(--green)">0</strong></div>
+      </div>
+    </div>
+
+    <div class="itabs">
+      <button class="itab active" id="bltab-btn-scanner" onclick="blSwitchTab('scanner',this)"><i class="ti ti-radar"></i> Scanner</button>
+      <button class="itab" id="bltab-btn-queue" onclick="blSwitchTab('queue',this)"><i class="ti ti-list-check"></i> Link queue <span class="itab-badge" id="bl-queue-badge">0</span></button>
+      <button class="itab" id="bltab-btn-settings" onclick="blSwitchTab('settings',this)"><i class="ti ti-settings"></i> Settings</button>
+    </div>
+
+    <div id="bltab-scanner" class="itab-pane active">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Target keywords</div>
+          <div id="bl-kw-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+          <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Target pages (link destinations)</div>
+          <div id="bl-pg-pills" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:1rem">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Source types</div>
+        <div id="bl-src-pills" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem">
+          <span class="bl-chip on" data-src="Reddit">Reddit</span>
+          <span class="bl-chip on" data-src="Quora">Quora</span>
+          <span class="bl-chip on" data-src="niche forums">Forums</span>
+          <span class="bl-chip on" data-src="blog comments">Blog comments</span>
+          <span class="bl-chip on" data-src="resource/directory pages">Directories</span>
+          <span class="bl-chip on" data-src="Q&A sites">Q&amp;A sites</span>
+          <span class="bl-chip on" data-src="guest post opportunities">Guest posts</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end">
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Min. Domain Authority</div><select id="bl-min-da" class="sm" style="width:100%"><option value="0">Any</option><option value="20" selected>20+</option><option value="30">30+</option><option value="40">40+</option></select></div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Max spam score</div><select id="bl-max-spam" class="sm" style="width:100%"><option value="100">Any</option><option value="30" selected>Under 30%</option><option value="15">Under 15%</option><option value="5">Under 5%</option></select></div>
+          <div><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Results per keyword</div><select id="bl-results-n" class="sm" style="width:100%"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option></select></div>
+          <button class="btn btn-primary" id="bl-scan-btn" onclick="blRunScan()"><i class="ti ti-radar"></i> <span id="bl-scan-txt">Scan for opportunities</span></button>
+        </div>
+        <div id="bl-scan-prog" style="display:none;margin-top:10px">
+          <div style="background:var(--surface2);border-radius:2px;height:3px;overflow:hidden"><div id="bl-prog-fill" style="height:100%;background:var(--blue);transition:width .4s;width:0%"></div></div>
+          <div id="bl-prog-label" style="font-size:11px;color:var(--text2);margin-top:5px"></div>
+        </div>
+      </div>
+      <div id="bl-scan-results"></div>
+    </div>
+
+    <div id="bltab-queue" class="itab-pane">
+      <div style="background:var(--blue-l);border:1px solid color-mix(in srgb,var(--blue) 30%,transparent);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--blue-d);margin-bottom:1rem;line-height:1.6">Approved opportunities land here with ready-to-post text. Open the page, paste, mark done.</div>
+      <div id="bl-queue-list"></div>
+    </div>
+
+    <div id="bltab-settings" class="itab-pane">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.875rem">Keywords to track</div>
+          <div id="bl-kw-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:.75rem"></div>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="bl-new-kw" placeholder="e.g. electrical BIM services" style="flex:1;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')blAddKw()">
+            <button class="btn" onclick="blAddKw()"><i class="ti ti-plus"></i> Add</button>
+          </div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
+          <div style="font-size:13px;font-weight:700;margin-bottom:.875rem">Target pages</div>
+          <div id="bl-pg-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:.75rem"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <input type="text" id="bl-new-pg-label" placeholder="Label" style="flex:1;min-width:120px;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);outline:none">
+            <input type="text" id="bl-new-pg-url" placeholder="eracore.com/…" style="flex:2;min-width:160px;height:36px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);outline:none" onkeydown="if(event.key==='Enter')blAddPage()">
+            <button class="btn" onclick="blAddPage()"><i class="ti ti-plus"></i> Add</button>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:1rem">Uses the Anthropic API key saved in Settings. Data lives locally in this app.</div>
+    </div>
+  </div>
 </div>
 
 <div id="page-standup" class="page">
@@ -633,7 +736,6 @@ select.sm:focus{border-color:var(--blue)}
   </div>
   <div class="itabs">
     <button class="itab active" onclick="switchSEOTab('overview',this)">Overview</button>
-    <button class="itab" onclick="switchSEOTab('whatchanged',this)" id="seo-tab-whatchanged"><i class="ti ti-sparkles" style="font-size:11px"></i> What changed</button>
     <button class="itab" onclick="switchSEOTab('gsc',this)">Google</button>
     <button class="itab" onclick="switchSEOTab('bing',this)">Bing</button>
     <button class="itab" onclick="switchSEOTab('semrush',this)">SEMrush</button>
@@ -642,7 +744,6 @@ select.sm:focus{border-color:var(--blue)}
     <button class="itab" onclick="switchSEOTab('deliverables',this)">Deliverables</button>
   </div>
   <div id="seo-overview" class="itab-pane active"></div>
-  <div id="seo-whatchanged" class="itab-pane"></div>
   <div id="seo-gsc" class="itab-pane"></div>
   <div id="seo-bing" class="itab-pane"></div>
   <div id="seo-semrush" class="itab-pane"></div>
@@ -4654,9 +4755,11 @@ const PAGE_MAP={
   socialdash:'page-socialdash',mktdash:'page-mktdash',
   standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview',
   outreach:'page-outreach', presales:'page-presales',
-  inventory:'page-inventory'
+  inventory:'page-inventory',
+  agents:'page-agents'
 };
 const REPORTING_PAGES=new Set(['mzreport','asanaview','standup','reporting']);
+const SALES_PAGES=new Set(['outreach','presales']);
 
 function navTo(id, el){
   if(typeof canAccess==='function'&&!canAccess(id)){toast('You don\'t have access to this view');return;}
@@ -4669,6 +4772,9 @@ function navTo(id, el){
   // For reporting sub-pages, highlight the Reporting nav item
   if(REPORTING_PAGES.has(id)){
     document.getElementById('nav-reporting')?.classList.add('active');
+  } else if(SALES_PAGES.has(id)){
+    document.getElementById('nav-sales')?.classList.add('active');
+    if(el&&el.classList.contains('nav-sub-item'))el.classList.add('active');
   } else {
     const navEl=document.getElementById('nav-'+id);if(navEl)navEl.classList.add('active');
   }
@@ -4704,6 +4810,7 @@ function onNavTo(id){
   if(id==='strategy')renderStrategies();
   if(id==='principles')renderPrinciples();
   if(id==='inventory'){invLoad();invRender();}
+  if(id==='agents'){agentLoad();agentRender();}
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
   if(id==='settings'){initSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
@@ -8294,6 +8401,7 @@ function _updateNavBadges(){
   const sel=document.getElementById('nb-strategy');if(sel)sel.textContent=strategies.length;
   const pel=document.getElementById('nb-principles');if(pel)pel.textContent=principles.length;
   safeRun('inv badge',()=>{invLoad();invPaintBadge();});
+  safeRun('agents badge',()=>agentLoad());
 }
 
 // ── NOTIFICATION BELL ────────────────────────────────────────────────────
@@ -8592,6 +8700,20 @@ async function exchangeGSCCode(){
     toast('Exchange failed: '+e.message);
   }
 }
+// Backlink Bot state — declared early so startup badge refresh can read it
+const BL_SK='ec-agents-bl-v1';
+let blState={
+  keywords:['electrical BIM services','MEP coordination','MEP BIM','VDC services','clash detection BIM'],
+  pages:[
+    {label:'Electrical BIM Services',url:'https://eracore.com/electrical-bim-services'},
+    {label:'Data Centers',url:'https://eracore.com/data-centers'},
+    {label:'MEP BIM',url:'https://eracore.com/mep-bim'},
+    {label:'VDC Services',url:'https://eracore.com/vdc-services'}
+  ],
+  opportunities:[],queue:[]
+};
+let blBusy=false;
+
 let googleStats={
   clicks:null,impressions:null,sessions:null,
   pages:[],countries:[],queries:[],
@@ -8756,10 +8878,9 @@ function updateSEOTopCounters(){
 }
 function switchSEOTab(tab,el){
   document.querySelectorAll('#page-seodash .itab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['overview','whatchanged','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
+  ['overview','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
   const active=document.getElementById('seo-'+tab);if(active)active.classList.add('active');
   if(tab==='overview')renderSEOOverview();
-  else if(tab==='whatchanged')renderSEOWhatChanged();
   else if(tab==='gsc')renderGSCTab();
   else if(tab==='bing')renderBingTab();
   else if(tab==='semrush')renderSEMrushTab();
@@ -9052,6 +9173,57 @@ function loadBingData(){
   }catch(e){bingData=[];}
 }
 
+// ── SEO "What changed" tile — organic edition of pfInsights/pfChangeCard ──
+function seoChangeCard(){
+  const g=googleStats;
+  if(g.clicks===null&&g.prevClicks===null&&!semrushData.length)return'';
+  const b=[];
+  const fmtSec=s=>{if(s==null)return'—';const m=Math.floor(s/60),x=Math.round(s%60);return m?`${m}m ${x}s`:`${x}s`;};
+  // Traffic
+  if(g.clicks!=null)b.push(`Organic clicks <strong>${g.clicks.toLocaleString()}</strong>${pfArrow(g.clicks,g.prevClicks,true)}`);
+  if(g.impressions!=null)b.push(`Impressions <strong>${g.impressions.toLocaleString()}</strong>${pfArrow(g.impressions,g.prevImpressions,true)}`);
+  const ctrC=(g.clicks&&g.impressions)?g.clicks/g.impressions*100:0,ctrP=(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:0;
+  if(ctrC)b.push(`CTR <strong>${ctrC.toFixed(2)}%</strong>${pfArrow(ctrC,ctrP,true)}${ctrC<2?' <span style="color:var(--amber)">— below 2%, review meta titles</span>':''}`);
+  if(g.sessions!=null)b.push(`GA4 organic sessions <strong>${g.sessions.toLocaleString()}</strong>${pfArrow(g.sessions,g.prevSessions,true)}`);
+  // Engagement
+  if(g.bounceRate!=null){
+    const br=g.bounceRate*100;
+    b.push(`Bounce rate <strong>${br.toFixed(1)}%</strong>${pfArrow(g.bounceRate,g.prevBounceRate,false)}${br>75?' <span style="color:var(--red)">— high, landing pages may not match intent</span>':br<45?' <span style="color:var(--green)">— healthy</span>':''}`);
+  }
+  if(g.avgSessionDuration!=null)b.push(`Avg session <strong>${fmtSec(g.avgSessionDuration)}</strong>${pfArrow(g.avgSessionDuration,g.prevAvgSessionDuration,true)}${g.avgSessionDuration<60?' <span style="color:var(--amber)">— under 1 min</span>':''}`);
+  // Keyword movers
+  const latest=semrushData[0];
+  if(latest&&(latest.keywords||[]).length){
+    const mv=(latest.keywords||[]).filter(k=>k.diff!=null&&k.diff!==0).sort((a,c)=>Math.abs(c.diff)-Math.abs(a.diff));
+    const up=mv.find(k=>k.diff>0),dn=mv.find(k=>k.diff<0);
+    if(up)b.push(`<strong>${esc(up.keyword)}</strong> climbed <span style="color:var(--green);font-weight:700">▲${up.diff}</span> to #${up.position}`);
+    if(dn)b.push(`<strong>${esc(dn.keyword)}</strong> dropped <span style="color:var(--red);font-weight:700">▼${Math.abs(dn.diff)}</span> to #${dn.position}`);
+  }
+  // Organic BOFU — the 3 conversion forms + calls
+  const FORMS=[['Contact form',['contact-form-success']],['RFP',['srfp-success','rfp-short-submission','rfp-long-submission']],['Calendly',['calendly-booking-success']]];
+  const cnt=(paths,by)=>(by||[]).reduce((t,c)=>t+(paths.some(p=>(c.path||'').includes(p))?c.count:0),0);
+  if(conversionStats.loaded){
+    const parts=FORMS.map(([l,p])=>{const c=cnt(p,conversionStats.byUrl),pr=cnt(p,prevConversionStats.byUrl);return`${l} <strong>${c}</strong>${pr?` <span style="color:var(--text3)">(was ${pr})</span>`:''}`;});
+    const tot=FORMS.reduce((t,[,p])=>t+cnt(p,conversionStats.byUrl),0),calls=getRecentCallsCount();
+    b.push(`Organic BOFU: ${parts.join(' · ')}${calls?` · Calls <strong>${calls}</strong>`:''} → <strong style="color:var(--green)">${tot+calls} leads</strong>${tot===0?' <span style="color:var(--amber)">— check GA4 events are firing</span>':''}`);
+  }
+  // Geo — Ukraine / MENA
+  const MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
+  const geo=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,v:c.sessions})):(g.countries||[]).map(c=>({country:c.country,v:c.clicks}));
+  const tot=geo.reduce((t,c)=>t+c.v,0);
+  if(tot){
+    const ua=geo.find(c=>c.country==='Ukraine'),us=geo.find(c=>c.country==='United States');
+    const mena=geo.filter(c=>MENA.includes(c.country)).reduce((t,c)=>t+c.v,0);
+    const parts=[];
+    if(us)parts.push(`US <strong>${(us.v/tot*100).toFixed(0)}%</strong>`);
+    if(ua)parts.push(`Ukraine <strong>${(ua.v/tot*100).toFixed(0)}%</strong>${ua.v/tot>0.2?' <span style="color:var(--amber)">— inflating B2B numbers</span>':''}`);
+    if(mena)parts.push(`MENA <strong>${(mena/tot*100).toFixed(0)}%</strong>`);
+    if(parts.length)b.push(`Geo split: ${parts.join(' · ')}`);
+  }
+  if(!b.length)return'';
+  const pTo=new Date(Date.now()-8*86400000).toISOString().slice(0,10),pFrom=new Date(Date.now()-15*86400000).toISOString().slice(0,10);
+  return pfChangeCard(b,pFrom,pTo);
+}
 function renderSEOOverview(){
   const el=document.getElementById('seo-overview');if(!el)return;
   let html='';
@@ -9096,6 +9268,9 @@ function renderSEOOverview(){
       <div style="font-size:10px;color:var(--text3);margin-top:3px">${sub}</div>
     </div>`).join('')}
   </div>`;
+
+  // ── What changed (same engine as the ads tabs) ──
+  html+=seoChangeCard();
 
   // ── Engine breakdown: Google · Bing · Combined ──
   html+=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.25rem">
@@ -9194,162 +9369,6 @@ function renderSEOOverview(){
 
   el.innerHTML=html;
 }
-// ══════════════════════════════════════════════════════════════
-// SEO "WHAT CHANGED" TAB — plain-language attention panel
-// Traffic · Engagement · Keyword movers · Organic BOFU · Geo intel
-// ══════════════════════════════════════════════════════════════
-function renderSEOWhatChanged(){
-  const el=document.getElementById('seo-whatchanged');if(!el)return;
-  const g=googleStats;
-  const hasGoogle=g.clicks!==null;
-
-  function pct(cur,prev){if(cur===null||cur===undefined||!prev)return null;return((cur-prev)/prev*100);}
-  function fmtSec(s){if(s===null||s===undefined)return'—';const m=Math.floor(s/60),sec=Math.round(s%60);return m>0?`${m}m ${sec}s`:`${sec}s`;}
-  function deltaChip(cur,prev,goodUp=true){
-    if(cur===null||prev===null||cur===undefined||prev===undefined)return'';
-    const p=pct(cur,prev);if(p===null)return'';
-    const up=p>0,good=goodUp?up:!up;
-    return`<span style="font-size:11px;font-weight:700;color:${good?'var(--green)':'var(--red)'};margin-left:5px">${up?'▲':'▼'}${Math.abs(p).toFixed(1)}%</span>`;
-  }
-  function mRow(label,val,chip,note=''){
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:13px;color:var(--text2)">${label}</div><div style="display:flex;align-items:center"><strong style="font-size:13px">${val}</strong>${chip}${note?`<span style="font-size:11px;color:var(--text3);margin-left:8px">${note}</span>`:''}</div></div>`;
-  }
-
-  const alerts=[];
-  function flag(level,text){alerts.push({level,text});}
-
-  // ── Traffic pulse ──────────────────────────────────────────
-  const curCTR=(g.clicks&&g.impressions)?g.clicks/g.impressions*100:null;
-  const prevCTR=(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:null;
-  const clicksPct=pct(g.clicks,g.prevClicks);
-  if(clicksPct!==null){
-    if(clicksPct<-15)flag('red',`Organic clicks dropped ${Math.abs(clicksPct).toFixed(1)}% vs prior 7 days — investigate ranking changes or seasonality`);
-    else if(clicksPct>15)flag('green',`Organic clicks up ${clicksPct.toFixed(1)}% vs prior period`);
-  }
-  if(curCTR!==null&&curCTR<2)flag('amber',`GSC CTR is ${curCTR.toFixed(2)}% — below 2% threshold, review meta titles on top impression pages`);
-  else if(pct(curCTR,prevCTR)!==null&&pct(curCTR,prevCTR)<-10)flag('amber',`GSC CTR fell ${Math.abs(pct(curCTR,prevCTR)).toFixed(1)}% — title/description relevance may have slipped`);
-
-  const trafficSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-trending-up" style="color:var(--blue)"></i> Traffic pulse <span style="font-size:11px;color:var(--text3);font-weight:400">last 7d vs prior 7d</span></div>
-    ${hasGoogle?`
-      ${mRow('Organic clicks',g.clicks!=null?g.clicks.toLocaleString():'—',deltaChip(g.clicks,g.prevClicks,true))}
-      ${mRow('Impressions',g.impressions!=null?g.impressions.toLocaleString():'—',deltaChip(g.impressions,g.prevImpressions,true))}
-      ${mRow('GSC CTR',curCTR!=null?curCTR.toFixed(2)+'%':'—',deltaChip(curCTR,prevCTR,true),curCTR!=null&&curCTR<2?'⚠ below 2%':'')}
-      ${mRow('GA4 organic sessions',g.sessions!=null?g.sessions.toLocaleString():'—',deltaChip(g.sessions,g.prevSessions,true))}
-    `:`<div style="font-size:12px;color:var(--text3)">Connect Google (GSC + GA4) to see traffic comparison.</div>`}
-  </div>`;
-
-  // ── Engagement health ──────────────────────────────────────
-  if(g.bounceRate!==null){
-    if(g.bounceRate>0.75)flag('red',`Bounce rate is ${(g.bounceRate*100).toFixed(1)}% — high bounce on organic, landing pages may not match search intent`);
-    else if(g.bounceRate>0.60)flag('amber',`Bounce rate ${(g.bounceRate*100).toFixed(1)}% — moderate, check top landing pages for relevance`);
-    else flag('green',`Bounce rate ${(g.bounceRate*100).toFixed(1)}% — healthy organic engagement`);
-  }
-  if(g.avgSessionDuration!==null&&g.avgSessionDuration<60)flag('amber',`Avg session duration ${fmtSec(g.avgSessionDuration)} — under 1 min, users may not be finding value quickly`);
-
-  const engSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-activity" style="color:var(--green)"></i> Engagement health <span style="font-size:11px;color:var(--text3);font-weight:400">organic sessions · GA4</span></div>
-    ${g.bounceRate!==null?`
-      ${mRow('Bounce rate',(g.bounceRate*100).toFixed(1)+'%',deltaChip(g.bounceRate,g.prevBounceRate,false),g.bounceRate>0.75?'⚠ high':g.bounceRate<0.45?'✓ strong':'')}
-      ${mRow('Avg session duration',fmtSec(g.avgSessionDuration),deltaChip(g.avgSessionDuration,g.prevAvgSessionDuration,true),g.avgSessionDuration!=null&&g.avgSessionDuration<60?'⚠ under 1 min':'')}
-      ${mRow('Pages / session',g.pagesPerSession!=null?g.pagesPerSession.toFixed(1):'—',deltaChip(g.pagesPerSession,g.prevPagesPerSession,true))}
-    `:`<div style="font-size:12px;color:var(--text3)">Engagement metrics load after Google is connected and refreshed.</div>`}
-  </div>`;
-
-  // ── Keyword movers ─────────────────────────────────────────
-  const latest=semrushData[0];
-  let kwSection='';
-  if(latest&&(latest.keywords||[]).length){
-    const movers=(latest.keywords||[]).filter(k=>k.diff!=null&&k.diff!==0).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff));
-    const climbers=movers.filter(k=>k.diff>0).slice(0,5);
-    const droppers=movers.filter(k=>k.diff<0).slice(0,5);
-    if(droppers.length&&droppers[0].diff<-5)flag('red',`"${droppers[0].keyword}" dropped ${Math.abs(droppers[0].diff)} positions — largest ranking fall`);
-    else if(climbers.length&&climbers[0].diff>5)flag('green',`"${climbers[0].keyword}" gained ${climbers[0].diff} positions — biggest keyword win`);
-    const kRow=(k,up)=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k.keyword)}</div><div style="display:flex;align-items:center;gap:7px;flex-shrink:0"><span style="font-size:11px;color:var(--text3)">pos ${k.position}</span><span style="font-size:12px;font-weight:700;color:${up?'var(--green)':'var(--red)'}">${up?'▲':'▼'}${Math.abs(k.diff)}</span></div></div>`;
-    kwSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-      <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-arrows-sort" style="color:var(--amber)"></i> Keyword movers <span style="font-size:11px;color:var(--text3);font-weight:400">SEMrush · ${latest.date||'last snapshot'}</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div><div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">↑ Climbers</div>${climbers.length?climbers.map(k=>kRow(k,true)).join(''):'<div style="font-size:12px;color:var(--text3)">No significant gains</div>'}</div>
-        <div><div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">↓ Droppers</div>${droppers.length?droppers.map(k=>kRow(k,false)).join(''):'<div style="font-size:12px;color:var(--text3)">No significant drops ✓</div>'}</div>
-      </div>
-    </div>`;
-  }else{
-    kwSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem"><div style="font-size:13px;font-weight:700;margin-bottom:.5rem;display:flex;align-items:center;gap:7px"><i class="ti ti-arrows-sort" style="color:var(--amber)"></i> Keyword movers</div><div style="font-size:12px;color:var(--text3)">Upload a SEMrush CSV or connect SEMrush to see position changes.</div></div>`;
-  }
-
-  // ── Organic BOFU — 3 conversion forms + calls ──────────────
-  const ORGANIC_FORMS=[
-    {label:'Contact form (2-step)',paths:['/contact-form-success/'],icon:'ti-mail',color:'var(--blue)'},
-    {label:'RFP popup (3-step)',paths:['/srfp-success/','/rfp-short-submission/','/rfp-long-submission'],icon:'ti-file-description',color:'var(--purple)'},
-    {label:'Calendly booking',paths:['/calendly-booking-success/'],icon:'ti-calendar-check',color:'var(--green)'},
-  ];
-  function formCountByPath(paths,byUrl){
-    return(byUrl||[]).reduce((t,c)=>{const matched=paths.some(p=>(c.path||'').includes(p.replace(/^\/|\/$/g,'')));return t+(matched?c.count:0);},0);
-  }
-  const curByUrl=conversionStats.byUrl||[];
-  const prevByUrl=prevConversionStats.byUrl||[];
-  const totalOrgForms=ORGANIC_FORMS.reduce((t,f)=>t+formCountByPath(f.paths,curByUrl),0);
-  const prevTotalOrgForms=ORGANIC_FORMS.reduce((t,f)=>t+formCountByPath(f.paths,prevByUrl),0);
-  const callsCount=getRecentCallsCount();
-  if(totalOrgForms===0&&conversionStats.loaded)flag('amber','No organic form submissions recorded — check GA4 conversion events are firing');
-  else if(totalOrgForms>0)flag('green',`${totalOrgForms} organic lead${totalOrgForms!==1?'s':''} from forms this period${prevTotalOrgForms?` (${totalOrgForms>=prevTotalOrgForms?'+':''}${totalOrgForms-prevTotalOrgForms} vs prior)`:''}`);
-
-  const bofuSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:7px"><i class="ti ti-funnel" style="color:var(--purple)"></i> Organic BOFU <span style="font-size:11px;color:var(--text3);font-weight:400">forms + calls · 7d</span></div>
-      <div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="openCallsInput()"><i class="ti ti-phone"></i> Log calls</button>${!conversionStats.loaded?`<button class="btn btn-sm" onclick="fetchConversionData()"><i class="ti ti-refresh"></i> Load</button>`:''}</div>
-    </div>
-    ${ORGANIC_FORMS.map(f=>{const cur=formCountByPath(f.paths,curByUrl);const prev=formCountByPath(f.paths,prevByUrl);const d=prev?((cur-prev)/prev*100):null;const dHtml=d!==null?`<span style="font-size:11px;font-weight:700;color:${d>=0?'var(--green)':'var(--red)'};margin-left:5px">${d>=0?'▲':'▼'}${Math.abs(d).toFixed(0)}%</span>`:'';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ${f.icon}" style="color:${f.color};font-size:14px"></i><span style="font-size:13px">${f.label}</span></div><div style="display:flex;align-items:center"><strong style="font-size:15px;color:${cur>0?f.color:'var(--text3)'}">${cur}</strong>${dHtml}${prev?`<span style="font-size:10px;color:var(--text3);margin-left:6px">was ${prev}</span>`:''}</div></div>`;}).join('')}
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><i class="ti ti-phone" style="color:var(--amber);font-size:14px"></i><span style="font-size:13px">Phone calls (manual log)</span></div><strong style="font-size:15px;color:${callsCount>0?'var(--amber)':'var(--text3)'}">${callsCount}</strong></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0"><span style="font-size:12px;font-weight:600;color:var(--text2)">Total organic leads</span><strong style="font-size:16px;color:var(--green)">${totalOrgForms+callsCount}</strong></div>
-    ${!conversionStats.loaded?`<div style="font-size:12px;color:var(--text3);margin-top:.25rem">Connect Google to auto-fetch conversion data.</div>`:''}
-  </div>`;
-
-  // ── Geographic intel ────────────────────────────────────────
-  const MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
-  const geoSrc=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,val:c.sessions,br:c.bounceRate})):(g.countries||[]).map(c=>({country:c.country,val:c.clicks,br:null}));
-  const geoTotal=geoSrc.reduce((t,c)=>t+c.val,0)||1;
-  const ukraine=geoSrc.find(c=>c.country==='Ukraine');
-  const menaTotal=geoSrc.filter(c=>MENA.includes(c.country)).reduce((t,c)=>t+c.val,0);
-  if(ukraine){const ukPct=ukraine.val/geoTotal*100;if(ukPct>20)flag('amber',`Ukraine is ${ukPct.toFixed(1)}% of organic traffic — confirm this is training programme traffic, not inflating B2B metrics`);else flag('green',`Ukraine: ${ukraine.val.toLocaleString()} organic sessions — training programme audience visible`);}
-  if(menaTotal>0){const menaPct=menaTotal/geoTotal*100;flag('green',`MENA: ${menaTotal.toLocaleString()} organic sessions (${menaPct.toFixed(1)}% of total) — MENA campaign generating organic signal`);}
-
-  const geoSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-world" style="color:var(--teal)"></i> Geographic intel <span style="font-size:11px;color:var(--text3);font-weight:400">${g.ga4Countries.length?'GA4 organic':'GSC'} · 7d</span></div>
-    ${geoSrc.length?geoSrc.slice(0,12).map(c=>{const p=c.val/geoTotal*100;const maxP=geoSrc[0].val/geoTotal*100||1;const isUA=c.country==='Ukraine';const isMENA=MENA.includes(c.country);const tag=isUA?`<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">UA</span>`:isMENA?`<span style="font-size:9px;background:var(--blue-l);color:var(--blue);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">MENA</span>`:'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:120px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.country)}${tag}</div><div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,p/maxP*100).toFixed(1)}%;height:100%;background:${isUA?'var(--amber)':isMENA?'var(--blue)':'var(--text3)'};opacity:.7;border-radius:3px"></div></div><div style="width:52px;text-align:right;font-size:12px;font-weight:600">${c.val.toLocaleString()}</div><div style="width:36px;text-align:right;font-size:11px;color:var(--text3)">${p.toFixed(1)}%</div>${c.br!=null?`<div style="width:44px;text-align:right;font-size:10px;color:${c.br>0.75?'var(--red)':c.br>0.6?'var(--amber)':'var(--text3)'}">${(c.br*100).toFixed(0)}%br</div>`:''}</div>`;}).join(''):`<div style="font-size:12px;color:var(--text3)">Connect Google to see country-level data.</div>`}
-    <div style="display:flex;gap:10px;margin-top:.5rem;font-size:11px;color:var(--text3)"><span><span style="background:var(--amber-l);color:var(--amber);padding:1px 4px;border-radius:4px;font-weight:700">UA</span> Ukraine (training programme)</span><span><span style="background:var(--blue-l);color:var(--blue);padding:1px 4px;border-radius:4px;font-weight:700">MENA</span> MENA region</span></div>
-  </div>`;
-
-  // ── Priority attention list ─────────────────────────────────
-  if(!alerts.length)flag('green','All organic metrics look stable — no urgent actions needed');
-  const alertBg={red:'var(--red-l)',amber:'var(--amber-l)',green:'var(--green-l)'};
-  const alertBd={red:'var(--red)',amber:'var(--amber)',green:'var(--green)'};
-  const alertIco={red:'ti-alert-triangle',amber:'ti-alert-circle',green:'ti-circle-check'};
-  const sorted=alerts.sort((a,b)=>({red:0,amber:1,green:2}[a.level]-({red:0,amber:1,green:2}[b.level])));
-  const attentionSection=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;margin-bottom:1rem">
-    <div style="font-size:13px;font-weight:700;margin-bottom:.875rem;display:flex;align-items:center;gap:7px"><i class="ti ti-sparkles" style="color:var(--blue)"></i> What needs attention</div>
-    <div style="display:flex;flex-direction:column;gap:6px">${sorted.map(a=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:var(--r);background:${alertBg[a.level]};border:1px solid color-mix(in srgb,${alertBd[a.level]} 30%,transparent)"><i class="ti ${alertIco[a.level]}" style="color:${alertBd[a.level]};font-size:14px;margin-top:1px;flex-shrink:0"></i><div style="font-size:13px;line-height:1.5;color:var(--text)">${a.text}</div></div>`).join('')}</div>
-  </div>`;
-
-  const redCount=alerts.filter(a=>a.level==='red').length;
-  const amberCount=alerts.filter(a=>a.level==='amber').length;
-  const tabBtn=document.getElementById('seo-tab-whatchanged');
-  if(tabBtn){const existing=tabBtn.querySelector('.itab-badge');if(existing)existing.remove();if(redCount+amberCount>0)tabBtn.insertAdjacentHTML('beforeend',`<span class="itab-badge" style="background:${redCount>0?'var(--red)':'var(--amber)'};color:white">${redCount+amberCount}</span>`);}
-  const headerColor=redCount>0?'var(--red)':amberCount>0?'var(--amber)':'var(--green)';
-  const headerLabel=redCount>0?`${redCount} issue${redCount!==1?'s':''} need attention`:amberCount>0?`${amberCount} item${amberCount!==1?'s':''} to review`:'All clear';
-
-  el.innerHTML=`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 1.125rem;border-radius:var(--rl);background:color-mix(in srgb,${headerColor} 8%,var(--surface));border:1px solid color-mix(in srgb,${headerColor} 25%,var(--border));margin-bottom:1.25rem">
-      <div style="display:flex;align-items:center;gap:10px">
-        <i class="ti ti-sparkles" style="color:${headerColor};font-size:18px"></i>
-        <div><div style="font-size:14px;font-weight:700;color:${headerColor}">${headerLabel}</div><div style="font-size:11px;color:var(--text2);margin-top:1px">Organic SEO · last 7 days · auto-generated</div></div>
-      </div>
-      <button class="btn btn-sm" onclick="fetchLiveData();fetchConversionData();toast('Refreshing…')"><i class="ti ti-refresh"></i> Refresh all</button>
-    </div>
-    ${attentionSection}${trafficSection}${engSection}${kwSection}${bofuSection}${geoSection}
-  `;
-}
-
 function renderKeywordTable(){
   const el=document.getElementById('seo-keywords');if(!el)return;
   const latest=semrushData[0];
@@ -12449,6 +12468,7 @@ const PERMISSION_PAGES=[
   {id:'seodash',label:'SEO / AIEO — organic'},
   {id:'paiddash',label:'Paid Marketing'},
   {id:'socialdash',label:'Social Media'},
+  {id:'agents',label:'Agents (Backlink Bot)'},
   {id:'reporting',label:'Reporting / MZ Report'},
   {id:'settings',label:'Settings & Integrations'}
 ];
@@ -12511,7 +12531,10 @@ const EDIT_GUARDS={
   invOpenAdd:'inventory',invSave:'inventory',invOpenEdit:'inventory',invDelete:'inventory',
   // Paid historical review
   paidHistSetVal:'paiddash',paidHistSetNotes:'paiddash',paidHistAddMonth:'paiddash',
-  tpSetVal:'paiddash',tpAddMonth:'paiddash'
+  tpSetVal:'paiddash',tpAddMonth:'paiddash',
+  // Agents — Backlink Bot
+  blRunScan:'agents',blApproveOpp:'agents',blSkipOpp:'agents',blMarkDone:'agents',blRemoveQI:'agents',
+  blAddKw:'agents',blDelKw:'agents',blAddPage:'agents',blDelPage:'agents',blSaveSettings:'agents'
 };
 function installEditGuards(){
   Object.entries(EDIT_GUARDS).forEach(([fn,page])=>{
@@ -14368,6 +14391,191 @@ loadData();
   checkAndShowLogin();
 })();
 async function safeRunAsync(label,fn){try{await fn();}catch(e){console.error('[OS] '+label+' failed:',e);}}
+
+// ══════════════════════════════════════════════════════════════
+// AGENTS — Backlink Bot
+// Storage: ec-agents-bl-v1 · Claude via /proxy-post using the
+// Anthropic key saved in Settings (eracore-api-key)
+// ══════════════════════════════════════════════════════════════
+function agentLoad(){try{const d=localStorage.getItem(BL_SK);if(d)blState={...blState,...JSON.parse(d)};}catch(e){}blUpdateStats();}
+function agentSave(){localStorage.setItem(BL_SK,JSON.stringify(blState));blUpdateStats();}
+function agentRender(){agentSelectBot('backlink');blRenderResults(blState.opportunities);blRenderQueue();}
+function agentSelectBot(bot){
+  document.querySelectorAll('.agent-bot-pane').forEach(p=>p.classList.toggle('active',p.id==='agent-bot-'+bot));
+  blRenderScanPills();blRenderSettings();
+}
+function blUpdateStats(){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const open=blState.queue.filter(q=>q.status!=='done').length;
+  set('bl-s-found',blState.opportunities.length);set('bl-s-queue',blState.queue.length);
+  set('bl-s-done',blState.queue.filter(q=>q.status==='done').length);set('bl-queue-badge',open);
+  const nb=document.getElementById('nb-agents');if(nb)nb.textContent=open;
+}
+function blSwitchTab(tab,el){
+  document.querySelectorAll('#agent-bot-backlink .itab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  ['scanner','queue','settings'].forEach(t=>document.getElementById('bltab-'+t)?.classList.toggle('active',t===tab));
+  if(tab==='queue')blRenderQueue();if(tab==='settings')blRenderSettings();if(tab==='scanner')blRenderScanPills();
+}
+function blRenderScanPills(){
+  const kp=document.getElementById('bl-kw-pills');
+  if(kp)kp.innerHTML=blState.keywords.map((k,i)=>`<span class="bl-chip on" data-ki="${i}" onclick="this.classList.toggle('on')">${esc(k)}</span>`).join('')||'<span style="font-size:12px;color:var(--text3)">Add keywords in Settings</span>';
+  const pp=document.getElementById('bl-pg-pills');
+  if(pp)pp.innerHTML=blState.pages.map((p,i)=>`<span class="bl-chip on" data-pi="${i}" onclick="this.classList.toggle('on')" title="${esc(p.url)}">${esc(p.label)}</span>`).join('')||'<span style="font-size:12px;color:var(--text3)">Add pages in Settings</span>';
+  document.querySelectorAll('#bl-src-pills .bl-chip').forEach(c=>{c.onclick=()=>c.classList.toggle('on');});
+}
+async function blCallClaude(prompt,maxTokens=2500){
+  const key=getApiKey();
+  if(!key)throw new Error('No Anthropic API key — add it in Settings');
+  const res=await fetch('http://127.0.0.1:8742/proxy-post',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:'https://api.anthropic.com/v1/messages',contentType:'application/json',
+      headers:{'x-api-key':key,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,messages:[{role:'user',content:prompt}]})})});
+  const data=await res.json();
+  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+  const raw=(data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+  const start=raw.search(/[\[{]/);
+  return JSON.parse(start>0?raw.slice(start):raw);
+}
+async function blRunScan(){
+  if(blBusy)return;
+  const selKws=[...document.querySelectorAll('#bl-kw-pills .bl-chip.on')].map(p=>blState.keywords[+p.dataset.ki]).filter(Boolean);
+  const selPgs=[...document.querySelectorAll('#bl-pg-pills .bl-chip.on')].map(p=>blState.pages[+p.dataset.pi]).filter(Boolean);
+  const selSrc=[...document.querySelectorAll('#bl-src-pills .bl-chip.on')].map(p=>p.dataset.src);
+  const minDA=+document.getElementById('bl-min-da').value,maxSpam=+document.getElementById('bl-max-spam').value,nRes=+document.getElementById('bl-results-n').value;
+  if(!selKws.length){toast('Select at least one keyword');return;}
+  if(!selSrc.length){toast('Select at least one source type');return;}
+  if(!getApiKey()){toast('Add your Anthropic API key in Settings first');navTo('settings');return;}
+  const btn=document.getElementById('bl-scan-btn'),txt=document.getElementById('bl-scan-txt'),prog=document.getElementById('bl-scan-prog'),fill=document.getElementById('bl-prog-fill'),lbl=document.getElementById('bl-prog-label'),out=document.getElementById('bl-scan-results');
+  blBusy=true;btn.disabled=true;prog.style.display='block';txt.textContent='Scanning…';
+  const targets=(selPgs.length?selPgs:blState.pages).map(p=>p.url).join(', ');
+  const found=[];let failed=0;
+  for(let i=0;i<selKws.length;i++){
+    const kw=selKws[i];
+    fill.style.width=Math.round((i+.5)/selKws.length*100)+'%';lbl.textContent=`Scanning "${kw}" (${i+1}/${selKws.length})…`;
+    out.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:1rem 0;color:var(--text2);font-size:13px"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Scanning "${esc(kw)}"…</div>`;
+    const prompt=`You are a backlink opportunity researcher for Eracore, an electrical BIM and VDC preconstruction engineering firm serving US AEC and data center contractors.
+
+Find exactly ${nRes} backlink opportunities for the keyword: "${kw}"
+Source types: ${selSrc.join(', ')}
+Eracore target pages: ${targets}
+Industry context: MEP coordination, electrical BIM, VDC, clash detection, conduit routing, cable tray modeling, LOD 200-400, prefab electrical, data center construction
+
+Return real, specific places that exist in the AEC/BIM/construction space — actual subreddits, forum threads, directories, blogs. Estimate SEO metrics realistically.
+
+Return a raw JSON array only, no markdown:
+[{"title":"specific thread/page title","url":"full URL","domain":"root domain","type":"Reddit|Quora|Forum|Blog|Directory|Q&A|Guest","da":0-100,"pa":0-100,"tf":0-100,"cf":0-100,"spamScore":0-100,"traffic":number,"linkType":"dofollow|nofollow","context":"2 sentences: what the page is and why it fits Eracore","anchorSuggestion":"exact anchor text","targetPage":"one URL from the target pages list","opportunityScore":0-100}]`;
+    try{
+      const r=await blCallClaude(prompt);
+      (Array.isArray(r)?r:[]).filter(o=>(o.da||0)>=minDA&&(o.spamScore||0)<=maxSpam).forEach(o=>{o.kw=kw;o.id='bl'+Date.now()+Math.floor(Math.random()*1e6);o.status='new';found.push(o);});
+    }catch(e){failed++;console.error('[Backlink Bot]',kw,e);lbl.textContent=`"${kw}" failed: ${e.message}`;}
+  }
+  fill.style.width='100%';
+  const seen=new Set(blState.opportunities.map(o=>o.domain+'|'+o.type+'|'+o.title));
+  const fresh=found.filter(o=>!seen.has(o.domain+'|'+o.type+'|'+o.title));
+  blState.opportunities=[...fresh,...blState.opportunities];
+  agentSave();blRenderResults(blState.opportunities);
+  lbl.textContent=`Scan complete — ${fresh.length} new opportunities${failed?` · ${failed} keyword${failed>1?'s':''} failed (see console)`:''}`;
+  blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';
+  toast(`Found ${fresh.length} new opportunities`);
+  if(typeof logActivity==='function')try{logActivity('agent_scan',`Backlink Bot scanned ${selKws.length} keywords → ${fresh.length} new`);}catch(e){}
+}
+const BL_TYPE_COLOR={Reddit:'#ff6830',Quora:'#c0392b',Forum:'var(--purple)',Blog:'var(--blue)',Directory:'var(--green)','Q&A':'var(--amber)',Guest:'var(--purple)'};
+function blMetric(k,v,c){return`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 8px;text-align:center;min-width:46px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase">${k}</div><div style="font-size:12px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;}
+function blFmtN(n){return n>=1000?(n/1000).toFixed(1)+'k':String(n||0);}
+function blRenderResults(opps){
+  const out=document.getElementById('bl-scan-results');if(!out)return;
+  const live=(opps||[]).filter(o=>o.status!=='skipped');
+  if(!live.length){out.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-radar" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>No opportunities yet — pick keywords and sources above, then scan.</div>`;return;}
+  const sorted=[...live].sort((a,b)=>(b.opportunityScore||0)-(a.opportunityScore||0));
+  out.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:.625rem">${sorted.length} opportunities · sorted by score</div>`+sorted.map(o=>{
+    const sc=o.opportunityScore||50,scC=sc>=70?'var(--green)':sc>=45?'var(--amber)':'var(--red)';
+    const inQ=blState.queue.some(q=>q.oppId===o.id);
+    return`<div id="boc-${o.id}" style="background:var(--surface);border:1px solid ${inQ?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:1rem 1.125rem;margin-bottom:10px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;line-height:1.3">${esc(o.title)}</div><a href="${esc(o.url)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;word-break:break-all">${esc(o.url)}</a></div>
+        <span style="font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap;background:color-mix(in srgb,${BL_TYPE_COLOR[o.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[o.type]||'var(--text2)'}">${esc(o.type)}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        ${blMetric('DA',o.da,o.da>=40?'var(--green)':o.da>=20?'var(--amber)':'var(--red)')}${blMetric('PA',o.pa)}${blMetric('TF',o.tf)}${blMetric('CF',o.cf)}
+        ${blMetric('Spam',(o.spamScore||0)+'%',o.spamScore<=15?'var(--green)':o.spamScore<=30?'var(--amber)':'var(--red)')}${blMetric('Traffic',blFmtN(o.traffic))}
+        ${blMetric('Link',o.linkType,o.linkType==='dofollow'?'var(--green)':'var(--text2)')}
+        <div style="flex:1"></div>
+        <div style="display:flex;align-items:center;gap:8px;min-width:160px"><span style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase">Score</span><div style="flex:1;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="width:${sc}%;height:100%;background:${scC}"></div></div><strong style="font-size:12px;color:${scC}">${sc}</strong></div>
+      </div>
+      <div style="background:var(--surface2);border-left:3px solid var(--blue);padding:8px 10px;font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:8px;border-radius:0 var(--r) var(--r) 0">${esc(o.context)}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text2)">Anchor <strong style="color:var(--text)">${esc(o.anchorSuggestion||'')}</strong> → <span style="color:var(--blue)">${esc((o.targetPage||'').replace(/^https?:\/\//,''))}</span> · kw: ${esc(o.kw||'')}</span>
+        <div style="flex:1"></div>
+        ${inQ?`<span style="font-size:11px;color:var(--green);font-weight:600"><i class="ti ti-check"></i> In queue</span>`:
+        `<button class="btn btn-sm" onclick="blSkipOpp('${o.id}')">Skip</button><button class="btn btn-sm" onclick="window.open('${esc(o.url)}','_blank')"><i class="ti ti-external-link"></i> Open</button><button class="btn btn-sm btn-primary" onclick="blApproveOpp('${o.id}')"><i class="ti ti-check"></i> Approve &amp; draft</button>`}
+      </div>
+    </div>`;}).join('');
+}
+function blSkipOpp(id){const o=blState.opportunities.find(x=>x.id===id);if(o)o.status='skipped';agentSave();blRenderResults(blState.opportunities);}
+async function blApproveOpp(id){
+  const o=blState.opportunities.find(x=>x.id===id);if(!o)return;
+  const btn=document.querySelector(`#boc-${id} .btn-primary`);if(btn){btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Drafting…';btn.disabled=true;}
+  const prompt=`Write a natural, helpful ${o.type} post for a backlink opportunity.
+
+Platform: ${o.type}
+Page/thread: "${o.title}" — ${o.url}
+Keyword context: ${o.kw}
+Link to: ${o.targetPage}
+Anchor text: ${o.anchorSuggestion}
+Company: Eracore — electrical BIM and VDC preconstruction engineering firm (US AEC, data centers)
+
+Rules: fit the conversation, add genuine value, not spammy, include the link naturally with the anchor text, format for ${o.type} (Reddit markdown if Reddit, plain text for forums, professional business description for directories). 2-4 sentences for comments; longer for guest posts/directories.
+
+Return raw JSON only: {"text":"ready-to-post text with link","instructions":"one sentence on where exactly to paste this"}`;
+  try{
+    const r=await blCallClaude(prompt,1200);
+    blState.queue.push({id:'q'+Date.now(),oppId:id,title:o.title,url:o.url,type:o.type,domain:o.domain,da:o.da,spamScore:o.spamScore,traffic:o.traffic,opportunityScore:o.opportunityScore,kw:o.kw,targetPage:o.targetPage,anchorSuggestion:o.anchorSuggestion,text:r.text||'',instructions:r.instructions||'',status:'pending',addedAt:Date.now()});
+    o.status='approved';agentSave();blRenderResults(blState.opportunities);toast('Added to link queue');
+    if(typeof logActivity==='function')try{logActivity('agent_queue',`Backlink Bot queued: ${o.title}`);}catch(e){}
+  }catch(e){toast('Draft failed: '+e.message);if(btn){btn.innerHTML='<i class="ti ti-check"></i> Approve &amp; draft';btn.disabled=false;}}
+}
+function blRenderQueue(){
+  const el=document.getElementById('bl-queue-list');if(!el)return;
+  if(!blState.queue.length){el.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-inbox" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>Queue is empty — approve opportunities from the Scanner.</div>`;return;}
+  const order={pending:0,open:1,done:2};
+  const sorted=[...blState.queue].sort((a,b)=>(order[a.status]-order[b.status])||((b.opportunityScore||0)-(a.opportunityScore||0)));
+  const dot={pending:'var(--amber)',open:'var(--blue)',done:'var(--green)'},lab={pending:'Pending',open:'In progress',done:'Done'};
+  el.innerHTML=sorted.map((q,i)=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem;margin-bottom:10px;${q.status==='done'?'opacity:.6':''}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:.625rem">
+      <div style="width:22px;height:22px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0">${i+1}</div>
+      <div style="font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(q.title)}</div>
+      <span style="font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;background:color-mix(in srgb,${BL_TYPE_COLOR[q.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[q.type]||'var(--text2)'}">${esc(q.type)}</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)"><span style="width:8px;height:8px;border-radius:50%;background:${dot[q.status]}"></span>${lab[q.status]}</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.625rem;align-items:center">${blMetric('DA',q.da)}${blMetric('Spam',(q.spamScore||0)+'%')}${blMetric('Score',q.opportunityScore)}<span style="font-size:11px;color:var(--text3);margin-left:auto">${fmtDate(q.addedAt)}</span></div>
+    ${q.instructions?`<div style="font-size:11px;color:var(--blue-d);margin-bottom:6px;padding:6px 10px;background:var(--blue-l);border-radius:var(--r)"><i class="ti ti-map-pin"></i> ${esc(q.instructions)}</div>`:''}
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;margin-bottom:.625rem;max-height:170px;overflow-y:auto">${esc(q.text)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sm" onclick="blCopyQI(this,'${q.id}')"><i class="ti ti-copy"></i> Copy text</button>
+      <button class="btn btn-sm" onclick="window.open('${esc(q.url)}','_blank');blMarkOpen('${q.id}')"><i class="ti ti-external-link"></i> Open page</button>
+      ${q.status!=='done'?`<button class="btn btn-sm" style="color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent)" onclick="blMarkDone('${q.id}')"><i class="ti ti-check"></i> Mark done</button>`:''}
+      <div style="flex:1"></div>
+      <button class="btn btn-sm btn-icon" title="Remove" onclick="blRemoveQI('${q.id}')"><i class="ti ti-trash" style="color:var(--red)"></i></button>
+    </div>
+  </div>`).join('');
+}
+function blMarkOpen(id){const q=blState.queue.find(x=>x.id===id);if(q&&q.status==='pending'){q.status='open';agentSave();blRenderQueue();}}
+function blMarkDone(id){const q=blState.queue.find(x=>x.id===id);if(q){q.status='done';agentSave();blRenderQueue();toast('Marked done');if(typeof logActivity==='function')try{logActivity('agent_done',`Backlink placed: ${q.title}`);}catch(e){}}}
+function blRemoveQI(id){if(!confirm('Remove this item from the queue?'))return;blState.queue=blState.queue.filter(x=>x.id!==id);agentSave();blRenderQueue();}
+function blCopyQI(btn,id){const q=blState.queue.find(x=>x.id===id);if(!q)return;(navigator.clipboard?.writeText(q.text)||Promise.reject()).then(()=>{const o=btn.innerHTML;btn.innerHTML='<i class="ti ti-check"></i> Copied';setTimeout(()=>btn.innerHTML=o,1600);}).catch(()=>toast('Copy failed — select the text manually'));}
+function blRenderSettings(){
+  const kl=document.getElementById('bl-kw-list');
+  if(kl)kl.innerHTML=blState.keywords.map((k,i)=>`<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px"><span style="flex:1;font-size:13px">${esc(k)}</span><button class="btn btn-sm btn-icon" onclick="blDelKw(${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No keywords yet</div>';
+  const pl=document.getElementById('bl-pg-list');
+  if(pl)pl.innerHTML=blState.pages.map((p,i)=>`<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px"><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(p.label)}</div><div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.url)}</div></div><button class="btn btn-sm btn-icon" onclick="blDelPage(${i})"><i class="ti ti-x"></i></button></div>`).join('')||'<div style="font-size:12px;color:var(--text3)">No pages yet</div>';
+}
+function blAddKw(){const el=document.getElementById('bl-new-kw'),v=(el?.value||'').trim();if(!v)return;if(blState.keywords.includes(v)){toast('Already tracked');return;}blState.keywords.push(v);el.value='';agentSave();blRenderSettings();blRenderScanPills();toast('Keyword added');}
+function blDelKw(i){blState.keywords.splice(i,1);agentSave();blRenderSettings();blRenderScanPills();}
+function blAddPage(){const l=(document.getElementById('bl-new-pg-label')?.value||'').trim(),u=(document.getElementById('bl-new-pg-url')?.value||'').trim();if(!l||!u){toast('Label and URL both needed');return;}blState.pages.push({label:l,url:/^https?:\/\//.test(u)?u:'https://'+u});document.getElementById('bl-new-pg-label').value='';document.getElementById('bl-new-pg-url').value='';agentSave();blRenderSettings();blRenderScanPills();toast('Page added');}
+function blDelPage(i){blState.pages.splice(i,1);agentSave();blRenderSettings();blRenderScanPills();}
+function blSaveSettings(){agentSave();toast('Saved');}
+
 </script>
 </body>
 </html>
