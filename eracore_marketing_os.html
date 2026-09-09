@@ -12868,7 +12868,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.9';
+const APP_HTML_VERSION='10.0';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -12993,7 +12993,7 @@ const EDIT_GUARDS={
   tpSetVal:'paiddash',tpAddMonth:'paiddash',
   // Agents — Backlink Bot
   blRunScan:'agents',blApproveOpp:'agents',blSkipOpp:'agents',blMarkDone:'agents',blRemoveQI:'agents',
-  blAddKw:'agents',blDelKw:'agents',blAddPage:'agents',blDelPage:'agents',blSaveSettings:'agents',blAddForum:'agents',blDelForum:'agents',blAddComp:'agents',blDelComp:'agents',blSaveFootprints:'agents'
+  blAddKw:'agents',blDelKw:'agents',blAddPage:'agents',blDelPage:'agents',blSaveSettings:'agents',blAddForum:'agents',blDelForum:'agents',blAddComp:'agents',blDelComp:'agents',blSaveFootprints:'agents',blReverify:'agents'
 };
 function installEditGuards(){
   Object.entries(EDIT_GUARDS).forEach(([fn,page])=>{
@@ -14867,7 +14867,7 @@ function agentSelectBot(bot){
 function blUpdateStats(){
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   const open=blState.queue.filter(q=>q.status!=='done').length;
-  set('bl-s-found',blState.opportunities.length);set('bl-s-queue',blState.queue.length);
+  set('bl-s-found',blState.opportunities.filter(o=>o.status!=='closed'&&o.status!=='skipped').length);set('bl-s-queue',blState.queue.length);
   set('bl-s-done',blState.queue.filter(q=>q.status==='done').length);set('bl-queue-badge',open);
   const nb=document.getElementById('nb-agents');if(nb)nb.textContent=open;
 }
@@ -14943,13 +14943,15 @@ const BL_FOOTPRINTS={
 const BL_TYPE_FOR={'Quora':'Quora','Q&A sites':'Q&A','niche forums':'Forum','blog comments':'Blog','resource/directory pages':'Directory','guest post opportunities':'Guest','custom':'Blog'};
 function blInferType(url,fallback){const u=(url||'').toLowerCase();if(/reddit\.com/.test(u))return'Reddit';if(/quora\.com/.test(u))return'Quora';if(/forum|thread|viewtopic|showthread|community\.|discourse|\/t\//.test(u))return'Forum';if(/directory|listing|\/companies|\/vendors|\/resources|\/links/.test(u))return'Directory';if(/write-for-us|guest-post|contribute/.test(u))return'Guest';if(/questions|answers/.test(u))return'Q&A';return fallback||'Blog';}
 function blEngines(){const e=[];if(localStorage.getItem('ec-serpapi-key'))e.push('serpapi');if(localStorage.getItem('ec-brave-key'))e.push('brave');return e;}
+let blMaxAge=365;
 async function blWebSearch(q,n){ // fan out to every configured engine, dedupe by URL
   const out=[],seen=new Set();
+  const gTbs=blMaxAge<=90?'&tbs=qdr:m3':blMaxAge<=365?'&tbs=qdr:y':'';const bFresh=blMaxAge<=90?'&freshness=pm':blMaxAge<=365?'&freshness=py':'';
   for(const eng of blEngines()){
     try{
       let items=[];
-      if(eng==='serpapi'){const j=await blGetJson(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&num=${Math.min(10,n)}&api_key=${encodeURIComponent(localStorage.getItem('ec-serpapi-key'))}`);if(j.error)throw new Error('SerpApi: '+String(j.error).slice(0,100));items=(j.organic_results||[]).map(it=>({title:it.title,url:it.link,snippet:it.snippet||'',site:it.displayed_link||blDomain(it.link),engine:'Google (SerpApi)'}));}
-      else if(eng==='brave'){const j=await blGetJson(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=${Math.min(20,n)}`,{'X-Subscription-Token':localStorage.getItem('ec-brave-key'),'Accept':'application/json'});if(j.error)throw new Error('Brave: '+(j.error.detail||j.error.message||'').slice(0,100));items=(j.web?.results||[]).map(it=>({title:it.title,url:it.url,snippet:it.description||'',site:blDomain(it.url),engine:'Brave',age:it.age}));}
+      if(eng==='serpapi'){const j=await blGetJson(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&num=${Math.min(10,n)}${gTbs}&api_key=${encodeURIComponent(localStorage.getItem('ec-serpapi-key'))}`);if(j.error)throw new Error('SerpApi: '+String(j.error).slice(0,100));items=(j.organic_results||[]).map(it=>({title:it.title,url:it.link,snippet:it.snippet||'',site:it.displayed_link||blDomain(it.link),engine:'Google (SerpApi)'}));}
+      else if(eng==='brave'){const j=await blGetJson(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&count=${Math.min(20,n)}${bFresh}`,{'X-Subscription-Token':localStorage.getItem('ec-brave-key'),'Accept':'application/json'});if(j.error)throw new Error('Brave: '+(j.error.detail||j.error.message||'').slice(0,100));items=(j.web?.results||[]).map(it=>({title:it.title,url:it.url,snippet:it.description||'',site:blDomain(it.url),engine:'Brave',age:it.age}));}
       items.forEach(it=>{if(it.url&&!seen.has(it.url)){seen.add(it.url);out.push(it);}});
     }catch(e){console.warn('[Scout]',eng,e.message);if(blEngines().length===1)throw e;}
   }
@@ -15003,6 +15005,37 @@ async function blEnrichRank(opps){ // Open PageRank: free key, 1000 domains/day.
     const m={};(j.response||[]).forEach(r=>{if(r.status_code===200)m[r.domain]=parseFloat(r.page_rank_decimal)||0;});opps.forEach(o=>{if(m[o.domain]!=null)o.rank=m[o.domain];});
   }catch(e){console.warn('[OPR]',e.message);}
 }
+// Fetch the actual page and look for "thread closed" markers across forum platforms + extract the real date.
+const BL_CLOSED_RE=/not open for further replies|closed for (further )?(replies|comments|new posts)|this (thread|topic|discussion) (is|has been) (closed|locked|archived)|thread (is )?locked|topic (is )?locked|(comments|replies) (are|have been) (closed|disabled|turned off)|this (post|thread) is archived|archived (thread|topic|post)|you cannot reply to this (topic|thread)|no longer accepting (new )?(comments|replies)|comments are closed|discussion (is )?closed|locked-thread|thread-closed|topic_closed|fa-lock.{0,80}(closed|locked)|class="[^"]*\b(locked|closed)\b[^"]*"[^>]*>[^<]{0,40}(closed|locked)/i;
+const BL_LOGIN_RE=/(log ?in|sign ?in) to (view|see|read)|you must be (logged|signed) in|please (log|sign) in to (view|access)|access denied|checking your browser|attention required!?\s*\|\s*cloudflare|just a moment\.\.\./i;
+function blExtractDate(html){
+  const cands=[];const push=v=>{const t=Date.parse(v);if(!isNaN(t)&&t>946684800000&&t<Date.now()+86400000)cands.push(t);};
+  (html.match(/datetime="([^"]{8,40})"/gi)||[]).slice(0,60).forEach(m=>push(m.slice(10,-1)));
+  (html.match(/"(?:dateModified|datePublished|dateCreated)"\s*:\s*"([^"]{8,40})"/gi)||[]).forEach(m=>push(m.split(':').slice(1).join(':').replace(/["\s]/g,'')));
+  (html.match(/property="article:(?:published|modified)_time" content="([^"]{8,40})"/gi)||[]).forEach(m=>push(m.split('content="')[1].slice(0,-1)));
+  (html.match(/data-time="(\d{9,10})"/g)||[]).slice(0,60).forEach(m=>push(new Date(parseInt(m.slice(11,-1))*1000).toISOString()));
+  if(!cands.length)return null;return{first:Math.min(...cands),last:Math.max(...cands)};
+}
+async function blVerify(o){
+  if(o.type==='Reddit'||(o.site&&/Discourse|dynamo|osarch/i.test(o.site))){o.verify={ok:true,how:'api'};return;} // already filtered by their APIs
+  if(o.domain==='news.ycombinator.com'){const stale=o.ageDays!=null&&o.ageDays>14;o.verify=stale?{ok:false,reason:'HN comments close after 2 weeks'}:{ok:true,how:'api'};return;}
+  if(o.type==='Directory'||o.type==='Guest'){o.verify={ok:true,how:'n/a'};return;} // submission forms / editors, not threads
+  try{
+    const r=await fetch(blProxy(o.url,{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36 EracoreOS/1.0','Accept':'text/html'}));
+    const html=(await r.text()).slice(0,400000);
+    if(r.status>=400){o.verify={ok:false,reason:'HTTP '+r.status};return;}
+    if(BL_LOGIN_RE.test(html.slice(0,20000))){o.verify={ok:null,reason:'login wall / bot check — verify manually'};return;}
+    const d=blExtractDate(html);
+    if(d){const created=d.first,last=d.last;if(o.createdAt==null){o.createdAt=created;}o.lastActivity=last;o.ageDays=blAgeDays(last);}
+    if(BL_CLOSED_RE.test(html)){o.verify={ok:false,reason:'thread closed / locked'};return;}
+    if(o.ageDays!=null&&o.ageDays>blMaxAge){o.verify={ok:false,reason:`last activity ${blAge(o.ageDays)} ago`};return;}
+    o.verify={ok:true,how:'page',lastActivity:o.lastActivity||null};
+  }catch(e){o.verify={ok:null,reason:'could not fetch — verify manually'};}
+}
+async function blVerifyAll(list,onProgress){
+  const todo=[...list];let done=0;const workers=Array.from({length:4},async()=>{while(todo.length){const o=todo.shift();await blVerify(o);done++;onProgress&&onProgress(done,list.length);await new Promise(r=>setTimeout(r,250));}});
+  await Promise.all(workers);
+}
 function blPickTarget(o,pages){const t=(o.title+' '+o.context).toLowerCase();return(pages.find(p=>t.includes(p.label.split(' ')[0].toLowerCase()))||pages.find(p=>/electrical/i.test(p.label))||pages[0]||{url:'https://eracore.com',label:'Eracore'});}
 function blAnchor(o,pg){return/data cent/i.test(o.title+o.context)&&/data/i.test(pg.label)?'BIM for data centers':pg.label.replace(/ Services$/,'').toLowerCase()+' services';}
 
@@ -15011,7 +15044,7 @@ async function blRunScan(){
   const selKws=[...document.querySelectorAll('#bl-kw-pills .bl-chip.on')].map(p=>blState.keywords[+p.dataset.ki]).filter(Boolean);
   const selPgs=[...document.querySelectorAll('#bl-pg-pills .bl-chip.on')].map(p=>blState.pages[+p.dataset.pi]).filter(Boolean);
   const selSrc=[...document.querySelectorAll('#bl-src-pills .bl-chip.on')].map(p=>p.dataset.src);
-  const minScore=+document.getElementById('bl-min-da').value,maxAge=+document.getElementById('bl-max-spam').value,nRes=+document.getElementById('bl-results-n').value;
+  const minScore=+document.getElementById('bl-min-da').value,maxAge=+document.getElementById('bl-max-spam').value,nRes=+document.getElementById('bl-results-n').value;blMaxAge=maxAge;
   if(!selKws.length){toast('Select at least one keyword');return;}
   if(!selSrc.length){toast('Select at least one source type');return;}
   const btn=document.getElementById('bl-scan-btn'),txt=document.getElementById('bl-scan-txt'),prog=document.getElementById('bl-scan-prog'),fill=document.getElementById('bl-prog-fill'),lbl=document.getElementById('bl-prog-label'),out=document.getElementById('bl-scan-results');
@@ -15036,14 +15069,19 @@ async function blRunScan(){
     try{const rows=await fn();const kw=name.startsWith('Competitor backlinks')?selKws[0]:name.split(' · ').slice(1).join(' · ');rows.forEach(o=>{o.kw=kw;found.push(o);});}catch(e){fails.push(name+': '+e.message);console.warn('[Scout]',name,e.message);}
     await new Promise(r=>setTimeout(r,650)); // be polite to public APIs
   }
-  await blEnrichRank(found);
-  found.forEach(o=>{const pg=blPickTarget(o,pages);o.targetPage=pg.url;o.anchorSuggestion=blAnchor(o,pg);o.opportunityScore=blScore(o);o.id='bl'+Date.now()+Math.floor(Math.random()*1e6);o.status='new';});
-  const kept=found.filter(o=>o.opportunityScore>=minScore&&(o.ageDays==null||o.ageDays<=maxAge));
-  const seen=new Set(blState.opportunities.map(o=>o.url));const fresh=kept.filter(o=>!seen.has(o.url)&&(seen.add(o.url),true));
+  // De-dupe against what we already have BEFORE verifying, so we only fetch new pages
+  const seen=new Set(blState.opportunities.map(o=>o.url));const novel=found.filter(o=>!seen.has(o.url)&&(seen.add(o.url),true));
+  lbl.textContent=`Verifying ${novel.length} pages are still open for replies…`;fill.style.width='100%';
+  await blVerifyAll(novel,(d,n)=>{lbl.textContent=`Verifying pages are still open for replies… ${d}/${n}`;});
+  await blEnrichRank(novel);
+  novel.forEach(o=>{const pg=blPickTarget(o,pages);o.targetPage=pg.url;o.anchorSuggestion=blAnchor(o,pg);o.opportunityScore=blScore(o);o.id='bl'+Date.now()+Math.floor(Math.random()*1e6);o.status=o.verify&&o.verify.ok===false?'closed':'new';});
+  const closedN=novel.filter(o=>o.status==='closed').length,unverifiedN=novel.filter(o=>o.verify&&o.verify.ok===null).length;
+  const fresh=novel.filter(o=>o.status==='closed'||(o.opportunityScore>=minScore&&(o.ageDays==null||o.ageDays<=maxAge)));
   blState.opportunities=[...fresh,...blState.opportunities];agentSave();blRenderResults(blState.opportunities);
   fill.style.width='100%';
-  lbl.innerHTML=`Done — <b>${fresh.length}</b> new opportunities from ${jobs.length} source queries${!engines.length?' · <a href="#" onclick="blSwitchTab(\'settings\',document.getElementById(\'bltab-btn-settings\'));return false" style="color:var(--blue)">add a free search key</a> (SerpApi — no card, or Brave) to unlock footprints, Quora, directories &amp; non-Discourse forums':''}${fails.length?` · <span style="color:var(--amber)">${fails.length} skipped/failed</span> <span title="${esc(fails.join('\n'))}" style="cursor:help">ⓘ</span>`:''}`;
-  blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';toast(`Found ${fresh.length} new opportunities`);
+  const openN=fresh.filter(o=>o.status!=='closed').length;
+  lbl.innerHTML=`Done — <b>${openN}</b> open opportunities from ${jobs.length} source queries${closedN?` · <span style="color:var(--text3)">${closedN} closed/locked/stale threads hidden</span>`:''}${unverifiedN?` · <span style="color:var(--amber)">${unverifiedN} need manual check</span>`:''}${!engines.length?' · <a href="#" onclick="blSwitchTab(\'settings\',document.getElementById(\'bltab-btn-settings\'));return false" style="color:var(--blue)">add a free search key</a> (SerpApi — no card, or Brave) to unlock footprints, Quora, directories &amp; non-Discourse forums':''}${fails.length?` · <span style="color:var(--amber)">${fails.length} skipped/failed</span> <span title="${esc(fails.join('\n'))}" style="cursor:help">ⓘ</span>`:''}`;
+  blBusy=false;btn.disabled=false;txt.textContent='Scan for opportunities';toast(`${openN} open opportunities found${closedN?` · ${closedN} closed hidden`:''}`);
 }
 const BL_TYPE_COLOR={Reddit:'#ff6830',Quora:'#c0392b',Forum:'var(--purple)',Blog:'var(--blue)',Directory:'var(--green)','Q&A':'var(--amber)',Guest:'var(--purple)'};
 function blMetric(k,v,c,title){return`<div title="${esc(title||'')}" style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:4px 8px;text-align:center;min-width:46px"><div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase">${k}</div><div style="font-size:12px;font-weight:700;color:${c||'var(--text)'}">${v}</div></div>`;}
@@ -15051,15 +15089,17 @@ function blFmtN(n){return n>=1000?(n/1000).toFixed(1)+'k':String(n||0);}
 function blAge(d){return d==null?'—':d<1?'today':d<30?d+'d':d<365?Math.round(d/30)+'mo':Math.round(d/365)+'y';}
 function blRenderResults(opps){
   const out=document.getElementById('bl-scan-results');if(!out)return;
-  const live=(opps||[]).filter(o=>o.status!=='skipped');
-  if(!live.length){out.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-radar" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>No opportunities yet — pick keywords and sources above, then scan.<div style="font-size:11px;color:var(--text3);margin-top:6px">Discovery is free and uses real public data (Reddit, Hacker News, and Google Search if a key is added).</div></div>`;return;}
+  const closed=(opps||[]).filter(o=>o.status==='closed');
+  const live=(opps||[]).filter(o=>o.status!=='skipped'&&(o.status!=='closed'||blShowClosed));
+  if(!live.length&&!closed.length){out.innerHTML=`<div style="text-align:center;padding:2.5rem 0;color:var(--text2)"><i class="ti ti-radar" style="font-size:2rem;display:block;margin-bottom:.75rem;opacity:.3"></i>No opportunities yet — pick keywords and sources above, then scan.<div style="font-size:11px;color:var(--text3);margin-top:6px">Discovery is free and uses real public data; every thread is checked to be open for replies before it's shown.</div></div>`;return;}
   const sorted=[...live].sort((a,b)=>(b.opportunityScore||0)-(a.opportunityScore||0));
-  out.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:.625rem">${sorted.length} opportunities · sorted by score · <span style="color:var(--text3)">real engagement &amp; freshness, no estimates</span></div>`+sorted.map(o=>{
+  out.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:.625rem;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span>${sorted.filter(o=>o.status!=='closed').length} open opportunities · sorted by score</span>${closed.length?`<a href="#" onclick="blShowClosed=!blShowClosed;blRenderResults(blState.opportunities);return false" style="color:var(--text3);font-size:11px">${blShowClosed?'hide':'show'} ${closed.length} closed/locked</a>`:''}<span style="flex:1"></span><a href="#" onclick="blReverify();return false" style="color:var(--blue);font-size:11px" title="Re-check every open thread is still accepting replies"><i class="ti ti-shield-check"></i> Re-verify all</a></div>`+sorted.map(o=>{
     const sc=o.opportunityScore||0,scC=sc>=65?'var(--green)':sc>=40?'var(--amber)':'var(--red)';
     const inQ=blState.queue.some(q=>q.oppId===o.id);
-    return`<div id="boc-${o.id}" style="background:var(--surface);border:1px solid ${inQ?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:1rem 1.125rem;margin-bottom:10px">
+    const v=o.verify||{};const vBadge=o.status==='closed'?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--red-l);color:var(--red);font-weight:700"><i class="ti ti-lock"></i> ${esc(v.reason||'closed')}</span>`:v.ok===true?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--green-l);color:var(--green);font-weight:700" title="${v.how==='page'?'Page fetched and checked for locked/closed markers':v.how==='api'?'Source API reports it open':'Submission page — not a thread'}"><i class="ti ti-lock-open"></i> open${v.lastActivity?' · active '+blAge(blAgeDays(v.lastActivity))+' ago':''}</span>`:v.ok===null?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--amber-l);color:var(--amber);font-weight:700" title="${esc(v.reason||'')}"><i class="ti ti-help"></i> verify manually</span>`:`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface2);color:var(--text3);font-weight:700">unverified</span>`;
+    return`<div id="boc-${o.id}" style="background:var(--surface);border:1px solid ${inQ?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:1rem 1.125rem;margin-bottom:10px;${o.status==='closed'?'opacity:.55':''}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;line-height:1.3">${esc(o.title)}</div><a href="${esc(o.url)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;word-break:break-all">${esc(o.url)}</a></div>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;line-height:1.3;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${esc(o.title)} ${vBadge}</div><a href="${esc(o.url)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none;word-break:break-all">${esc(o.url)}</a></div>
         <span style="font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap;background:color-mix(in srgb,${BL_TYPE_COLOR[o.type]||'var(--text3)'} 12%,transparent);color:${BL_TYPE_COLOR[o.type]||'var(--text2)'}">${esc(o.site||o.type)}</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center">
@@ -15076,11 +15116,13 @@ function blRenderResults(opps){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text2)">Suggested anchor <strong style="color:var(--text)">${esc(o.anchorSuggestion||'')}</strong> → <span style="color:var(--blue)">${esc((o.targetPage||'').replace(/^https?:\/\//,''))}</span> · kw: ${esc(o.kw||'')}</span>
         <div style="flex:1"></div>
-        ${inQ?`<span style="font-size:11px;color:var(--green);font-weight:600"><i class="ti ti-check"></i> In queue</span>`:
+        ${o.status==='closed'?`<button class="btn btn-sm" onclick="blSkipOpp('${o.id}')"><i class="ti ti-trash"></i> Remove</button>`:inQ?`<span style="font-size:11px;color:var(--green);font-weight:600"><i class="ti ti-check"></i> In queue</span>`:
         `<button class="btn btn-sm" onclick="blSkipOpp('${o.id}')">Skip</button><button class="btn btn-sm" onclick="window.open('${esc(o.url)}','_blank')"><i class="ti ti-external-link"></i> Open</button><button class="btn btn-sm btn-primary" onclick="blApproveOpp('${o.id}')"><i class="ti ti-check"></i> Approve &amp; draft</button>`}
       </div>
     </div>`;}).join('');
 }
+let blShowClosed=false;
+async function blReverify(){const list=blState.opportunities.filter(o=>o.status==='new');if(!list.length){toast('Nothing to verify');return;}toast(`Re-checking ${list.length} threads…`);await blVerifyAll(list);list.forEach(o=>{if(o.verify&&o.verify.ok===false)o.status='closed';});agentSave();blRenderResults(blState.opportunities);const c=list.filter(o=>o.status==='closed').length;toast(c?`${c} thread${c>1?'s':''} closed since last check — hidden`:'All threads still open');}
 function blSkipOpp(id){const o=blState.opportunities.find(x=>x.id===id);if(o)o.status='skipped';agentSave();blRenderResults(blState.opportunities);}
 // ── Drafting: templates always available; Claude used only when a key exists ──
 function blTemplateDraft(o){
