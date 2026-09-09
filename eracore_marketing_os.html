@@ -6904,14 +6904,14 @@ function saveGAdsCredentials(){
   const badge=document.getElementById('gads-status-badge');if(badge){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
   toast('Google Ads credentials saved');
 }
-function startGAdsOAuth(){
+function startGAdsOAuth(hostId){
   // Uses http://localhost redirect (OOB was deprecated by Google in 2022)
   // IMPORTANT: add http://localhost to Authorised redirect URIs in Google Cloud Console
-  const scope=encodeURIComponent('https://www.googleapis.com/auth/adwords');
+  const scope=encodeURIComponent(GOOGLE_ALL_SCOPES);
   const redirect=encodeURIComponent('http://localhost');
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
   window.open(url,'_blank');
-  const statusEl=document.getElementById('gads-oauth-status');
+  const statusEl=document.getElementById(hostId||'gads-oauth-status');
   if(statusEl)statusEl.innerHTML=`
     <div style="background:var(--surface2);border-radius:var(--r);padding:.75rem;font-size:12px;line-height:1.6;margin-top:6px">
       <b>Steps:</b><br>
@@ -6922,10 +6922,10 @@ function startGAdsOAuth(){
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <input type="text" id="gads-auth-code" placeholder="Paste the full redirect URL: http://localhost/?code=4/0A..." style="flex:1;height:34px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
-      <button class="btn btn-primary btn-sm" onclick="exchangeGAdsCode()">Extract token</button>
+      <button class="btn btn-primary btn-sm" onclick="exchangeGAdsCode('${hostId||'gads-oauth-status'}')">Extract token</button>
     </div>`;
 }
-async function exchangeGAdsCode(){
+async function exchangeGAdsCode(hostId){
   let raw=(document.getElementById('gads-auth-code')?.value||'').trim();
   if(!raw){toast('Paste the redirect URL or auth code first');return;}
   // Extract code from full URL if user pasted the whole redirect URL
@@ -6936,7 +6936,7 @@ async function exchangeGAdsCode(){
     if(extracted)code=extracted;
   }catch(e){/* raw is just the code itself, not a URL — fine */}
   if(!code){toast('Could not find auth code — paste the full redirect URL');return;}
-  const statusEl=document.getElementById('gads-oauth-status');
+  const statusEl=document.getElementById(hostId||'gads-oauth-status');
   if(statusEl){statusEl.textContent='Exchanging code…';statusEl.style.color='var(--text2)';}
   try{
     const res=await fetch('https://oauth2.googleapis.com/token',{
@@ -6945,15 +6945,17 @@ async function exchangeGAdsCode(){
     });
     const data=await res.json();
     if(data.refresh_token){
-      const rtEl=document.getElementById('gads-refresh-token');if(rtEl)rtEl.value=data.refresh_token;
-      // Auto-save immediately — no save-ordering pitfalls — then self-test the
-      // fresh token with a real refresh so problems surface RIGHT NOW.
-      saveGAdsCredentials();
+      adoptGoogleRefreshToken(data.refresh_token);
+      if(data.access_token){gscToken=data.access_token;ga4Token=data.access_token;localStorage.setItem('ec-gsc-token',gscToken);updateGSCConnectedState();}
+      // Auto-save (if the Settings form is on screen) then self-test with a real refresh so problems surface RIGHT NOW.
+      if(document.getElementById('gads-dev-token'))saveGAdsCredentials();
       if(statusEl){statusEl.textContent='✓ Token minted + saved — verifying with Google…';statusEl.style.color='var(--text2)';}
       try{
         await getGAdsAccessToken();
-        if(statusEl){statusEl.textContent='✓ Token minted, saved, and verified with Google — click "Test connection" for the full check';statusEl.style.color='var(--green)';}
+        if(statusEl){statusEl.textContent='✓ Token minted, saved, and verified with Google — this login now serves Ads, Search Console, GA4 and Business Profile';statusEl.style.color='var(--green)';}
         toast('Google refresh token verified');
+        if(typeof gadsTab==='object'&&gadsTab){gadsTab.error=null;}
+        if(document.getElementById('page-paiddash')?.classList.contains('active')){try{gadsRefreshTab();}catch(e){}}
       }catch(selfErr){
         if(statusEl){statusEl.textContent='Token minted but Google refused the refresh: '+selfErr.message;statusEl.style.color='var(--red)';}
         toast('Fresh token failed verification — see the message below the buttons');
@@ -6972,6 +6974,14 @@ async function getGAdsAccessToken(){
   });
   const data=await res.json();
   if(data.access_token){gAdsToken=data.access_token;return data.access_token;}
+  // Fallback: the shared Google login (SEO "Connect Google") now carries the adwords scope too.
+  const shared=localStorage.getItem('ec-gsc-refresh-token');
+  if(data.error==='invalid_grant'&&shared&&shared!==creds.refreshToken){
+    const r2=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`client_id=${encodeURIComponent(GSC_CLIENT_ID)}&client_secret=${encodeURIComponent(GSC_CLIENT_SECRET)}&refresh_token=${encodeURIComponent(shared)}&grant_type=refresh_token`});
+    const d2=await r2.json();
+    if(d2.access_token&&/adwords/.test(d2.scope||'')){creds.refreshToken=shared;localStorage.setItem('ec-gads-creds',JSON.stringify(creds));gAdsToken=d2.access_token;console.log('[GAds] adopted shared Google refresh token');return d2.access_token;}
+  }
   // Google's error_description names the actual cause (expired vs revoked vs bad client)
   throw new Error('Token refresh failed: '+(data.error||'?')+(data.error_description?' — '+data.error_description:'')+' [client …'+String(GSC_CLIENT_ID).slice(-8)+']');
 }
@@ -8600,7 +8610,21 @@ async function refreshGA4Token(){
   return false;
 }
 
-async function connectGSC(){
+// One Google authorisation serves GSC, GA4, Business Profile AND Google Ads.
+// Both entry points (SEO "Connect Google" and Settings "Generate token") request the full set,
+// and whichever refresh token is minted is written to every consumer, so re-consenting for one
+// product can never orphan another.
+const GOOGLE_ALL_SCOPES='https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/adwords';
+function adoptGoogleRefreshToken(rt){
+  if(!rt)return;
+  localStorage.setItem('ec-gsc-refresh-token',rt);
+  localStorage.setItem('ec-ga4-refresh-token',rt);
+  const creds=getGAdsCreds();
+  if(creds){creds.refreshToken=rt;localStorage.setItem('ec-gads-creds',JSON.stringify(creds));}
+  const rtEl=document.getElementById('gads-refresh-token');if(rtEl)rtEl.value=rt;
+  if(typeof gadsTab==='object'&&gadsTab)gadsTab.error=null;
+}
+async function connectGSC(force=false){
   const btn=document.getElementById('gsc-connect-btn');
   if(!GSC_CLIENT_ID||!GSC_CLIENT_SECRET){
     toast('Save your Google Client ID and Secret in Settings first');
@@ -8608,7 +8632,7 @@ async function connectGSC(){
   }
   // If we have stored refresh tokens, just use them
   const hasRT=localStorage.getItem('ec-gsc-refresh-token');
-  if(hasRT){
+  if(hasRT&&!force){
     if(btn)btn.innerHTML='<i class="ti ti-loader"></i> Connecting…';
     const ok=await refreshAccessToken();
     await refreshGA4Token();
@@ -8623,13 +8647,13 @@ async function connectGSC(){
     return;
   }
   // Full OAuth flow using localhost redirect
-  const scope=encodeURIComponent('https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/business.manage');
+  const scope=encodeURIComponent(GOOGLE_ALL_SCOPES);
   const redirect=encodeURIComponent('http://localhost');
   const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
   // Open in new window and listen for the redirect
   const statusEl=document.getElementById('gsc-oauth-status');
   if(statusEl)statusEl.innerHTML=`<div style="background:var(--blue-l);border:1px solid var(--blue)30;border-radius:var(--r);padding:.875rem 1rem;font-size:13px;color:var(--text);line-height:1.6;margin-top:.5rem">
-    <strong>Step 1:</strong> A Google sign-in page will open. Sign in with the Eracore Google account and approve access.<br>
+    <strong>Step 1:</strong> A Google sign-in page will open. Sign in with the Eracore Google account and approve access — one approval covers Search Console, Analytics, Business Profile and Google Ads.<br>
     <strong>Step 2:</strong> After approving, your browser will show a page that can't be reached (localhost refused). That's expected.<br>
     <strong>Step 3:</strong> Copy the full URL from your browser's address bar and paste it below.<br>
     <div style="display:flex;gap:8px;margin-top:10px">
@@ -8670,12 +8694,11 @@ async function exchangeGSCRedirectUrl(){
     });
     const data=await res.json();
     if(data.refresh_token){
-      localStorage.setItem('ec-gsc-refresh-token',data.refresh_token);
-      localStorage.setItem('ec-ga4-refresh-token',data.refresh_token);
+      adoptGoogleRefreshToken(data.refresh_token);
       if(data.access_token){gscToken=data.access_token;ga4Token=data.access_token;localStorage.setItem('ec-gsc-token',gscToken);}
       updateGSCConnectedState();
-      if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ Google connected — GSC and GA4 are live.</div>';
-      fetchLiveData();fetchConversionData();
+      if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ Google connected — Search Console, GA4, Business Profile and Google Ads all use this login.</div>';
+      fetchLiveData();fetchConversionData();try{fetchGBP(true);}catch(e){}
       toast('Google connected');
     }else{
       const msg=data.error_description||data.error||JSON.stringify(data);
@@ -9441,7 +9464,7 @@ function renderSEOOverview(){
       <div style="font-size:10px;color:var(--text3);margin-top:.5rem">Business Profile Performance API · ${fmtDate(gbp.fetched)}</div>`;
     }
     const gateMsg=gbp.gate==='scope'
-      ?`Your Google login was authorised before the Business Profile permission existed, so Google rejects the token for this API. Click <b>Google connected</b> at the top of this page to re-authorise once — the request now includes the Business Profile scope. Everything else (GSC, GA4) keeps working.`
+      ?`Your Google login was authorised before the Business Profile permission existed, so Google rejects the token for this API. Re-authorise once — the request now covers Search Console, GA4, Business Profile and Google Ads together.<div style="margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="navTo('seodash');setTimeout(()=>connectGSC(true),150)"><i class="ti ti-brand-google"></i> Re-authorise Google</button></div>`
       :gbp.gate==='approval'
       ?`Google gates the Business Profile APIs behind an access-approval form (quota is 0 until approved). <b>MZ needs to submit the request</b> for the OAuth project — usually approved in a few days. <a href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" style="color:var(--blue)">Request form</a>`
       :esc(gbp.error||'Unknown error');
@@ -10342,7 +10365,19 @@ function renderPaidGoogleTab(){
     <span style="font-size:11px;color:var(--text3)">Live from Google Ads API</span>
   </div>`;
   if(gadsTab.loading&&!gadsTab.campaigns){el.innerHTML=header+`<div class="empty">Pulling live data from Google Ads…</div>`;return;}
-  if(gadsTab.error&&!gadsTab.campaigns){el.innerHTML=header+`<div class="empty" style="color:var(--red)">Google Ads error: ${esc(gadsTab.error)}</div>`;return;}
+  if(gadsTab.error&&!gadsTab.campaigns){
+    const authErr=/invalid_grant|expired or revoked|No adwords refresh token|Token refresh failed/i.test(gadsTab.error);
+    el.innerHTML=header+(authErr?`
+      <div style="max-width:720px;margin:1.5rem auto;background:var(--surface);border:1px solid color-mix(in srgb,var(--amber) 40%,var(--border));border-radius:var(--rl);padding:1.25rem 1.5rem">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:.5rem"><i class="ti ti-key-off" style="font-size:20px;color:var(--amber)"></i><div style="font-size:15px;font-weight:700">Google Ads needs to be re-authorised</div></div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:.875rem">Google has invalidated the stored refresh token (<span style="font-family:monospace;font-size:11px">${esc(gadsTab.error.replace(/\s*\[client.*$/,''))}</span>). This happens when the Google Cloud OAuth app is in <b>Testing</b> mode (tokens expire after 7 days), when access is revoked in the Google account, or when the account password changes. Re-authorising takes about a minute and the new login also covers Search Console, GA4 and Business Profile.</div>
+        <button class="btn btn-primary" onclick="startGAdsOAuth('gads-inline-oauth')"><i class="ti ti-brand-google"></i> Re-authorise Google</button>
+        <div id="gads-inline-oauth" style="margin-top:.75rem"></div>
+        <details style="margin-top:1rem;font-size:12px;color:var(--text2);line-height:1.6"><summary style="cursor:pointer;color:var(--text);font-weight:600">Stop this happening every week</summary>
+          If this keeps recurring roughly every 7 days, the OAuth consent screen is in Testing. Fix (needs the Google Cloud project owner): <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" style="color:var(--blue)">Google Cloud → APIs &amp; Services → OAuth consent screen</a> → <b>Publishing status → Publish app</b>. No verification is required for your own account to keep working; refresh tokens then stop expiring.</details>
+      </div>`:`<div class="empty" style="color:var(--red)">Google Ads error: ${esc(gadsTab.error)}</div>`);
+    return;
+  }
   if(!gadsTab.campaigns){el.innerHTML=header+`<div class="empty">Click Refresh to pull live campaign data.</div>`;gadsRefreshTab();return;}
 
   // ── Type filter chips + filtered set ──
@@ -12547,7 +12582,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.1';
+const APP_HTML_VERSION='9.2';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
