@@ -539,7 +539,7 @@ select.sm:focus{border-color:var(--blue)}
     <button disabled style="height:34px;padding:0 14px;border-radius:100px;border:1px dashed var(--border2);background:transparent;color:var(--text3);font-size:13px;cursor:default;display:inline-flex;align-items:center;gap:6px"><i class="ti ti-plus"></i> More bots coming</button>
   </div>
 
-  <div id="agent-bot-backlink" class="agent-bot-pane active">
+  <div id="agent-bot-host"><div id="agent-bot-backlink" class="agent-bot-pane active">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div style="display:flex;align-items:center;gap:10px">
         <div style="width:36px;height:36px;border-radius:var(--r);background:var(--blue-l);display:flex;align-items:center;justify-content:center"><i class="ti ti-link" style="color:var(--blue);font-size:18px"></i></div>
@@ -621,7 +621,7 @@ select.sm:focus{border-color:var(--blue)}
       </div>
       <div style="font-size:12px;color:var(--text3);margin-top:1rem">Uses the Anthropic API key saved in Settings. Data lives locally in this app.</div>
     </div>
-  </div>
+  </div></div>
 </div>
 
 <div id="page-standup" class="page">
@@ -742,6 +742,7 @@ select.sm:focus{border-color:var(--blue)}
     <button class="itab" onclick="switchSEOTab('funnel',this)">Funnel</button>
     <button class="itab" onclick="switchSEOTab('aieo',this)">AIEO</button>
     <button class="itab" onclick="switchSEOTab('deliverables',this)">Deliverables</button>
+    <button class="itab" onclick="switchSEOTab('bot',this)"><i class="ti ti-robot" style="font-size:12px"></i> Backlink Bot</button>
   </div>
   <div id="seo-overview" class="itab-pane active"></div>
   <div id="seo-gsc" class="itab-pane"></div>
@@ -751,6 +752,7 @@ select.sm:focus{border-color:var(--blue)}
   <div id="seo-keywords" class="itab-pane"></div>
   <div id="seo-aieo" class="itab-pane"></div>
   <div id="seo-deliverables" class="itab-pane"></div>
+  <div id="seo-bot" class="itab-pane"></div>
 
   <!-- SEMrush upload overlay -->
   <div class="overlay" id="semrush-overlay" onclick="if(event.target===this)this.classList.remove('open')">
@@ -1383,6 +1385,16 @@ select.sm:focus{border-color:var(--blue)}
       <div style="display:flex;gap:8px">
         <input type="password" id="bing-wmt-key-input" placeholder="Bing WMT API key" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
         <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('bing-wmt-key-input').value.trim();if(!v)return;localStorage.setItem('ec-bing-wmt-key',v);toast('Bing WMT key saved');fetchBingWmt();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+      </div>
+    </div>
+
+    <!-- PageSpeed Insights -->
+    <div id="settings-psi" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.25rem"><i class="ti ti-gauge" style="color:#4285F4"></i> PageSpeed Insights (Core Web Vitals)</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.5rem;line-height:1.5">Free key, no billing. In the same Google Cloud project as the Search Console OAuth app: <b>APIs &amp; Services → Enable "PageSpeed Insights API" → Credentials → Create credentials → API key</b>. Without a key Google's shared anonymous quota runs out within minutes.</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="psi-key-input" placeholder="AIza…" style="flex:1;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        <button class="btn btn-primary" onclick="(function(){const v=document.getElementById('psi-key-input').value.trim();if(!v)return;localStorage.setItem('ec-psi-key',v);toast('PageSpeed key saved — running Lighthouse…');fetchPageSpeed(true);})()"><i class="ti ti-check"></i> Save &amp; run</button>
       </div>
     </div>
 
@@ -6822,6 +6834,7 @@ function initSettings(){
   // ── SEMrush fields ──
   const srKey=localStorage.getItem('ec-semrush-key');
   const srCid=localStorage.getItem('ec-semrush-campaign-id');
+  const psiEl=document.getElementById('psi-key-input');if(psiEl)psiEl.value=localStorage.getItem('ec-psi-key')||'';
   const srKeyEl=document.getElementById('semrush-key-input');
   const srCidEl=document.getElementById('semrush-campaign-id-input');
   if(srKeyEl&&srKey)srKeyEl.value=srKey;
@@ -8788,101 +8801,32 @@ async function fetchLiveData(){
     }
   }catch(e){console.log('GA4 error',e);}
 
-  // ── GA4: Engagement metrics (bounce rate, session duration, pages/session) ──
-  try{
-    if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('No GA4 token');}
-    const engRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
-      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dateRanges:[{startDate,endDate}],
-        metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],
-        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}
-      })
-    });
-    if(engRes.ok){
-      const engData=await engRes.json();
-      const row=(engData.rows||[])[0];
-      if(row){
-        googleStats.bounceRate=parseFloat(row.metricValues[0].value)||null;
-        googleStats.avgSessionDuration=parseFloat(row.metricValues[1].value)||null;
-        googleStats.pagesPerSession=parseFloat(row.metricValues[2].value)||null;
-      }
-    }
-  }catch(e){console.log('GA4 engagement error',e);}
-
-  // ── Prior equal period (for "What changed" deltas) ──
-  try{
-    const prevEnd=new Date(new Date(startDate+'T00:00:00Z')-86400000).toISOString().slice(0,10);
-    const prevStart=new Date(new Date(prevEnd+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
-    // Prior GSC clicks/impressions
-    const gscPrevRes=await fetch(gscBase,{method:'POST',headers:gscHeaders,
-      body:JSON.stringify({startDate:prevStart,endDate:prevEnd,rowLimit:1})});
-    if(gscPrevRes.ok){
-      const gscPrevData=await gscPrevRes.json();
-      const tot=(gscPrevData.rows||[]).reduce((s,r)=>({clicks:s.clicks+r.clicks,impressions:s.impressions+r.impressions}),{clicks:0,impressions:0});
-      googleStats.prevClicks=Math.round(tot.clicks);
-      googleStats.prevImpressions=Math.round(tot.impressions);
-    }
-    // Prior GA4 engagement
-    const prevEngRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
-      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dateRanges:[{startDate:prevStart,endDate:prevEnd}],
-        metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],
-        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}}
-      })
-    });
-    if(prevEngRes.ok){
-      const prevEngData=await prevEngRes.json();
-      const row=(prevEngData.rows||[])[0];
-      if(row){
-        googleStats.prevSessions=parseInt(row.metricValues[0].value)||null;
-        googleStats.prevBounceRate=parseFloat(row.metricValues[1].value)||null;
-        googleStats.prevAvgSessionDuration=parseFloat(row.metricValues[2].value)||null;
-        googleStats.prevPagesPerSession=parseFloat(row.metricValues[3].value)||null;
-      }
-    }
-  }catch(e){console.log('GA4 prev-period error',e);}
-
-  // ── GA4: Country breakdown (organic — surfaces Ukraine / MENA) ──
-  try{
-    const ctrRes=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{
-      method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dateRanges:[{startDate,endDate}],
-        dimensions:[{name:'country'}],
-        metrics:[{name:'sessions'},{name:'bounceRate'}],
-        dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}},
-        orderBys:[{metric:{metricName:'sessions'},desc:true}],
-        limit:25
-      })
-    });
-    if(ctrRes.ok){
-      const ctrData=await ctrRes.json();
-      googleStats.ga4Countries=(ctrData.rows||[]).map(r=>({
-        country:r.dimensionValues[0].value,
-        sessions:parseInt(r.metricValues[0].value)||0,
-        bounceRate:parseFloat(r.metricValues[1].value)||0
-      }));
-    }
-  }catch(e){console.log('GA4 country error',e);}
-
-  // ── 28-day daily trend: GSC clicks/impressions + GA4 organic sessions ──
-  try{
-    const d28=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
-    const res=await fetch(gscBase,{method:'POST',headers:gscHeaders,body:JSON.stringify({startDate:d28,endDate,dimensions:['date'],rowLimit:100})});
-    if(res.ok){const d=await res.json();googleStats.daily=(d.rows||[]).map(r=>({d:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions)})).sort((a,b)=>a.d.localeCompare(b.d));}
-    const gres=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({dateRanges:[{startDate:d28,endDate}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}},orderBys:[{dimension:{dimensionName:'date'}}]})});
-    if(gres.ok){const d=await gres.json();googleStats.dailySessions=(d.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});}
-  }catch(e){console.log('daily trend error',e);}
-
-  // ── GA4 landing pages (organic): sessions, bounce, duration ──
-  try{
-    const res=await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`,{method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},
-      body:JSON.stringify({dateRanges:[{startDate,endDate}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'conversions'}],dimensionFilter:{filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}},orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25})});
-    if(res.ok){const d=await res.json();googleStats.ga4Pages=(d.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:parseFloat(r.metricValues[1].value)||0,avgDuration:parseFloat(r.metricValues[2].value)||0,conversions:parseFloat(r.metricValues[3].value)||0}));}
-  }catch(e){console.log('GA4 pages error',e);}
+  // ── Extended feeds: run in parallel, each isolated, errors surfaced in the UI ──
+  googleStats.feedErrors={};
+  const GA4URL=`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY}:runReport`;
+  const organic={filter:{fieldName:'sessionMedium',stringFilter:{matchType:'EXACT',value:'organic'}}};
+  const ga4=async body=>{
+    if(!ga4Token){const ok=await refreshGA4Token();if(!ok)throw new Error('GA4 not authorised — reconnect Google');}
+    let r=await fetch(GA4URL,{method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.status===401||r.status===403){if(await refreshGA4Token())r=await fetch(GA4URL,{method:'POST',headers:{Authorization:`Bearer ${ga4Token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});}
+    const j=await r.json();if(j.error)throw new Error(j.error.message||JSON.stringify(j.error).slice(0,160));return j;
+  };
+  const gsc=async body=>{const r=await fetch(gscBase,{method:'POST',headers:gscHeaders,body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error.message||'GSC error');return j;};
+  const prevEnd=new Date(new Date(startDate+'T00:00:00Z')-86400000).toISOString().slice(0,10);
+  const prevStart=new Date(new Date(prevEnd+'T00:00:00Z')-7*86400000).toISOString().slice(0,10);
+  const d28=new Date(Date.now()-28*86400000).toISOString().slice(0,10);
+  const mv=(row,i)=>parseFloat(row?.metricValues?.[i]?.value);
+  const feeds={
+    engagement:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],metrics:[{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.bounceRate=mv(r,0)||null;googleStats.avgSessionDuration=mv(r,1)||null;googleStats.pagesPerSession=mv(r,2)||null;},
+    prevGA4:async()=>{const j=await ga4({dateRanges:[{startDate:prevStart,endDate:prevEnd}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'screenPageViewsPerSession'}],dimensionFilter:organic});const r=(j.rows||[])[0];if(!r)throw new Error('no rows');googleStats.prevSessions=parseInt(r.metricValues[0].value)||null;googleStats.prevBounceRate=mv(r,1)||null;googleStats.prevAvgSessionDuration=mv(r,2)||null;googleStats.prevPagesPerSession=mv(r,3)||null;},
+    prevGSC:async()=>{const j=await gsc({startDate:prevStart,endDate:prevEnd,rowLimit:1});const t=(j.rows||[]).reduce((s,r)=>({c:s.c+r.clicks,i:s.i+r.impressions}),{c:0,i:0});googleStats.prevClicks=Math.round(t.c);googleStats.prevImpressions=Math.round(t.i);},
+    countries:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'country'}],metrics:[{name:'sessions'},{name:'bounceRate'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Countries=(j.rows||[]).map(r=>({country:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0}));},
+    dailyGSC:async()=>{const j=await gsc({startDate:d28,endDate,dimensions:['date'],rowLimit:100});googleStats.daily=(j.rows||[]).map(r=>({d:r.keys[0],clicks:Math.round(r.clicks),impressions:Math.round(r.impressions)})).sort((a,b)=>a.d.localeCompare(b.d));},
+    dailyGA4:async()=>{const j=await ga4({dateRanges:[{startDate:d28,endDate}],dimensions:[{name:'date'}],metrics:[{name:'sessions'}],dimensionFilter:organic,orderBys:[{dimension:{dimensionName:'date'}}]});googleStats.dailySessions=(j.rows||[]).map(r=>{const k=r.dimensionValues[0].value;return{d:`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`,sessions:parseInt(r.metricValues[0].value)||0};});},
+    landingPages:async()=>{const j=await ga4({dateRanges:[{startDate,endDate}],dimensions:[{name:'landingPage'}],metrics:[{name:'sessions'},{name:'bounceRate'},{name:'averageSessionDuration'},{name:'keyEvents'}],dimensionFilter:organic,orderBys:[{metric:{metricName:'sessions'},desc:true}],limit:25});googleStats.ga4Pages=(j.rows||[]).map(r=>({page:r.dimensionValues[0].value,sessions:parseInt(r.metricValues[0].value)||0,bounceRate:mv(r,1)||0,avgDuration:mv(r,2)||0,conversions:mv(r,3)||0}));}
+  };
+  const results=await Promise.allSettled(Object.entries(feeds).map(async([k,fn])=>{try{await fn();}catch(e){googleStats.feedErrors[k]=e.message;console.error('[SEO feed]',k,e.message);}}));
+  console.log('[SEO feeds] done',Object.keys(googleStats.feedErrors).length?googleStats.feedErrors:'all OK');
 
   googleStats.fetchedAt=Date.now();
   updateSEOTopCounters();
@@ -8901,7 +8845,7 @@ function updateSEOTopCounters(){
 }
 function switchSEOTab(tab,el){
   document.querySelectorAll('#page-seodash .itab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
-  ['overview','gsc','bing','semrush','funnel','keywords','aieo','deliverables'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
+  ['overview','gsc','bing','semrush','funnel','keywords','aieo','deliverables','bot'].forEach(t=>{const p=document.getElementById('seo-'+t);if(p)p.classList.remove('active');});
   const active=document.getElementById('seo-'+tab);if(active)active.classList.add('active');
   if(tab==='overview')renderSEOOverview();
   else if(tab==='gsc')renderGSCTab();
@@ -8911,6 +8855,7 @@ function switchSEOTab(tab,el){
   else if(tab==='aieo'){renderAIEO();if(!aieoWeeks.length||!aieoWeeks[0].fetchedFromApi)fetchAIEOData();}
   else if(tab==='deliverables')renderDeliverables();
   else if(tab==='funnel'){loadCalls();renderSEOFunnel();}
+  else if(tab==='bot'){blMountInto('seo-bot');}
 }
 function renderGSCTab(){
   const el=document.getElementById('seo-gsc');if(!el)return;
@@ -9215,7 +9160,8 @@ async function fetchPageSpeed(force=false){
   const out={fetched:Date.now(),url:'https://eracore.com/'};
   for(const strategy of['mobile','desktop']){
     try{
-      const u=`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(out.url)}&strategy=${strategy}&category=performance&category=seo&category=accessibility&category=best-practices`;
+      const psiKey=localStorage.getItem('ec-psi-key')||'';
+      const u=`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(out.url)}&strategy=${strategy}&category=performance&category=seo&category=accessibility&category=best-practices${psiKey?'&key='+encodeURIComponent(psiKey):''}`;
       const r=await fetch(u);const j=await r.json();
       if(j.error)throw new Error(j.error.message);
       const L=j.lighthouseResult||{},A=L.audits||{},C=L.categories||{};
@@ -9288,7 +9234,7 @@ async function fetchGBP(force=false){
   }catch(e){
     const msg=String(e.message||e);
     out.error=msg;
-    out.gate=/insufficient|scope|invalid_scope/i.test(msg)?'scope':/quota|PERMISSION_DENIED|not enabled|has not been used|403/i.test(msg+(e.code||''))?'approval':'other';
+    out.gate=/insufficient|scope|invalid authentication|UNAUTHENTICATED|401|invalid credentials/i.test(msg+(e.code||''))?'scope':/quota|PERMISSION_DENIED|not enabled|has not been used|403/i.test(msg+(e.code||''))?'approval':'other';
     console.error('[GBP]',e);
   }
   gbpData=out;Store.set(GBP_KEY,gbpData);gbpBusy=false;renderSEOOverview();
@@ -9329,8 +9275,8 @@ function seoChangeCard(){
     b.push(`Organic BOFU: ${parts.join(' · ')}${calls?` · Calls <strong>${calls}</strong>`:''} → <strong style="color:var(--green)">${tot+calls} leads</strong>${tot===0?' <span style="color:var(--amber)">— check GA4 events are firing</span>':''}`);
   }
   // Geo — Ukraine / MENA
-  const MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
-  const geo=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,v:c.sessions})):(g.countries||[]).map(c=>({country:c.country,v:c.clicks}));
+  const MENA=SEO_MENA;
+  const geo=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,v:c.sessions})):(g.countries||[]).map(c=>({country:seoCountryName(c.country),v:c.clicks}));
   const tot=geo.reduce((t,c)=>t+c.v,0);
   if(tot){
     const ua=geo.find(c=>c.country==='Ukraine'),us=geo.find(c=>c.country==='United States');
@@ -9345,6 +9291,9 @@ function seoChangeCard(){
   const pTo=new Date(Date.now()-8*86400000).toISOString().slice(0,10),pFrom=new Date(Date.now()-15*86400000).toISOString().slice(0,10);
   return pfChangeCard(b,pFrom,pTo);
 }
+const SEO_ISO3={usa:'United States',ukr:'Ukraine',egy:'Egypt',sau:'Saudi Arabia',are:'United Arab Emirates',jor:'Jordan',kwt:'Kuwait',qat:'Qatar',bhr:'Bahrain',lbn:'Lebanon',mar:'Morocco',tun:'Tunisia',pak:'Pakistan',ind:'India',gbr:'United Kingdom',bra:'Brazil',pol:'Poland',col:'Colombia',mkd:'North Macedonia',can:'Canada',aus:'Australia',deu:'Germany',fra:'France',esp:'Spain',ita:'Italy',nld:'Netherlands',tur:'Türkiye',sgp:'Singapore',vnm:'Vietnam',bgd:'Bangladesh',phl:'Philippines',idn:'Indonesia',mex:'Mexico',arg:'Argentina',nga:'Nigeria',zaf:'South Africa',ken:'Kenya',irq:'Iraq',omn:'Oman',dza:'Algeria',lby:'Libya',syr:'Syria',yem:'Yemen',pse:'Palestine',irn:'Iran',rou:'Romania',cze:'Czechia',swe:'Sweden',nor:'Norway',dnk:'Denmark',fin:'Finland',irl:'Ireland',prt:'Portugal',che:'Switzerland',aut:'Austria',bel:'Belgium',grc:'Greece',hun:'Hungary',srb:'Serbia',hrv:'Croatia',bgr:'Bulgaria',ltu:'Lithuania',lva:'Latvia',est:'Estonia',geo:'Georgia',kaz:'Kazakhstan',uzb:'Uzbekistan',aze:'Azerbaijan',arm:'Armenia',mda:'Moldova',blr:'Belarus',rus:'Russia',chn:'China',jpn:'Japan',kor:'South Korea',twn:'Taiwan',hkg:'Hong Kong',mys:'Malaysia',tha:'Thailand',npl:'Nepal',lka:'Sri Lanka',nzl:'New Zealand',chl:'Chile',per:'Peru',ecu:'Ecuador',ven:'Venezuela',isr:'Israel',eth:'Ethiopia',gha:'Ghana',zzz:'Unknown'};
+const SEO_MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan','Iraq','Oman','Algeria','Libya','Syria','Yemen','Palestine'];
+function seoCountryName(c){if(!c)return'';const k=String(c).toLowerCase();return SEO_ISO3[k]||(k.length===3?k.toUpperCase():c);}
 // ── Overview helpers ──────────────────────────────────────────
 function seoCard(title,sub,body,actions='',style=''){
   return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem;${style}">
@@ -9415,8 +9364,8 @@ function renderSEOOverview(){
 
   // ── Row A: KPI tiles with sparklines ──
   const tiles=[
-    ['Organic clicks',combinedClicks?combinedClicks.toLocaleString():'—',dChip(gClicks,g.prevClicks),d7.map(d=>d.clicks),'var(--blue)','Google + Bing · 7d'],
-    ['Impressions',combinedImpressions?combinedImpressions.toLocaleString():'—',dChip(gImpressions,g.prevImpressions),d7.map(d=>d.impressions),'var(--amber)','All engines · 7d'],
+    ['Organic clicks',combinedClicks?combinedClicks.toLocaleString():'—',dChip(combinedClicks,(g.prevClicks||0)+(bingData[0]?.prevClicks7||0)),d7.map(d=>d.clicks),'var(--blue)','Google + Bing · 7d'],
+    ['Impressions',combinedImpressions?combinedImpressions.toLocaleString():'—',dChip(combinedImpressions,(g.prevImpressions||0)+(bingData[0]?.prevImpressions7||0)),d7.map(d=>d.impressions),'var(--amber)','All engines · 7d'],
     ['CTR',gCTR!=null?gCTR.toFixed(2)+'%':'—',dChip(gCTR,(g.prevClicks&&g.prevImpressions)?g.prevClicks/g.prevImpressions*100:null),d7.map(d=>d.impressions?d.clicks/d.impressions*100:0),'var(--green)','Google Search'],
     ['Organic sessions',gSessions!=null?gSessions.toLocaleString():'—',dChip(gSessions,g.prevSessions),sess7.map(d=>d.sessions),'var(--purple)','GA4 · 7d'],
     ['Bounce rate',g.bounceRate!=null?(g.bounceRate*100).toFixed(1)+'%':'—',dChip(g.bounceRate,g.prevBounceRate,false),null,g.bounceRate>0.75?'var(--red)':g.bounceRate>0.6?'var(--amber)':'var(--green)','GA4 organic'],
@@ -9432,6 +9381,15 @@ function renderSEOOverview(){
 
   // ── Row B: What changed ──
   html+=seoChangeCard();
+  const fe=g.feedErrors||{};
+  if(Object.keys(fe).length){
+    const nice={engagement:'GA4 engagement (bounce/duration)',prevGA4:'GA4 prior period',prevGSC:'GSC prior period',countries:'GA4 countries',dailyGSC:'GSC 28-day trend',dailyGA4:'GA4 28-day sessions',landingPages:'GA4 landing pages'};
+    html+=`<div style="background:var(--amber-l);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--rl);padding:.75rem 1rem;margin-bottom:1rem;font-size:12px;line-height:1.6">
+      <div style="font-weight:700;color:var(--amber);margin-bottom:2px"><i class="ti ti-alert-triangle"></i> ${Object.keys(fe).length} data feed${Object.keys(fe).length>1?'s':''} failed on last refresh</div>
+      ${Object.entries(fe).map(([k,m])=>`<div>· <b>${nice[k]||k}</b>: ${esc(m)}</div>`).join('')}
+      <div style="color:var(--text3);margin-top:2px">Tiles depending on these show — until they succeed. <a href="#" onclick="fetchLiveData();toast('Retrying…');return false" style="color:var(--blue)">Retry now</a></div>
+    </div>`;
+  }
 
   // ── Row C: Organic traffic (28d) + Sessions (28d) ──
   const bingByDate={};(bingData[0]?.dailyRows||[]).forEach(r=>{if(r.date&&/^\d{4}-\d{2}-\d{2}/.test(r.date))bingByDate[r.date.slice(0,10)]={c:r.clicks||0,i:r.impressions||0};});
@@ -9446,6 +9404,8 @@ function renderSEOOverview(){
   const psiBody=(()=>{
     if(psiBusy&&!psi)return`<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:1rem 0"><i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Running Lighthouse on eracore.com (30–60s)…</div>`;
     if(!psi)return`<div style="font-size:12px;color:var(--text3);padding:.5rem 0">Runs automatically when you open this tab.</div>`;
+    const quota=/quota/i.test((psi.mobile?.error||'')+(psi.desktop?.error||''))&&!localStorage.getItem('ec-psi-key');
+    if(quota)return`<div style="background:var(--amber-l);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--r);padding:.75rem;font-size:12px;line-height:1.55"><i class="ti ti-key" style="color:var(--amber)"></i> Google's anonymous PageSpeed quota is exhausted. Add a free API key (2 minutes, no billing) to get unlimited runs.</div><button class="btn btn-sm" style="margin-top:.5rem" onclick="openSettingsToSection('psi')"><i class="ti ti-settings"></i> Add PageSpeed key</button>`;
     const dev=(k,d)=>{if(!d||d.error)return`<div style="font-size:12px;color:var(--red)">${k}: ${esc(d?.error||'no data')}</div>`;
       return`<div style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--border)">
         <div style="width:44px;height:44px;border-radius:50%;border:3px solid ${seoScoreColor(d.perf)};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${seoScoreColor(d.perf)};flex-shrink:0">${d.perf}</div>
@@ -9481,7 +9441,7 @@ function renderSEOOverview(){
       <div style="font-size:10px;color:var(--text3);margin-top:.5rem">Business Profile Performance API · ${fmtDate(gbp.fetched)}</div>`;
     }
     const gateMsg=gbp.gate==='scope'
-      ?`Your Google connection predates the Business Profile permission. <b>Reconnect Google</b> once (button above) — the new scope is now included in the auth request.`
+      ?`Your Google login was authorised before the Business Profile permission existed, so Google rejects the token for this API. Click <b>Google connected</b> at the top of this page to re-authorise once — the request now includes the Business Profile scope. Everything else (GSC, GA4) keeps working.`
       :gbp.gate==='approval'
       ?`Google gates the Business Profile APIs behind an access-approval form (quota is 0 until approved). <b>MZ needs to submit the request</b> for the OAuth project — usually approved in a few days. <a href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" style="color:var(--blue)">Request form</a>`
       :esc(gbp.error||'Unknown error');
@@ -9523,8 +9483,8 @@ function renderSEOOverview(){
     ${latest.visibility!=null?`<div style="font-size:12px;color:var(--text2);margin-bottom:.5rem">Visibility <b>${latest.visibility}%</b>${latest.visibilityDiff?` <span style="color:${latest.visibilityDiff>0?'var(--green)':'var(--red)'};font-weight:700">${latest.visibilityDiff>0?'▲':'▼'}${Math.abs(latest.visibilityDiff).toFixed(1)}</span>`:''}</div>`:''}
     ${movers.length?`<div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Biggest movers</div>${movers.map(k=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%">${esc(k.keyword)}</span><span><span style="color:var(--text3)">#${k.position}</span> <b style="color:${k.diff>0?'var(--green)':'var(--red)'}">${k.diff>0?'▲':'▼'}${Math.abs(k.diff)}</b></span></div>`).join('')}`:''}`;
   }else semBody=`<div style="font-size:12px;color:var(--text3)">Connect SEMrush to see keyword rankings.</div>`;
-  const MENA=['Saudi Arabia','United Arab Emirates','Egypt','Jordan','Kuwait','Qatar','Bahrain','Lebanon','Morocco','Tunisia','Pakistan'];
-  const geoSrc=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,val:c.sessions,br:c.bounceRate})):(g.countries||[]).map(c=>({country:c.country,val:c.clicks,br:null}));
+  const MENA=SEO_MENA;
+  const geoSrc=g.ga4Countries.length?g.ga4Countries.map(c=>({country:c.country,val:c.sessions,br:c.bounceRate})):(g.countries||[]).map(c=>({country:seoCountryName(c.country),val:c.clicks,br:null}));
   const geoTot=geoSrc.reduce((t,c)=>t+c.val,0)||1,geoMax=geoSrc[0]?.val||1;
   const geoBody=geoSrc.length?geoSrc.slice(0,10).map(c=>{const p=c.val/geoTot*100,isUA=c.country==='Ukraine',isM=MENA.includes(c.country);const tag=isUA?`<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">UA</span>`:isM?`<span style="font-size:9px;background:var(--blue-l);color:var(--blue);padding:1px 5px;border-radius:8px;font-weight:700;margin-left:4px">MENA</span>`:'';return`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)"><div style="width:120px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.country)}${tag}</div><div style="flex:1;height:7px;background:var(--surface2);border-radius:3px;overflow:hidden"><div style="width:${(c.val/geoMax*100).toFixed(1)}%;height:100%;background:${isUA?'var(--amber)':isM?'var(--blue)':'var(--text3)'};opacity:.75"></div></div><div style="width:44px;text-align:right;font-size:12px;font-weight:600">${c.val.toLocaleString()}</div><div style="width:36px;text-align:right;font-size:11px;color:var(--text3)">${p.toFixed(0)}%</div>${c.br!=null?`<div style="width:40px;text-align:right;font-size:10px;color:${c.br>0.75?'var(--red)':c.br>0.6?'var(--amber)':'var(--text3)'}">${(c.br*100).toFixed(0)}%br</div>`:''}</div>`;}).join('')+`<div style="display:flex;gap:10px;margin-top:.5rem;font-size:10px;color:var(--text3)"><span><b style="background:var(--amber-l);color:var(--amber);padding:0 4px;border-radius:3px">UA</b> Ukraine · training programme</span><span><b style="background:var(--blue-l);color:var(--blue);padding:0 4px;border-radius:3px">MENA</b> MENA campaign</span></div>`
     :`<div style="font-size:12px;color:var(--text3)">Connect Google to see country breakdown.</div>`;
@@ -9902,26 +9862,26 @@ async function refreshBingToken(refreshToken){
 
 async function fetchBingDataWithToken(token){
   const siteUrl=encodeURIComponent('https://eracore.com/');
-  const targetUrl=`https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?siteUrl=${siteUrl}`;
-  const proxyUrl=`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(targetUrl)}&authHeader=${encodeURIComponent('Bearer '+token)}`;
+  const px=u=>`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}&authHeader=${encodeURIComponent('Bearer '+token)}`;
+  const getJson=async u=>{const r=await fetch(px(u));const t=await r.text();let j;try{j=JSON.parse(t);}catch(e){throw new Error('Non-JSON: '+t.slice(0,100));}if(j.error||j.ErrorCode)throw new Error(JSON.stringify(j).slice(0,200));return j;};
+  const parseDate=v=>{const m=/\/Date\((\d+)/.exec(v||'');return m?new Date(+m[1]).toISOString().slice(0,10):(String(v||'').slice(0,10));};
   try{
-    const res=await fetch(proxyUrl);
-    const text=await res.text();
-    console.log('[Bing data] status:',res.status,'response:',text.slice(0,300));
-    let data;
-    try{data=JSON.parse(text);}catch(e){throw new Error('Non-JSON: '+text.slice(0,100));}
-    if(data.error||data.ErrorCode){throw new Error(JSON.stringify(data));}
-    const queries=Array.isArray(data.d)?data.d:[];
-    const totalClicks=queries.reduce((s,q)=>s+(q.Clicks||0),0);
-    const totalImpr=queries.reduce((s,q)=>s+(q.Impressions||0),0);
-    // Build dailyRows compatible structure from query data
-    const dailyRows=queries.map(q=>({date:q.Date||'',clicks:q.Clicks||0,impressions:q.Impressions||0,query:q.Query||''}));
-    bingData=[{totalClicks7:totalClicks,totalImpressions7:totalImpr,queries:queries.slice(0,20),dailyRows,weeks:[],source:'oauth',fetched:Date.now()}];
+    // Daily clicks/impressions — the only source that gives a true 7-day window
+    const traffic=await getJson(`https://ssl.bing.com/webmaster/api.svc/json/GetRankAndTrafficStats?siteUrl=${siteUrl}`);
+    const dailyRows=(Array.isArray(traffic.d)?traffic.d:[]).map(r=>({date:parseDate(r.Date),clicks:r.Clicks||0,impressions:r.Impressions||0,avgPos:r.AvgImpressionPosition||null})).filter(r=>/^\d{4}-\d{2}-\d{2}$/.test(r.date)).sort((a,b)=>a.date.localeCompare(b.date));
+    const cutoff7=new Date(Date.now()-7*86400e3).toISOString().slice(0,10),cutoff14=new Date(Date.now()-14*86400e3).toISOString().slice(0,10);
+    const last7=dailyRows.filter(r=>r.date>=cutoff7),prev7=dailyRows.filter(r=>r.date>=cutoff14&&r.date<cutoff7);
+    const sum=(rows,k)=>rows.reduce((t,r)=>t+(r[k]||0),0);
+    // Weekly buckets for the 8-week chart
+    const weeks=[];for(let w=0;w<8;w++){const end=new Date(Date.now()-w*7*86400e3),start=new Date(end-7*86400e3);const rows=dailyRows.filter(r=>r.date>start.toISOString().slice(0,10)&&r.date<=end.toISOString().slice(0,10));weeks.push({date:start.toISOString().slice(0,10),clicks:sum(rows,'clicks'),impressions:sum(rows,'impressions')});}
+    // Top queries (all-time table from Bing) — for the query list only, never summed as "7d"
+    let queries=[];try{const q=await getJson(`https://ssl.bing.com/webmaster/api.svc/json/GetQueryStats?siteUrl=${siteUrl}`);queries=(Array.isArray(q.d)?q.d:[]).sort((a,b)=>(b.Clicks||0)-(a.Clicks||0)).slice(0,20);}catch(e){console.warn('[Bing queries]',e.message);}
+    bingData=[{totalClicks7:sum(last7,'clicks'),totalImpressions7:sum(last7,'impressions'),prevClicks7:sum(prev7,'clicks'),prevImpressions7:sum(prev7,'impressions'),queries,dailyRows,weeks,source:'oauth',fetched:Date.now()}];
     localStorage.setItem('ec-bing-v1',JSON.stringify(bingData));
     updateSEOTopCounters();renderSEOOverview();
     const btn=document.getElementById('bing-connect-btn');
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Bing connected</span>';
-    toast('Bing connected — '+totalClicks+' clicks, '+totalImpr+' impressions');
+    toast(`Bing connected — ${sum(last7,'clicks')} clicks · ${sum(last7,'impressions').toLocaleString()} impressions (7d)`);
   }catch(e){
     console.error('[Bing data] Error:',e.message);
     toast('Bing fetch failed: '+e.message);
@@ -12587,7 +12547,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='9.0';
+const APP_HTML_VERSION='9.1';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -14577,7 +14537,8 @@ async function safeRunAsync(label,fn){try{await fn();}catch(e){console.error('[O
 // ══════════════════════════════════════════════════════════════
 function agentLoad(){try{const d=localStorage.getItem(BL_SK);if(d)blState={...blState,...JSON.parse(d)};}catch(e){}blUpdateStats();}
 function agentSave(){localStorage.setItem(BL_SK,JSON.stringify(blState));blUpdateStats();}
-function agentRender(){agentSelectBot('backlink');blRenderResults(blState.opportunities);blRenderQueue();}
+function blMountInto(hostId){const host=document.getElementById(hostId),pane=document.getElementById('agent-bot-backlink');if(host&&pane&&pane.parentElement!==host)host.appendChild(pane);pane?.classList.add('active');agentLoad();agentSelectBot('backlink');blRenderResults(blState.opportunities);blRenderQueue();}
+function agentRender(){blMountInto('agent-bot-host');}
 function agentSelectBot(bot){
   document.querySelectorAll('.agent-bot-pane').forEach(p=>p.classList.toggle('active',p.id==='agent-bot-'+bot));
   blRenderScanPills();blRenderSettings();
