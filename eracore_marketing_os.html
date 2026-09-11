@@ -1504,7 +1504,7 @@ select.sm:focus{border-color:var(--blue)}
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">
         Uses your existing Google OAuth (same as Search Console + GA4). You only need the <strong>YouTube Channel ID</strong>.<br>
-        Channel ID: go to <a href="https://studio.youtube.com" target="_blank" style="color:var(--blue)">studio.youtube.com</a> → Settings → Channel → Basic info → Channel ID (starts with <em>UC…</em>). Also enable the <strong>YouTube Analytics API</strong> in Google Cloud Console for your project.
+        Channel ID: go to <a href="https://studio.youtube.com" target="_blank" style="color:var(--blue)">studio.youtube.com</a> → Settings → Channel → Basic info → Channel ID (starts with <em>UC…</em>).<br>After saving, go to <strong>SEO/AIEO → Connect Google</strong> and re-authorise — this adds <code>youtube.readonly</code> scope to your existing Google token (one-time, doesn't break anything).
       </div>
       <div style="margin-bottom:8px">
         <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">YouTube Channel ID</label>
@@ -8678,7 +8678,7 @@ async function refreshGA4Token(){
 // Both entry points (SEO "Connect Google" and Settings "Generate token") request the full set,
 // and whichever refresh token is minted is written to every consumer, so re-consenting for one
 // product can never orphan another.
-const GOOGLE_ALL_SCOPES='https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/adwords';
+const GOOGLE_ALL_SCOPES='https://www.googleapis.com/auth/webmasters.readonly https://www.googleapis.com/auth/analytics.readonly https://www.googleapis.com/auth/business.manage https://www.googleapis.com/auth/adwords https://www.googleapis.com/auth/youtube.readonly';
 function adoptGoogleRefreshToken(rt){
   if(!rt)return;
   localStorage.setItem('ec-gsc-refresh-token',rt);
@@ -12215,87 +12215,67 @@ function updateSocConnectBtns(){
 async function fetchLinkedInOrganic(){
   const token=getLiToken();
   const orgId=getSocLiOrgId();
-  if(!token||!orgId){navTo('settings');toast('Add your LinkedIn Org ID in Settings → Social Media first','warn');return;}
+  if(!token||!orgId){
+    navTo('settings');
+    toast('Add your LinkedIn Org ID in Settings → Social Media first','warn');
+    return;
+  }
   const btn=document.getElementById('soc-li-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   socLiveData.linkedin.error='';
   try{
     const range=socDateRange();
-    // LinkedIn REST API: timeIntervals uses encoded list notation
-    // Use YEAR granularity for broader date ranges, MONTH for shorter
-    const startMs=Date.parse(range.since+'T00:00:00Z');
-    const endMs=Date.parse(range.until+'T23:59:59Z');
-    const granularity=range.days>60?'YEAR':'MONTH';
-
-    // Build headers JSON — passed as &headers= param to /proxy
     const liVer=liVersion(0);
-    const hdrs=JSON.stringify({
-      'Authorization':'Bearer '+token,
-      'LinkedIn-Version':liVer,
-      'X-Restli-Protocol-Version':'2.0.0'
-    });
+    const hdrs=JSON.stringify({'Authorization':'Bearer '+token,'LinkedIn-Version':liVer,'X-Restli-Protocol-Version':'2.0.0'});
+    const orgUrn=encodeURIComponent('urn:li:organization:'+orgId);
 
-    // LinkedIn REST v2: use organizationUrn directly (not encoded in URL param)
-    const orgUrn='urn:li:organization:'+orgId;
-
-    // ── Follower count (simpler endpoint — no time range needed) ──
-    // /rest/followersStatistics returns total follower count
-    const orgUrl=`https://api.linkedin.com/v2/organizations/${orgId}?fields=name,localizedName,followingInfo`;
-    const orgRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(orgUrl)}&headers=${encodeURIComponent(hdrs)}`);
-    const orgData=await orgRes.json();
-    console.log('[LI organic] org data:', JSON.stringify(orgData).slice(0,200));
-
-    // ── Follower stats with time range ──
-    // LinkedIn v2 organizationalEntityFollowerStatistics — encode URN as LIST param
-    const encUrn=encodeURIComponent(orgUrn);
-    const followerUrl=`https://api.linkedin.com/v2/organizationalEntityFollowerStatistics?q=organizationalEntity&organizationalEntity=${encUrn}&timeIntervals=(timeGranularityType:${granularity},timeRange:(start:${startMs},end:${endMs}))`;
+    // Follower stats
+    const followerUrl=`https://api.linkedin.com/rest/organizationalEntityFollowerStatistics?q=organizationalEntity&organizationalEntity=${orgUrn}&timeIntervals.timeGranularityType=MONTH&timeIntervals.timeRange.start=${Date.parse(range.since+'T00:00:00Z')}&timeIntervals.timeRange.end=${Date.parse(range.until+'T23:59:59Z')}`;
     const fRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(followerUrl)}&headers=${encodeURIComponent(hdrs)}`);
     const fData=await fRes.json();
-    console.log('[LI organic] followers:', JSON.stringify(fData).slice(0,300));
 
-    // ── Share stats ──
-    const shareUrl=`https://api.linkedin.com/v2/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encUrn}&timeIntervals=(timeGranularityType:${granularity},timeRange:(start:${startMs},end:${endMs}))`;
+    // Share/post stats
+    const shareUrl=`https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${orgUrn}&timeIntervals.timeGranularityType=MONTH&timeIntervals.timeRange.start=${Date.parse(range.since+'T00:00:00Z')}&timeIntervals.timeRange.end=${Date.parse(range.until+'T23:59:59Z')}`;
     const sRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(shareUrl)}&headers=${encodeURIComponent(hdrs)}`);
     const sData=await sRes.json();
-    console.log('[LI organic] shares:', JSON.stringify(sData).slice(0,300));
 
-    // Error check — try older API version as fallback
-    const hasError=(d)=>!d.elements&&(d.status>=400||d.message||d.error||d.code);
-    if(hasError(fData)){
+    if(fData.status===403||fData.message||fData.error){
+      // Try older version fallback
       const liVer2=liVersion(3);
       const hdrs2=JSON.stringify({'Authorization':'Bearer '+token,'LinkedIn-Version':liVer2,'X-Restli-Protocol-Version':'2.0.0'});
       const fRes2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(followerUrl)}&headers=${encodeURIComponent(hdrs2)}`);
       const fData2=await fRes2.json();
-      const sRes2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(shareUrl)}&headers=${encodeURIComponent(hdrs2)}`);
-      const sData2=await sRes2.json();
-      if(hasError(fData2)){
-        throw new Error((fData2.message||fData2.error||JSON.stringify(fData2)).slice(0,200));
+      if(fData2.elements){
+        processLinkedInOrgData(fData2, sData);
+      } else {
+        throw new Error(fData2.message||fData2.error||JSON.stringify(fData2).slice(0,120));
       }
-      processLinkedInOrgData(fData2, sData2, orgData);
     } else {
-      processLinkedInOrgData(fData, sData, orgData);
+      processLinkedInOrgData(fData, sData);
     }
   }catch(e){
     socLiveData.linkedin.error=e.message||String(e);
     toast('LinkedIn organic: '+socLiveData.linkedin.error,'error');
   }finally{
-    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span id="soc-li-btn-lbl">'+(socLiveData.linkedin.loaded?'↻ Refresh LinkedIn':'Connect LinkedIn')+'</span>';}
-    updateSocConnectBtns();updateSocKpiBar();
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span id="soc-li-btn-lbl">'+( socLiveData.linkedin.loaded?'↻ Refresh LinkedIn':'Connect LinkedIn')+'</span>';}
+    updateSocConnectBtns();
+    updateSocKpiBar();
     const active=document.querySelector('#page-socialdash .itab.active');
     if(active&&active.getAttribute('onclick').includes('linkedin'))renderSocLinkedInTab();
     else renderSocOverview();
   }
 }
 
-function processLinkedInOrgData(fData, sData, orgData){
+function processLinkedInOrgData(fData, sData){
   const els=fData.elements||[];
-  // Get follower gains over period
-  const gainedFollowers=els.reduce((s,e)=>{
-    const g=e.followerGains||{};
-    return s+(g.organicFollowerGain||0)+(g.paidFollowerGain||0);
+  // Sum followers across time intervals
+  const totalFollowers=els.reduce((s,e)=>{
+    const gains=(e.followerGains||{});
+    return s+(gains.organicFollowerGain||0)+(gains.paidFollowerGain||0);
   },0);
-  // Get follower count from org endpoint if available
-  const totalCount=orgData?.followingInfo?.followerCount||gainedFollowers||null;
+  // Latest period total count — try totalFollowerCount on last element
+  const lastEl=els[els.length-1];
+  const totalCount=lastEl?.followerCountsByType?.reduce((s,t)=>s+t.followerCounts.organicFollowerCount+t.followerCounts.paidFollowerCount,0)||totalFollowers;
 
   const sEls=(sData?.elements||[]);
   let totalImpr=0,totalClicks=0,totalEngRate=0,engCount=0;
@@ -12308,7 +12288,7 @@ function processLinkedInOrgData(fData, sData, orgData){
 
   socLiveData.linkedin={
     loaded:true,error:'',
-    followers:totalCount,
+    followers:totalCount||null,
     impressions:totalImpr||null,
     clicks:totalClicks||null,
     engRate:engCount?(totalEngRate/engCount*100):null,
@@ -12320,120 +12300,136 @@ function processLinkedInOrgData(fData, sData, orgData){
 }
 
 // ════════════════════════════════════════════════════════════════
-// META ORGANIC FETCH
-// Facebook Page Insights + Instagram Business Insights
-// Uses ec-meta-token (system user token) — token must have
-// pages_read_engagement + instagram_basic + instagram_manage_insights
-// First exchanges for a Page Access Token via /me/accounts
+// META ORGANIC FETCH (Facebook Page Insights + Instagram Business)
+// Reuses ec-meta-token (system user token)
 // ════════════════════════════════════════════════════════════════
 async function fetchMetaSocialOrganic(){
   const token=getMetaToken();
   const fbPageId=getSocFbPageId();
   const igAccountId=getSocIgAccountId();
-  if(!token){toast('No Meta token found. Add it in Settings → Meta Ads first.','warn');navTo('settings');return;}
+  if(!token){toast('No Meta token saved. Add it in Settings → Meta Ads first.','warn');navTo('settings');return;}
   if(!fbPageId&&!igAccountId){toast('Add Facebook Page ID and/or Instagram Account ID in Settings → Social Media.','warn');navTo('settings');return;}
   const btn=document.getElementById('soc-meta-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   const range=socDateRange();
   try{
-    // Step 1: Try to get a Page Access Token from the system user token
-    // System user tokens can exchange for page tokens via /me/accounts
-    let pageToken=token; // fallback: use system user token directly
-    if(fbPageId){
-      try{
-        const acctUrl=`https://graph.facebook.com/v21.0/${fbPageId}?fields=access_token,name,fan_count,followers_count&access_token=${token}`;
-        const acctRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(acctUrl)}`);
-        const acctData=await acctRes.json();
-        console.log('[Meta social] page token exchange:', JSON.stringify(acctData).slice(0,200));
-        if(acctData.access_token){pageToken=acctData.access_token;console.log('[Meta social] got page token');}
-        if(acctData.fan_count!=null||acctData.followers_count!=null){
-          // We already have fan count from this call — process FB data directly
-          socLiveData.facebook={
-            loaded:true,error:'',
-            followers:acctData.fan_count||acctData.followers_count||null,
-            reach:null,impressions:null,engRate:null,posts:null,days:[],
-            pageName:acctData.name||''
-          };
-        }
-      }catch(ex){console.log('[Meta social] page token exchange failed:',ex.message);}
-    }
-
     const results=await Promise.allSettled([
-      fbPageId?fetchFbPageInsights(pageToken,fbPageId,range):Promise.resolve(null),
+      fbPageId?fetchFbPageInsights(token,fbPageId,range):Promise.resolve(null),
       igAccountId?fetchIgInsights(token,igAccountId,range):Promise.resolve(null),
     ]);
     if(results[0].status==='fulfilled'&&results[0].value)processFbData(results[0].value);
-    else if(results[0].reason){
-      socLiveData.facebook.error=results[0].reason?.message||'Facebook error';
-      console.log('[Meta social] FB error:',socLiveData.facebook.error);
-    }
+    else if(results[0].status==='rejected') socLiveData.facebook.error=results[0].reason?.message||'Facebook error';
     if(results[1].status==='fulfilled'&&results[1].value)processIgData(results[1].value);
-    else if(results[1].reason){
-      socLiveData.instagram.error=results[1].reason?.message||'Instagram error';
-      console.log('[Meta social] IG error:',socLiveData.instagram.error);
-    }
-    toast('Meta social loaded');
+    else if(results[1].status==='rejected') socLiveData.instagram.error=results[1].reason?.message||'Instagram error';
+    toast('Meta organic loaded');
   }catch(e){
     toast('Meta organic error: '+(e.message||e),'error');
-    console.log('[Meta social] error:',e);
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span id="soc-meta-btn-lbl">↻ Refresh Meta</span>';}
-    updateSocConnectBtns();updateSocKpiBar();
+    updateSocConnectBtns();
+    updateSocKpiBar();
     const active=document.querySelector('#page-socialdash .itab.active');
     if(active&&active.getAttribute('onclick').includes('meta'))renderSocMetaTab();
     else renderSocOverview();
   }
 }
 
-async function fetchFbPageInsights(pageToken,pageId,range){
-  // Facebook Page Insights — use page access token
-  // Metrics that work with page tokens: page_fans, page_impressions, page_reach, page_engaged_users
-  const metrics='page_fans,page_impressions,page_reach,page_engaged_users';
-  const url=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(metrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${pageToken}`;
-  const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`);
-  const d=await r.json();
-  console.log('[FB insights]',JSON.stringify(d).slice(0,300));
-  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-  // Also get page basics
-  const fanUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name&access_token=${pageToken}`;
-  const fr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(fanUrl)}`);
-  const fd=await fr.json();
-  return{insights:d.data||[],page:fd};
+async function fetchFbPageInsights(token,pageId,range){
+  // ── Day-period metrics (valid for period=day) ──
+  const dayMetrics='page_impressions,page_reach,page_engaged_users';
+  const insightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insightsUrl)}`);
+  const insightsData=await ir.json();
+  console.log('[FB insights day]',JSON.stringify(insightsData).slice(0,300));
+
+  // ── Fan count (period=lifetime, single value) ──
+  const fanMetrics='page_fans,page_followers';
+  const fanInsightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(fanMetrics)}&period=lifetime&access_token=${token}`;
+  const fir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(fanInsightsUrl)}`);
+  const fanInsightsData=await fir.json();
+  console.log('[FB insights lifetime]',JSON.stringify(fanInsightsData).slice(0,200));
+
+  // ── Page basic fields (name, fan_count directly on page object) ──
+  const pageUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name&access_token=${token}`;
+  const pr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pageUrl)}`);
+  const pageData=await pr.json();
+  console.log('[FB page]',JSON.stringify(pageData).slice(0,200));
+
+  // If insights errored (common with restricted tokens), still use page basic data
+  const insightsArr=insightsData.error?[]:insightsData.data||[];
+  return{insights:insightsArr,fanInsights:fanInsightsData.data||[],page:pageData};
 }
 
-function processFbData({insights,page}){
+function processFbData({insights,fanInsights,page}){
   const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
-  const existing=socLiveData.facebook.followers; // may have been set from page token exchange
+  // Fan count: prefer direct page field, fallback to lifetime insights, then existing
+  const fanFromInsights=fanInsights?.find(m=>m.name==='page_fans')?.values?.[0]?.value||null;
+  const followers=page?.fan_count||page?.followers_count||fanFromInsights||socLiveData.facebook.followers||null;
+  const reach=sumMetric('page_reach')||null;
+  const impressions=sumMetric('page_impressions')||null;
+  const engagedUsers=sumMetric('page_engaged_users')||null;
+  const engRate=(reach&&engagedUsers)?(engagedUsers/reach*100):null;
+  // Days with reach data
+  const reachDays=(insights.find(m=>m.name==='page_reach')?.values||[]).filter(v=>v.value>0);
   socLiveData.facebook={
     loaded:true,error:'',
-    followers:page?.fan_count||page?.followers_count||existing||null,
-    reach:sumMetric('page_reach')||null,
-    impressions:sumMetric('page_impressions')||null,
-    engRate:null,posts:null,
-    days:(insights.find(m=>m.name==='page_reach')?.values||[]).map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
+    followers,reach,impressions,engRate,
+    posts:reachDays.length||null,
+    days:reachDays.map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
     pageName:page?.name||socLiveData.facebook.pageName||'',
   };
   localStorage.setItem('ec-soc-fb-live',JSON.stringify(socLiveData.facebook));
 }
 
 async function fetchIgInsights(token,igAccountId,range){
-  // Instagram Business Insights via Graph API
-  // period=day with since/until works for impressions and reach
-  const metrics='impressions,reach,profile_views';
-  const url=`https://graph.facebook.com/v21.0/${igAccountId}/insights?metric=${encodeURIComponent(metrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
-  const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`);
-  const d=await r.json();
-  console.log('[IG insights]',JSON.stringify(d).slice(0,300));
-  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-  // User info — followers_count, media_count
-  const uUrl=`https://graph.facebook.com/v21.0/${igAccountId}?fields=followers_count,media_count,username&access_token=${token}`;
+  // ── Step 1: Verify the IG account ID and get basic info ──
+  // If the ID stored is a numeric Instagram User ID (17841…), it may need to be
+  // the Instagram Business Account ID linked to the FB Page.
+  // Try fetching the account directly first.
+  const uUrl=`https://graph.facebook.com/v21.0/${igAccountId}?fields=id,followers_count,media_count,username,name&access_token=${token}`;
   const ur=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(uUrl)}`);
   const ud=await ur.json();
-  // Recent media for post-level data
-  const mUrl=`https://graph.facebook.com/v21.0/${igAccountId}/media?fields=id,caption,timestamp,like_count,comments_count,media_type&limit=20&access_token=${token}`;
+  console.log('[IG user]',JSON.stringify(ud).slice(0,200));
+
+  // If we get an error on the account, try to discover IG account via FB Page
+  let resolvedId=igAccountId;
+  if(ud.error&&getSocFbPageId()){
+    console.log('[IG] direct ID failed, trying via FB Page...');
+    const pageIgUrl=`https://graph.facebook.com/v21.0/${getSocFbPageId()}?fields=instagram_business_account&access_token=${token}`;
+    const pageIgRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pageIgUrl)}`);
+    const pageIgData=await pageIgRes.json();
+    console.log('[IG] via page:',JSON.stringify(pageIgData).slice(0,200));
+    if(pageIgData.instagram_business_account?.id){
+      resolvedId=pageIgData.instagram_business_account.id;
+      console.log('[IG] resolved ID via page:',resolvedId);
+      // Re-fetch user info with resolved ID
+      const uUrl2=`https://graph.facebook.com/v21.0/${resolvedId}?fields=id,followers_count,media_count,username&access_token=${token}`;
+      const ur2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(uUrl2)}`);
+      const ud2=await ur2.json();
+      if(!ud2.error){Object.assign(ud,ud2);}
+    } else {
+      throw new Error('Instagram account not found. Check the Account ID in Settings → Social Media, or link your Instagram account to your Facebook Page in Meta Business Suite.');
+    }
+  } else if(ud.error){
+    throw new Error(ud.error.message||'Instagram account not accessible — check your Account ID in Settings.');
+  }
+
+  // ── Step 2: Insights (impressions, reach — valid for period=day) ──
+  // follower_count is NOT valid for period=day — use period=lifetime separately
+  const dayMetrics='impressions,reach,profile_views';
+  const insUrl=`https://graph.facebook.com/v21.0/${resolvedId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insUrl)}`);
+  const insData=await ir.json();
+  console.log('[IG insights]',JSON.stringify(insData).slice(0,300));
+  // Don't throw on insights error — we may still have user data
+
+  // ── Step 3: Recent media (basic fields only — no reach/impressions at list level) ──
+  const mUrl=`https://graph.facebook.com/v21.0/${resolvedId}/media?fields=id,caption,timestamp,like_count,comments_count,media_type&limit=20&access_token=${token}`;
   const mr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(mUrl)}`);
   const md=await mr.json();
-  return{insights:d.data||[],user:ud,media:md.data||[]};
+
+  const insightsArr=insData.error?[]:insData.data||[];
+  return{insights:insightsArr,user:ud,media:md.data||[],resolvedId};
 }
 
 function processIgData({insights,user,media}){
@@ -12448,7 +12444,8 @@ function processIgData({insights,user,media}){
     followers:user?.followers_count||null,
     reach:totalReach||null,
     impressions:totalImpr||null,
-    engRate,posts:media,
+    engRate,
+    posts:media,
     days:(insights.find(m=>m.name==='reach')?.values||[]).map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
     username:user?.username||'',
     mediaCount:user?.media_count||null,
@@ -12457,79 +12454,80 @@ function processIgData({insights,user,media}){
 }
 
 // ════════════════════════════════════════════════════════════════
-// YOUTUBE FETCH
-// Uses YouTube Data API v3 (NOT Analytics) — same Google OAuth token
-// Gives: subscriber count, view count, video count from channel stats
-// For per-period views: uses Search + Videos API
+// YOUTUBE ANALYTICS FETCH
+// Uses existing Google OAuth (gscToken / ga4Token chain)
+// YouTube Analytics API: /v2/reports
 // ════════════════════════════════════════════════════════════════
 async function fetchYouTubeOrganic(){
   const channelId=getSocYtChannelId();
   if(!channelId){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');return;}
-  if(!gscToken){const ok=await refreshAccessToken();if(!ok){toast('Google token refresh failed — reconnect Google in SEO/AIEO first','warn');return;}}
   const btn=document.getElementById('soc-yt-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   try{
+    // Ensure Google token (needs youtube.readonly scope — added in v10.4)
+    // If you get scope errors, re-authorise Google in SEO/AIEO → Connect Google
+    if(!gscToken){const ok=await refreshAccessToken();if(!ok)throw new Error('Google token refresh failed — reconnect Google in SEO/AIEO');}
     const range=socDateRange();
-
-    // ── Channel stats (subscribers, total views, video count) ──
-    const statsUrl=`https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}`;
-    let statsRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(statsUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
-    if(statsRes.status===401){
+    // YouTube Data API v3 — uses same Google OAuth, no extra scope needed beyond youtube.readonly
+    // NOTE: if you get 403 scope errors, go to SEO/AIEO and click "Connect Google" to re-authorise
+    //       with the updated scope that now includes youtube.readonly
+    const ytUrl=`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${range.since}&endDate=${range.until}&metrics=views,estimatedMinutesWatched,subscribersGained,subscribersLost&dimensions=day&sort=day`;
+    const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    if(r.status===401){
       const ok=await refreshAccessToken();
-      if(!ok)throw new Error('Google token expired — reconnect Google in SEO/AIEO settings');
-      statsRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(statsUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+      if(!ok)throw new Error('Could not refresh Google token');
+      const r2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+      const d2=await r2.json();
+      if(d2.error)throw new Error(d2.error.message||JSON.stringify(d2.error));
+      processYtData(d2,range);
+    } else {
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+      processYtData(d,range);
     }
-    const statsData=await statsRes.json();
-    console.log('[YT] channel stats:',JSON.stringify(statsData).slice(0,300));
-    if(statsData.error)throw new Error(statsData.error.message||JSON.stringify(statsData.error).slice(0,150));
-
-    const ch=statsData.items?.[0];
-    if(!ch)throw new Error('Channel not found — check Channel ID in Settings');
-    const stats=ch.statistics||{};
-
-    // ── Recent videos in date range (to count posts + get views) ──
-    const searchUrl=`https://www.googleapis.com/youtube/v3/search?part=id&channelId=${channelId}&type=video&publishedAfter=${range.since}T00:00:00Z&publishedBefore=${range.until}T23:59:59Z&maxResults=50&order=date`;
-    const searchRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(searchUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
-    const searchData=await searchRes.json();
-    console.log('[YT] search:',JSON.stringify(searchData).slice(0,200));
-    const videoIds=(searchData.items||[]).map(i=>i.id.videoId).filter(Boolean);
-
-    let periodViews=0, periodVideos=videoIds.length;
-    if(videoIds.length>0){
-      // Get stats for those videos
-      const vidsUrl=`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds.slice(0,50).join(',')}`;
-      const vidsRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(vidsUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
-      const vidsData=await vidsRes.json();
-      periodViews=(vidsData.items||[]).reduce((s,v)=>s+parseInt(v.statistics?.viewCount||0),0);
+    // Also get subscriber count via YouTube Data API
+    const dataUrl=`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`;
+    const dr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(dataUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    const dd=await dr.json();
+    if(dd.items&&dd.items[0]){
+      const stats=dd.items[0].statistics;
+      socLiveData.youtube.subs=parseInt(stats.subscriberCount)||null;
+      socLiveData.youtube.totalViews=parseInt(stats.viewCount)||null;
     }
-
-    socLiveData.youtube={
-      loaded:true,error:'',
-      subs:parseInt(stats.subscriberCount)||null,
-      totalViews:parseInt(stats.viewCount)||null,
-      videoCount:parseInt(stats.videoCount)||null,
-      views:periodViews||null,
-      watchHours:null, // YouTube Data API v3 doesn't expose watch hours — needs Analytics API
-      netSubs:null,
-      videos:periodVideos,
-      days:[], // per-day data requires Analytics API with youtube.readonly scope
-      channelName:ch.snippet?.title||'',
-    };
     localStorage.setItem('ec-soc-yt-live',JSON.stringify(socLiveData.youtube));
-    toast('YouTube data loaded');
+    toast('YouTube analytics loaded');
   }catch(e){
     socLiveData.youtube.error=e.message||String(e);
     toast('YouTube: '+socLiveData.youtube.error,'error');
-    console.log('[YT] error:',e);
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-youtube"></i> <span id="soc-yt-btn-lbl">↻ Refresh YouTube</span>';}
-    updateSocConnectBtns();updateSocKpiBar();
+    updateSocConnectBtns();
+    updateSocKpiBar();
     const active=document.querySelector('#page-socialdash .itab.active');
     if(active&&active.getAttribute('onclick').includes('youtube'))renderSocYouTubeTab();
     else renderSocOverview();
   }
 }
 
+function processYtData(d,range){
+  const rows=d.rows||[];
+  const cols=(d.columnHeaders||[]).map(h=>h.name);
+  const idx=name=>cols.indexOf(name);
+  const sum=name=>rows.reduce((s,r)=>s+(r[idx(name)]||0),0);
+  const totalViews=sum('views');
+  const watchMins=sum('estimatedMinutesWatched');
+  const subsGained=sum('subscribersGained');
+  const subsLost=sum('subscribersLost');
+  socLiveData.youtube={
+    ...socLiveData.youtube,
+    loaded:true,error:'',
+    views:totalViews||null,
+    watchHours:watchMins?(watchMins/60).toFixed(1):null,
+    subsGained,subsLost,
+    netSubs:subsGained-subsLost,
+    days:rows.map(r=>({d:r[idx('day')]?.slice(5)||'',views:r[idx('views')]||0,watchMins:r[idx('estimatedMinutesWatched')]||0})),
+  };
+}
 
 // ════════════════════════════════════════════════════════════════
 // RENDER FUNCTIONS
@@ -12753,7 +12751,16 @@ function renderSocYouTubeTab(){
   const yt=socLiveData.youtube;
   if(!getSocYtChannelId()){el.innerHTML=socConnectPrompt('youtube','YouTube Analytics','#FF0000','ti-brand-youtube','Add your YouTube Channel ID in Settings → Social Media. Uses your existing Google OAuth (same as Search Console).');return;}
   if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses your Google OAuth token — make sure YouTube Analytics API is enabled in Google Cloud</div></div>`;return;}
-  if(yt.error&&!yt.loaded){el.innerHTML=socErrorCard(yt.error)+`<div style="text-align:center;margin-top:1rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-refresh"></i> Retry</button><div style="font-size:12px;color:var(--text3);margin-top:.5rem">Make sure YouTube Analytics API is enabled in Google Cloud Console for your project</div></div>`;return;}
+  if(yt.error&&!yt.loaded){
+    const isScope=yt.error.toLowerCase().includes('scope')||yt.error.toLowerCase().includes('permission')||yt.error.toLowerCase().includes('insufficientpermissions');
+    el.innerHTML=socErrorCard(yt.error)+(isScope?`
+      <div style="background:var(--amber-l,#fffbeb);border:1px solid var(--amber);border-radius:var(--rl);padding:1rem;margin-bottom:1rem;font-size:13px">
+        <strong>⚠ Re-authorise Google</strong> to add YouTube access. Go to <strong>SEO/AIEO → Connect Google</strong> and sign in again — this will add <code>youtube.readonly</code> to your token without affecting any existing connections.
+        <div style="margin-top:.75rem"><button class="btn btn-primary" onclick="navTo('seodash');setTimeout(()=>connectGSC(true),150)"><i class="ti ti-brand-google"></i> Re-authorise Google</button></div>
+      </div>`:'')+
+    `<div style="text-align:center;margin-top:1rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-refresh"></i> Retry</button></div>`;
+    return;
+  }
 
   // Weekly log fallback data
   const ytLogs=socialWeeks.filter(w=>w.youtube&&(w.youtube.subs||w.youtube.views)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -13380,7 +13387,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.3';
+const APP_HTML_VERSION='10.2';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
