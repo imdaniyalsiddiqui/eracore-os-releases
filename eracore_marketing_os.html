@@ -908,166 +908,102 @@ select.sm:focus{border-color:var(--blue)}
 <!-- SOCIAL MEDIA -->
 <div id="page-socialdash" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
-    <div><div class="pt">Social media</div><div class="ps">LinkedIn · Instagram · Facebook · YouTube — weekly KPIs and post cadence</div></div>
-    <div style="display:flex;gap:8px" id="soc-upload-btns">
-      <button class="btn" onclick="openLIUpload()"><i class="ti ti-upload"></i> LinkedIn XLS</button>
-      <button class="btn" onclick="openIGUpload()"><i class="ti ti-brand-instagram"></i> Instagram CSV</button>
-      <button class="btn" onclick="openFBUpload()"><i class="ti ti-brand-facebook"></i> Facebook CSV</button>
+    <div><div class="pt">Social Media</div><div class="ps">LinkedIn · Meta (Facebook + Instagram) · YouTube — live organic analytics</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="soc-date-preset" onchange="onSocDateChange()" style="height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer">
+        <option value="last_28_days" selected>Last 28 days</option>
+        <option value="last_7_days">Last 7 days</option>
+        <option value="this_month">This month</option>
+        <option value="last_month">Last month</option>
+        <option value="last_90_days">Last 90 days</option>
+      </select>
+      <button class="btn" id="soc-li-btn" onclick="fetchLinkedInOrganic()"><i class="ti ti-brand-linkedin"></i> <span id="soc-li-btn-lbl">Connect LinkedIn</span></button>
+      <button class="btn" id="soc-meta-btn" onclick="fetchMetaSocialOrganic()"><i class="ti ti-brand-facebook"></i> <span id="soc-meta-btn-lbl">Connect Meta</span></button>
+      <button class="btn" id="soc-yt-btn" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> <span id="soc-yt-btn-lbl">Connect YouTube</span></button>
       <button class="btn btn-primary" onclick="openSocialEntry()"><i class="ti ti-plus"></i> Log this week</button>
     </div>
   </div>
-  <!-- Overview counters -->
-  <div class="counters" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.25rem">
-    <div class="counter"><div class="counter-val" style="color:var(--blue)" id="soc-li-followers">—</div><div class="counter-lbl">LinkedIn followers</div></div>
-    <div class="counter"><div class="counter-val" style="color:var(--text)" id="soc-total-impressions">—</div><div class="counter-lbl">Total impressions</div></div>
-    <div class="counter"><div class="counter-val" style="color:var(--green)" id="soc-posts-this-week">—</div><div class="counter-lbl">Posts this week</div></div>
-    <div class="counter"><div class="counter-val" style="color:var(--amber)" id="soc-eng-rate">—</div><div class="counter-lbl">Avg engagement rate</div></div>
-    <div class="counter"><div class="counter-val" style="color:var(--purple)" id="soc-cadence">—</div><div class="counter-lbl">Cadence (target 2×/wk)</div></div>
+
+  <!-- Blended KPI counters -->
+  <div class="counters" style="grid-template-columns:repeat(6,1fr);margin-bottom:1.5rem">
+    <div class="counter"><div class="counter-val" style="color:var(--blue)" id="soc-kpi-li-followers">—</div><div class="counter-lbl">LinkedIn followers</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--blue)" id="soc-kpi-li-impressions">—</div><div class="counter-lbl">LinkedIn impressions</div></div>
+    <div class="counter"><div class="counter-val" style="color:#E1306C" id="soc-kpi-ig-followers">—</div><div class="counter-lbl">Instagram followers</div></div>
+    <div class="counter"><div class="counter-val" style="color:#1877F2" id="soc-kpi-fb-followers">—</div><div class="counter-lbl">Facebook followers</div></div>
+    <div class="counter"><div class="counter-val" style="color:#FF0000" id="soc-kpi-yt-subs">—</div><div class="counter-lbl">YouTube subscribers</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--purple)" id="soc-kpi-total-reach">—</div><div class="counter-lbl">Total reach / views</div></div>
   </div>
-  <!-- Inner tabs -->
-  <div class="itabs" style="margin-bottom:1rem">
+
+  <!-- Platform tabs — same pattern as Paid -->
+  <div class="itabs" style="margin-bottom:1.25rem">
     <button class="itab active" onclick="switchSocTab('overview',this)"><i class="ti ti-layout-grid"></i> Overview</button>
     <button class="itab" onclick="switchSocTab('linkedin',this)"><i class="ti ti-brand-linkedin"></i> LinkedIn</button>
-    <button class="itab" onclick="switchSocTab('instagram',this)"><i class="ti ti-brand-instagram"></i> Instagram</button>
-    <button class="itab" onclick="switchSocTab('facebook',this)"><i class="ti ti-brand-facebook"></i> Facebook</button>
+    <button class="itab" onclick="switchSocTab('meta',this)"><i class="ti ti-brand-instagram"></i> Meta</button>
     <button class="itab" onclick="switchSocTab('youtube',this)"><i class="ti ti-brand-youtube"></i> YouTube</button>
-  </div>
-  <div id="soc-tab-overview" class="soc-tab-pane">
-    <div id="social-weeks-list-legacy"></div>
-  </div>
-  <div id="soc-tab-linkedin" class="soc-tab-pane" style="display:none">
-    <div id="soc-linkedin-detail"></div>
-  </div>
-  <div id="soc-tab-instagram" class="soc-tab-pane" style="display:none">
-    <div id="soc-instagram-detail"></div>
-  </div>
-  <div id="soc-tab-facebook" class="soc-tab-pane" style="display:none">
-    <div id="soc-facebook-detail"></div>
-  </div>
-  <div id="soc-tab-youtube" class="soc-tab-pane" style="display:none">
-    <div id="soc-youtube-detail"></div>
-  </div>
-  <div id="instagram-block" style="display:none"></div>
-  <div id="facebook-block" style="display:none"></div>
-
-  <!-- Facebook CSV upload overlay -->
-  <div class="overlay" id="fb-upload-overlay" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
-      <div class="modal-title">Upload Facebook export <button class="btn-icon btn" onclick="document.getElementById('fb-upload-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1rem">Export from Meta Business Suite — video/post insights. Per-post export with Reach, Video views, Reactions, Comments, Shares.</div>
-      <div style="border:2px dashed var(--border);border-radius:var(--r);padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem" onclick="document.getElementById('fb-file').click()">
-        <i class="ti ti-file-upload" style="font-size:32px;color:var(--text3);display:block;margin-bottom:.5rem"></i>
-        <div style="font-size:13px;color:var(--text2)">Click to select CSV file</div>
-        <div id="fb-filename" style="font-size:12px;color:var(--blue);margin-top:.5rem"></div>
-      </div>
-      <input type="file" id="fb-file" accept=".csv" style="display:none" onchange="handleFBFile(this)">
-      <div id="fb-parse-status" style="font-size:13px;color:var(--text2);margin-bottom:.75rem"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="document.getElementById('fb-upload-overlay').classList.remove('open')">Cancel</button>
-        <button class="btn btn-primary" id="fb-save-btn" onclick="saveFBData()" disabled><i class="ti ti-check"></i> Import</button>
-      </div>
-    </div>
+    <button class="itab" onclick="switchSocTab('log',this)"><i class="ti ti-calendar-stats"></i> Weekly log</button>
   </div>
 
-  <!-- Instagram CSV upload overlay -->
-  <div class="overlay" id="ig-upload-overlay" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
-      <div class="modal-title">Upload Instagram export <button class="btn-icon btn" onclick="document.getElementById('ig-upload-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1rem">Export from Instagram Insights / Meta Business Suite. Per-post export with Views, Reach, Likes, Shares, Comments, Saves.</div>
-      <div style="border:2px dashed var(--border);border-radius:var(--r);padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem" onclick="document.getElementById('ig-file').click()">
-        <i class="ti ti-file-upload" style="font-size:32px;color:var(--text3);display:block;margin-bottom:.5rem"></i>
-        <div style="font-size:13px;color:var(--text2)">Click to select CSV file</div>
-        <div id="ig-filename" style="font-size:12px;color:var(--blue);margin-top:.5rem"></div>
-      </div>
-      <input type="file" id="ig-file" accept=".csv" style="display:none" onchange="handleIGFile(this)">
-      <div id="ig-parse-status" style="font-size:13px;color:var(--text2);margin-bottom:.75rem"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="document.getElementById('ig-upload-overlay').classList.remove('open')">Cancel</button>
-        <button class="btn btn-primary" id="ig-save-btn" onclick="saveIGData()" disabled><i class="ti ti-check"></i> Import</button>
-      </div>
-    </div>
-  </div>
+  <div id="soc-tab-overview" class="itab-pane active"></div>
+  <div id="soc-tab-linkedin" class="itab-pane"></div>
+  <div id="soc-tab-meta"     class="itab-pane"></div>
+  <div id="soc-tab-youtube"  class="itab-pane"></div>
+  <div id="soc-tab-log"      class="itab-pane"></div>
 
-  <!-- LinkedIn XLS upload overlay -->
-  <div class="overlay" id="li-upload-overlay" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
-      <div class="modal-title">Upload LinkedIn analytics export <button class="btn-icon btn" onclick="document.getElementById('li-upload-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:1rem">Export from LinkedIn → Company Page → Analytics → any tab → Export. Supports XLS and CSV. Data will be aggregated by week automatically.</div>
-      <div class="field"><label>Export type</label>
-        <select class="sm" id="li-export-type" style="width:100%">
-          <option value="content">Content / Posts (impressions, clicks, engagement)</option>
-          <option value="followers">Followers (follower count over time)</option>
-          <option value="visitors">Visitors (page views)</option>
-        </select>
-      </div>
-      <div style="border:2px dashed var(--border);border-radius:var(--r);padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem" onclick="document.getElementById('li-xls-file').click()">
-        <i class="ti ti-file-spreadsheet" style="font-size:32px;color:var(--text3);display:block;margin-bottom:.5rem"></i>
-        <div style="font-size:13px;color:var(--text2)">Click to select XLS or CSV file</div>
-        <div id="li-xls-filename" style="font-size:12px;color:var(--blue);margin-top:.5rem"></div>
-      </div>
-      <input type="file" id="li-xls-file" accept=".xls,.xlsx,.csv" style="display:none" onchange="handleLIFile(this)">
-      <div id="li-parse-status" style="font-size:13px;color:var(--text2);margin-bottom:.75rem"></div>
-      <div class="modal-actions">
-        <button class="btn" onclick="document.getElementById('li-upload-overlay').classList.remove('open')">Cancel</button>
-        <button class="btn btn-primary" id="li-import-btn" onclick="importLIData()" disabled><i class="ti ti-check"></i> Import</button>
-      </div>
-    </div>
-  </div>
+  <!-- Legacy hidden blocks kept for backward compat with old renderSocialDash() calls -->
+  <div id="social-weeks-list-legacy" style="display:none"></div>
+  <div id="social-weeks-list"        style="display:none"></div>
+  <div id="instagram-block"          style="display:none"></div>
+  <div id="facebook-block"           style="display:none"></div>
+  <div id="soc-tab-facebook"         style="display:none"></div>
+  <div id="soc-linkedin-detail"      style="display:none"></div>
+  <div id="soc-instagram-detail"     style="display:none"></div>
+  <div id="soc-facebook-detail"      style="display:none"></div>
+  <div id="soc-youtube-detail"       style="display:none"></div>
+
+  <!-- Social Log overlay (kept intact) -->
   <div class="overlay" id="social-overlay" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal" onclick="event.stopPropagation()" style="max-width:640px">
-      <div class="modal-title">Log weekly social performance <button class="btn-icon btn" onclick="document.getElementById('social-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
-      <div class="field"><label>Week ending</label><input type="date" id="sw-date" style="width:200px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:.875rem">
-        <!-- LinkedIn Eracore -->
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--blue-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:2px solid var(--blue-l)"><i class="ti ti-brand-linkedin" style="font-size:12px;margin-right:4px"></i>LinkedIn — Eracore</div>
-          <div class="field"><label>Followers</label><input type="number" id="li-e-followers" placeholder="0"></div>
-          <div class="field"><label>Follower growth</label><input type="number" id="li-e-growth" placeholder="0"></div>
-          <div class="field"><label>Impressions</label><input type="number" id="li-e-impressions" placeholder="0"></div>
-          <div class="field"><label>Engagement rate (%)</label><input type="number" step="0.01" id="li-e-eng" placeholder="0"></div>
-          <div class="field"><label>Posts this week</label><input type="number" id="li-e-posts" placeholder="0"></div>
-          <div class="field"><label>Website clicks</label><input type="number" id="li-e-clicks" placeholder="0"></div>
-        </div>
-        <!-- LinkedIn MZ -->
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--blue-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:2px solid var(--blue-l)"><i class="ti ti-brand-linkedin" style="font-size:12px;margin-right:4px"></i>LinkedIn — MZ personal</div>
-          <div class="field"><label>Followers</label><input type="number" id="li-m-followers" placeholder="0"></div>
-          <div class="field"><label>Follower growth</label><input type="number" id="li-m-growth" placeholder="0"></div>
-          <div class="field"><label>Impressions</label><input type="number" id="li-m-impressions" placeholder="0"></div>
-          <div class="field"><label>Engagement rate (%)</label><input type="number" step="0.01" id="li-m-eng" placeholder="0"></div>
-          <div class="field"><label>Posts this week</label><input type="number" id="li-m-posts" placeholder="0"></div>
-          <div class="field"><label>Website clicks</label><input type="number" id="li-m-clicks" placeholder="0"></div>
-        </div>
-        <!-- Instagram -->
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:2px solid var(--red-l)"><i class="ti ti-brand-instagram" style="font-size:12px;margin-right:4px"></i>Instagram</div>
-          <div class="field"><label>Followers</label><input type="number" id="ig-followers" placeholder="0"></div>
-          <div class="field"><label>Follower growth</label><input type="number" id="ig-growth" placeholder="0"></div>
-          <div class="field"><label>Impressions</label><input type="number" id="ig-impressions" placeholder="0"></div>
-          <div class="field"><label>Engagement rate (%)</label><input type="number" step="0.01" id="ig-eng" placeholder="0"></div>
-          <div class="field"><label>Posts this week</label><input type="number" id="ig-posts" placeholder="0"></div>
-        </div>
-        <!-- Facebook -->
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--blue);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem;padding-bottom:.375rem;border-bottom:2px solid var(--blue-l)"><i class="ti ti-brand-facebook" style="font-size:12px;margin-right:4px"></i>Facebook</div>
-          <div class="field"><label>Followers</label><input type="number" id="fb-followers" placeholder="0"></div>
-          <div class="field"><label>Follower growth</label><input type="number" id="fb-growth" placeholder="0"></div>
-          <div class="field"><label>Reach</label><input type="number" id="fb-reach" placeholder="0"></div>
-          <div class="field"><label>Engagement rate (%)</label><input type="number" step="0.01" id="fb-eng" placeholder="0"></div>
-          <div class="field"><label>Posts this week</label><input type="number" id="fb-posts" placeholder="0"></div>
-        </div>
-      </div>
-      <!-- YouTube -->
+      <div class="modal-title">Log this week — Social media <button class="btn-icon btn" onclick="document.getElementById('social-overlay').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+      <input type="hidden" id="sw-edit-id">
+      <div class="field"><label>Week ending</label><input type="date" id="sw-date"></div>
       <div style="border-top:1px solid var(--border);padding-top:.875rem;margin-bottom:.875rem">
-        <div style="font-size:12px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-brand-youtube" style="font-size:12px;margin-right:4px"></i>YouTube (optional)</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-          <div class="field"><label>Subscribers</label><input type="number" id="yt-subs" placeholder="0"></div>
-          <div class="field"><label>Views</label><input type="number" id="yt-views" placeholder="0"></div>
-          <div class="field"><label>Watch time (hrs)</label><input type="number" id="yt-watchtime" placeholder="0"></div>
-          <div class="field"><label>Videos published</label><input type="number" id="yt-videos" placeholder="0"></div>
+        <div style="font-size:12px;font-weight:600;color:#0A66C2;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-brand-linkedin" style="font-size:12px;margin-right:4px"></i>LinkedIn — Eracore page</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="field"><label>Followers</label><input type="number" id="sw-li-followers" placeholder="0"></div>
+          <div class="field"><label>Impressions</label><input type="number" id="sw-li-impressions" placeholder="0"></div>
+          <div class="field"><label>Eng. rate %</label><input type="number" step="0.01" id="sw-li-eng" placeholder="0.00"></div>
+          <div class="field"><label>Posts</label><input type="number" id="sw-li-posts" placeholder="0"></div>
+          <div class="field"><label>Clicks</label><input type="number" id="sw-li-clicks" placeholder="0"></div>
         </div>
       </div>
-      <!-- Website traffic -->
+      <div style="border-top:1px solid var(--border);padding-top:.875rem;margin-bottom:.875rem">
+        <div style="font-size:12px;font-weight:600;color:#E1306C;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-brand-instagram" style="font-size:12px;margin-right:4px"></i>Instagram</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="field"><label>Followers</label><input type="number" id="sw-ig-followers" placeholder="0"></div>
+          <div class="field"><label>Reach</label><input type="number" id="sw-ig-reach" placeholder="0"></div>
+          <div class="field"><label>Impressions</label><input type="number" id="sw-ig-impressions" placeholder="0"></div>
+          <div class="field"><label>Posts</label><input type="number" id="sw-ig-posts" placeholder="0"></div>
+          <div class="field"><label>Eng. rate %</label><input type="number" step="0.01" id="sw-ig-eng" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:.875rem;margin-bottom:.875rem">
+        <div style="font-size:12px;font-weight:600;color:#1877F2;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-brand-facebook" style="font-size:12px;margin-right:4px"></i>Facebook</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="field"><label>Followers</label><input type="number" id="sw-fb-followers" placeholder="0"></div>
+          <div class="field"><label>Reach</label><input type="number" id="sw-fb-reach" placeholder="0"></div>
+          <div class="field"><label>Posts</label><input type="number" id="sw-fb-posts" placeholder="0"></div>
+          <div class="field"><label>Eng. rate %</label><input type="number" step="0.01" id="sw-fb-eng" placeholder="0.00"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:.875rem;margin-bottom:.875rem">
+        <div style="font-size:12px;font-weight:600;color:#FF0000;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-brand-youtube" style="font-size:12px;margin-right:4px"></i>YouTube</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="field"><label>Subscribers</label><input type="number" id="sw-yt-subs" placeholder="0"></div>
+          <div class="field"><label>Views</label><input type="number" id="sw-yt-views" placeholder="0"></div>
+          <div class="field"><label>Watch hrs</label><input type="number" id="sw-yt-watchtime" placeholder="0"></div>
+          <div class="field"><label>Videos pub.</label><input type="number" id="sw-yt-videos" placeholder="0"></div>
+        </div>
+      </div>
       <div style="border-top:1px solid var(--border);padding-top:.875rem;margin-bottom:.875rem">
         <div style="font-size:12px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.75rem"><i class="ti ti-world" style="font-size:12px;margin-right:4px"></i>Website traffic (from social)</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
@@ -1508,6 +1444,76 @@ select.sm:focus{border-color:var(--blue)}
       <div id="ms-oauth-status" style="font-size:12px;color:var(--text3);margin-bottom:8px"></div>
       <button class="btn btn-primary" onclick="saveMsAdsCreds()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
+  <!-- Social Media Organic Handles -->
+  <div style="margin-top:1.5rem;border-top:2px solid var(--border);padding-top:1.25rem;max-width:620px">
+    <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:1rem">Social Media — Organic Handles</div>
+
+    <!-- Meta Social (Facebook + Instagram) -->
+    <div id="settings-meta-social" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.25rem">
+        <i class="ti ti-brand-instagram" style="color:#E1306C;font-size:16px"></i>
+        <div style="font-size:14px;font-weight:600">Meta Organic (Facebook Page + Instagram)</div>
+        <span id="soc-meta-settings-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not configured</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">
+        Reuses your Meta Ads system user token. You only need the <strong>Facebook Page ID</strong> and <strong>Instagram Business Account ID</strong>.<br>
+        Page ID: go to your Facebook Page → About → scroll to bottom → <em>Page ID</em>.<br>
+        Instagram Account ID: business.facebook.com → Instagram accounts → click your account → the number in the URL.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Facebook Page ID</label>
+          <input type="text" id="soc-fb-page-id-input" placeholder="e.g. 123456789012345" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">Instagram Business Account ID</label>
+          <input type="text" id="soc-ig-account-id-input" placeholder="e.g. 17841400000000000" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">The token must have <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">pages_read_engagement</code>, <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">instagram_basic</code>, <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">instagram_manage_insights</code> permissions. If your existing Meta Ads system user token was generated with ads-only scopes, you may need to regenerate it with these additional permissions in business.facebook.com → System Users → your user → Generate New Token.</div>
+      <button class="btn btn-primary" onclick="saveSocMetaSettings()"><i class="ti ti-check"></i> Save & test</button>
+      <div id="soc-meta-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
+    </div>
+
+    <!-- LinkedIn Organic -->
+    <div id="settings-li-organic" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.25rem">
+        <i class="ti ti-brand-linkedin" style="color:#0A66C2;font-size:16px"></i>
+        <div style="font-size:14px;font-weight:600">LinkedIn Organic (Company Page)</div>
+        <span id="soc-li-settings-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not configured</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">
+        Requires the same LinkedIn OAuth token as LinkedIn Ads, plus the <strong>Organization URN</strong> for the Eracore company page.<br>
+        Organization URN: go to <a href="https://www.linkedin.com/company/eracore" target="_blank" style="color:var(--blue)">linkedin.com/company/eracore</a> → click Admin view → the number in the URL is your org ID (format: <em>urn:li:organization:XXXXXXX</em>).
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">LinkedIn Organization ID (numbers only)</label>
+        <input type="text" id="soc-li-org-id-input" placeholder="e.g. 12345678" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Uses your existing LinkedIn Ads access token. That token needs <code style="background:var(--surface2);padding:1px 4px;border-radius:3px">r_organization_social</code> scope. If you see a 403, the token may need to be re-generated with this scope in the LinkedIn Developer Portal.</div>
+      <button class="btn btn-primary" onclick="saveSocLiOrgSettings()"><i class="ti ti-check"></i> Save & test</button>
+      <div id="soc-li-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
+    </div>
+
+    <!-- YouTube -->
+    <div id="settings-yt-organic" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:.75rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.25rem">
+        <i class="ti ti-brand-youtube" style="color:#FF0000;font-size:16px"></i>
+        <div style="font-size:14px;font-weight:600">YouTube Analytics</div>
+        <span id="soc-yt-settings-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not configured</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">
+        Uses your existing Google OAuth (same as Search Console + GA4). You only need the <strong>YouTube Channel ID</strong>.<br>
+        Channel ID: go to <a href="https://studio.youtube.com" target="_blank" style="color:var(--blue)">studio.youtube.com</a> → Settings → Channel → Basic info → Channel ID (starts with <em>UC…</em>). Also enable the <strong>YouTube Analytics API</strong> in Google Cloud Console for your project.
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">YouTube Channel ID</label>
+        <input type="text" id="soc-yt-channel-id-input" placeholder="UCxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
+      </div>
+      <button class="btn btn-primary" onclick="saveSocYtSettings()"><i class="ti ti-check"></i> Save & test</button>
+      <div id="soc-yt-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -4799,7 +4805,7 @@ function loadData(){
   try{const s=localStorage.getItem('ec-strategies-v2');strategies=s?mergeSeedById(JSON.parse(s),SEED_STRATEGIES):SEED_STRATEGIES;}catch(e){strategies=SEED_STRATEGIES;}
   try{const sd=localStorage.getItem('ec-standup-v1');standupHistory=sd?mergeSeedById(JSON.parse(sd),SEED_STANDUP):SEED_STANDUP;}catch(e){standupHistory=SEED_STANDUP;}
   standupHistory.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||(b.created||0)-(a.created||0));
-  try{loadPaid();loadSEO();loadSocial();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();}catch(e){console.warn('[OS] secondary load error',e);}
+  try{loadPaid();loadSEO();loadSocial();loadSocLiveCache();loadBingData();loadHubSpotAds();loadInstagramData();loadFacebookData();loadAsanaSettings();loadPaidGA4();loadBingAdsData();}catch(e){console.warn('[OS] secondary load error',e);}
   // Final safety — force-seed any array that is still empty
   if(!tasks.length)tasks=JSON.parse(JSON.stringify(SEED_TASKS));
   if(!strategies.length)strategies=JSON.parse(JSON.stringify(SEED_STRATEGIES));
@@ -4879,7 +4885,7 @@ function onNavTo(id){
   if(id==='agents'){agentLoad();agentRender();}
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
-  if(id==='settings'){initSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
+  if(id==='settings'){initSettings();initSocSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
   if(id==='tasks')renderTasks();
   if(id==='seodash'){loadSEO();loadBingData();loadCalls();updateSEOTopCounters();renderSEODash();
     // Auto-fetch if credentials already saved
@@ -4905,7 +4911,7 @@ function onNavTo(id){
     if(getLinkedInToken()&&getLinkedInAdAccount()){try{fetchLinkedInAds();}catch(e){}}
     if(getMsRefreshToken()){try{fetchMsAds();}catch(e){}}
   }
-  if(id==='socialdash'){renderSocialDash();renderInstagramBlock();renderFacebookBlock();}
+  if(id==='socialdash'){loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();}
   if(id==='mktdash'){renderDashboard();buildNotifications();}
   if(id==='standup')renderStandupHistory();
   if(id==='mzreport')renderMZReport();
@@ -12094,328 +12100,774 @@ function platformSection(label,iconClass,accentColor,metrics,topPosts){
   </div>`;
 }
 
+// ══════════════════════════════════════════════════════════════
+// SOCIAL MEDIA ORGANIC ANALYTICS ENGINE
+// Platforms: LinkedIn (company page), Meta (FB Page + IG), YouTube
+// All data via API proxy; manual weekly log as fallback
+// ══════════════════════════════════════════════════════════════
+
+// ── State ─────────────────────────────────────────────────────
+let socLiveData = {
+  linkedin:  { loaded:false, error:'', followers:null, impressions:null, engRate:null, posts:null, clicks:null, days:[] },
+  facebook:  { loaded:false, error:'', followers:null, reach:null, impressions:null, engRate:null, posts:[] },
+  instagram: { loaded:false, error:'', followers:null, reach:null, impressions:null, engRate:null, posts:[] },
+  youtube:   { loaded:false, error:'', subs:null, views:null, watchHours:null, videos:null, days:[] },
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+function getSocDatePreset(){ return (document.getElementById('soc-date-preset')||{}).value||'last_28_days'; }
+function socDateRange(){
+  const iso=d=>d.toISOString().slice(0,10);
+  const now=new Date();
+  const p=getSocDatePreset();
+  if(p==='last_7_days')  return{since:iso(new Date(now-7*86400000)),until:iso(now),days:7};
+  if(p==='this_month')   return{since:iso(new Date(now.getFullYear(),now.getMonth(),1)),until:iso(now),days:now.getDate()};
+  if(p==='last_month'){const f=new Date(now.getFullYear(),now.getMonth()-1,1);const l=new Date(now.getFullYear(),now.getMonth(),0);return{since:iso(f),until:iso(l),days:l.getDate()};}
+  if(p==='last_90_days') return{since:iso(new Date(now-90*86400000)),until:iso(now),days:90};
+  return{since:iso(new Date(now-28*86400000)),until:iso(now),days:28}; // last_28_days default
+}
+function getSocFbPageId(){ return localStorage.getItem('ec-soc-fb-page-id')||''; }
+function getSocIgAccountId(){ return localStorage.getItem('ec-soc-ig-account-id')||''; }
+function getSocLiOrgId(){ return localStorage.getItem('ec-soc-li-org-id')||''; }
+function getSocYtChannelId(){ return localStorage.getItem('ec-soc-yt-channel-id')||''; }
+function getLiToken(){ return localStorage.getItem('ec-li-token')||''; }
+function socFmt(n){ if(n===null||n===undefined)return'—'; return n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'k':n.toLocaleString(); }
+function socPct(n){ if(n===null||n===undefined)return'—'; return n.toFixed(2)+'%'; }
+function socDelta(cur,prev){ if(!prev||prev===0)return''; const d=(cur-prev)/prev*100; const up=d>=0; return`<span style="color:${up?'var(--green)':'var(--red)'};font-weight:600">${up?'▲':'▼'}${Math.abs(d).toFixed(1)}%</span>`; }
+
+function updateSocKpiBar(){
+  const li=socLiveData.linkedin, fb=socLiveData.facebook, ig=socLiveData.instagram, yt=socLiveData.youtube;
+  const totalReach=(fb.reach||0)+(ig.reach||0)+(yt.views||0);
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+  set('soc-kpi-li-followers',   li.followers!=null?socFmt(li.followers):(socialWeeks[0]?.liEracore?.followers!=null?socFmt(socialWeeks[0].liEracore.followers):'—'));
+  set('soc-kpi-li-impressions', li.impressions!=null?socFmt(li.impressions):'—');
+  set('soc-kpi-ig-followers',   ig.followers!=null?socFmt(ig.followers):(instagramData[0]?.posts?.length?instagramData[0].posts.length+'posts':'—'));
+  set('soc-kpi-fb-followers',   fb.followers!=null?socFmt(fb.followers):'—');
+  set('soc-kpi-yt-subs',        yt.subs!=null?socFmt(yt.subs):(socialWeeks[0]?.youtube?.subs!=null?socFmt(socialWeeks[0].youtube.subs):'—'));
+  set('soc-kpi-total-reach',    totalReach>0?socFmt(totalReach):'—');
+}
+
+function onSocDateChange(){
+  const tab=document.querySelector('#page-socialdash .itab.active');
+  let name='overview';
+  if(tab){const m=tab.getAttribute('onclick').match(/switchSocTab\('(\w+)'/);if(m)name=m[1];}
+  switchSocTab(name, tab||document.querySelector('#page-socialdash .itab'));
+}
+
+// ── Tab switcher (same pattern as switchPaidTab) ──────────────
 function switchSocTab(tab, el){
-  document.querySelectorAll('.soc-tab-pane').forEach(p=>p.style.display='none');
-  document.querySelectorAll('#page-socialdash .itab').forEach(b=>b.classList.remove('active'));
-  document.getElementById('soc-tab-'+tab).style.display='block';
-  el.classList.add('active');
-  if(tab==='linkedin')renderSocLinkedinDetail();
-  if(tab==='instagram')renderSocIGDetail();
-  if(tab==='facebook')renderSocFBDetail();
-  if(tab==='youtube')renderSocYouTubeTab();
+  document.querySelectorAll('#page-socialdash .itab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  ['overview','linkedin','meta','youtube','log'].forEach(t=>{
+    const p=document.getElementById('soc-tab-'+t);
+    if(p){p.classList.remove('active');p.style.display='';}
+  });
+  const pane=document.getElementById('soc-tab-'+tab);
+  if(pane)pane.classList.add('active');
+  if(tab==='overview') renderSocOverview();
+  else if(tab==='linkedin') renderSocLinkedInTab();
+  else if(tab==='meta')     renderSocMetaTab();
+  else if(tab==='youtube')  renderSocYouTubeTab();
+  else if(tab==='log')      renderSocLogTab();
 }
-function renderSocLinkedinDetail(){
-  const el=document.getElementById('soc-linkedin-detail');if(!el)return;
-  if(!socialWeeks.length){el.innerHTML='<div class="empty">No LinkedIn data — upload XLS export from LinkedIn Analytics.</div>';return;}
-  const weeks=[...socialWeeks].sort((a,b)=>a.date.localeCompare(b.date));
-  el.innerHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:.75rem">LinkedIn — weekly history</div>
-  <div style="overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border)"><table style="width:100%;border-collapse:collapse;font-size:12px">
-  <thead><tr style="background:var(--surface2)">
-    <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Week</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eracore Followers</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Impressions</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eng rate</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Posts</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">MZ Followers</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">MZ Impressions</th>
-  </tr></thead>
-  <tbody>${[...weeks].reverse().map((w,i)=>`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--blue-l)':'var(--surface)'}">
-    <td style="padding:.5rem .75rem;font-weight:${i===0?700:400}">${w.date}${i===0?'<span style="font-size:9px;color:var(--blue);margin-left:4px">LATEST</span>':''}</td>
-    <td style="padding:.5rem;text-align:right">${w.liEracore?.followers??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${w.liEracore?.impressions??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${w.liEracore?.eng!=null?w.liEracore.eng.toFixed(2)+'%':'—'}</td>
-    <td style="padding:.5rem;text-align:right">${w.liEracore?.posts??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${w.liMZ?.followers??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${w.liMZ?.impressions??'—'}</td>
-  </tr>`).join('')}</tbody>
-  </table></div>`;
+
+// ── Shared mini SVG trend ─────────────────────────────────────
+function socTrendSVG(vals, color, label){
+  if(!vals||vals.length<2)return'';
+  const W=420,H=90,P=4,n=vals.length;
+  const max=Math.max(...vals,1);
+  const bw=Math.max(2,((W-2*P)/n)-2);
+  const xOf=i=>P+i*((W-2*P)/n);
+  const yOf=v=>H-20-Math.round((v/max)*(H-28));
+  const bars=vals.map((v,i)=>`<rect x="${xOf(i).toFixed(1)}" y="${yOf(v)}" width="${bw.toFixed(1)}" height="${Math.max(1,(v/max)*(H-28)).toFixed(1)}" rx="2" fill="${color}" opacity=".7"/>`).join('');
+  const step=Math.ceil(n/5);
+  const lbls=vals.map((_,i)=>i%step===0||i===n-1?`<text x="${(xOf(i)+bw/2).toFixed(1)}" y="${H-5}" text-anchor="middle" font-size="8" fill="var(--text3)">d${i+1}</text>`:'').join('');
+  return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${bars}${lbls}</svg>`;
 }
-function renderSocIGDetail(){
-  const el=document.getElementById('soc-instagram-detail');if(!el)return;
-  const ig=instagramData.length?instagramData[0]:null;
-  if(!ig){el.innerHTML='<div class="empty">No Instagram data — upload CSV export from Meta Business Suite.</div>';return;}
-  const posts=[...ig.posts].sort((a,b)=>(b.likes+b.comments+b.saves)-(a.likes+a.comments+a.saves));
-  el.innerHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Instagram — post breakdown (${ig.date})</div>
-  <div style="overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border)"><table style="width:100%;border-collapse:collapse;font-size:12px">
-  <thead><tr style="background:var(--surface2)">
-    <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Post</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Reach</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Views</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Likes</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Comments</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Saves</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eng</th>
-  </tr></thead>
-  <tbody>${posts.map((p,i)=>{const eng=p.reach?((p.likes+p.comments+p.saves)/p.reach*100).toFixed(1):0;return`<tr style="border-top:1px solid var(--border)">
-    <td style="padding:.5rem .75rem;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.description||p.type||'Post '+( i+1)}</td>
-    <td style="padding:.5rem;text-align:right">${p.reach?.toLocaleString()??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${p.views?.toLocaleString()??'—'}</td>
-    <td style="padding:.5rem;text-align:right;color:var(--red)">${p.likes??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${p.comments??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${p.saves??'—'}</td>
-    <td style="padding:.5rem;text-align:right;font-weight:600;color:${eng>=3?'var(--green)':eng>=1?'var(--amber)':'var(--text2)'}">${eng}%</td>
-  </tr>`}).join('')}</tbody>
-  </table></div>`;
+
+// ── CONNECT BUTTONS update ────────────────────────────────────
+function updateSocConnectBtns(){
+  const hasMeta=!!(getMetaToken()&&getSocFbPageId()&&getSocIgAccountId());
+  const hasLi=!!(getLiToken()&&getSocLiOrgId());
+  const hasYt=!!(getSocYtChannelId());
+  const metaLbl=document.getElementById('soc-meta-btn-lbl');
+  const liLbl=document.getElementById('soc-li-btn-lbl');
+  const ytLbl=document.getElementById('soc-yt-btn-lbl');
+  const metaBtn=document.getElementById('soc-meta-btn');
+  const liBtn=document.getElementById('soc-li-btn');
+  const ytBtn=document.getElementById('soc-yt-btn');
+  if(metaLbl){metaLbl.textContent=hasMeta?(socLiveData.facebook.loaded?'↻ Refresh Meta':'Fetch Meta'):'Configure Meta';}
+  if(liLbl){liLbl.textContent=hasLi?(socLiveData.linkedin.loaded?'↻ Refresh LinkedIn':'Fetch LinkedIn'):'Configure LinkedIn';}
+  if(ytLbl){ytLbl.textContent=hasYt?(socLiveData.youtube.loaded?'↻ Refresh YouTube':'Fetch YouTube'):'Configure YouTube';}
+  if(metaBtn){metaBtn.classList.toggle('btn-success',socLiveData.facebook.loaded);}
+  if(liBtn){liBtn.classList.toggle('btn-success',socLiveData.linkedin.loaded);}
+  if(ytBtn){ytBtn.classList.toggle('btn-success',socLiveData.youtube.loaded);}
 }
-function renderSocFBDetail(){
-  const el=document.getElementById('soc-facebook-detail');if(!el)return;
-  const fb=facebookData.length?facebookData[0]:null;
-  if(!fb){el.innerHTML='<div class="empty">No Facebook data — upload CSV export from Meta Business Suite.</div>';return;}
-  const posts=[...fb.posts].sort((a,b)=>b.engagementTotal-a.engagementTotal);
-  el.innerHTML=`<div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Facebook — post breakdown (${fb.date})</div>
-  <div style="overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border)"><table style="width:100%;border-collapse:collapse;font-size:12px">
-  <thead><tr style="background:var(--surface2)">
-    <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Post</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Reach</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">3s Views</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Engagement</th>
-    <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eng rate</th>
-  </tr></thead>
-  <tbody>${posts.map(p=>{const eng=p.reach?((p.engagementTotal/p.reach)*100).toFixed(1):0;return`<tr style="border-top:1px solid var(--border)">
-    <td style="padding:.5rem .75rem;max-width:300px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.description||'Post'}</td>
-    <td style="padding:.5rem;text-align:right">${p.reach?.toLocaleString()??'—'}</td>
-    <td style="padding:.5rem;text-align:right">${(p.views3s||0).toLocaleString()}</td>
-    <td style="padding:.5rem;text-align:right;font-weight:600">${p.engagementTotal??'—'}</td>
-    <td style="padding:.5rem;text-align:right;color:${eng>=3?'var(--green)':eng>=1?'var(--amber)':'var(--text2)'}">${eng}%</td>
-  </tr>`}).join('')}</tbody>
-  </table></div>`;
+
+// ════════════════════════════════════════════════════════════════
+// LINKEDIN ORGANIC FETCH
+// Uses /proxy with Authorization header + LinkedIn-Version
+// Endpoints: /rest/organizationalEntityFollowerStatistics
+//            /rest/organizationalEntityShareStatistics
+// ════════════════════════════════════════════════════════════════
+async function fetchLinkedInOrganic(){
+  const token=getLiToken();
+  const orgId=getSocLiOrgId();
+  if(!token||!orgId){
+    navTo('settings');
+    toast('Add your LinkedIn Org ID in Settings → Social Media first','warn');
+    return;
+  }
+  const btn=document.getElementById('soc-li-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
+  socLiveData.linkedin.error='';
+  try{
+    const range=socDateRange();
+    const liVer=liVersion(0);
+    const hdrs=JSON.stringify({'Authorization':'Bearer '+token,'LinkedIn-Version':liVer,'X-Restli-Protocol-Version':'2.0.0'});
+    const orgUrn=encodeURIComponent('urn:li:organization:'+orgId);
+
+    // Follower stats
+    const followerUrl=`https://api.linkedin.com/rest/organizationalEntityFollowerStatistics?q=organizationalEntity&organizationalEntity=${orgUrn}&timeIntervals.timeGranularityType=MONTH&timeIntervals.timeRange.start=${Date.parse(range.since+'T00:00:00Z')}&timeIntervals.timeRange.end=${Date.parse(range.until+'T23:59:59Z')}`;
+    const fRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(followerUrl)}&headers=${encodeURIComponent(hdrs)}`);
+    const fData=await fRes.json();
+
+    // Share/post stats
+    const shareUrl=`https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${orgUrn}&timeIntervals.timeGranularityType=MONTH&timeIntervals.timeRange.start=${Date.parse(range.since+'T00:00:00Z')}&timeIntervals.timeRange.end=${Date.parse(range.until+'T23:59:59Z')}`;
+    const sRes=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(shareUrl)}&headers=${encodeURIComponent(hdrs)}`);
+    const sData=await sRes.json();
+
+    if(fData.status===403||fData.message||fData.error){
+      // Try older version fallback
+      const liVer2=liVersion(3);
+      const hdrs2=JSON.stringify({'Authorization':'Bearer '+token,'LinkedIn-Version':liVer2,'X-Restli-Protocol-Version':'2.0.0'});
+      const fRes2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(followerUrl)}&headers=${encodeURIComponent(hdrs2)}`);
+      const fData2=await fRes2.json();
+      if(fData2.elements){
+        processLinkedInOrgData(fData2, sData);
+      } else {
+        throw new Error(fData2.message||fData2.error||JSON.stringify(fData2).slice(0,120));
+      }
+    } else {
+      processLinkedInOrgData(fData, sData);
+    }
+  }catch(e){
+    socLiveData.linkedin.error=e.message||String(e);
+    toast('LinkedIn organic: '+socLiveData.linkedin.error,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span id="soc-li-btn-lbl">'+( socLiveData.linkedin.loaded?'↻ Refresh LinkedIn':'Connect LinkedIn')+'</span>';}
+    updateSocConnectBtns();
+    updateSocKpiBar();
+    const active=document.querySelector('#page-socialdash .itab.active');
+    if(active&&active.getAttribute('onclick').includes('linkedin'))renderSocLinkedInTab();
+    else renderSocOverview();
+  }
 }
-function renderSocYouTubeTab(){
-  const el=document.getElementById('soc-youtube-detail');if(!el)return;
-  const ytWeeks=socialWeeks.filter(w=>w.youtube&&(w.youtube.subs||w.youtube.views||w.youtube.videos));
-  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-    <div>
-      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">YouTube — weekly log</div>
-      ${ytWeeks.length?`<div style="overflow-x:auto;border-radius:var(--rl);border:1px solid var(--border)"><table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="background:var(--surface2)">
-        <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Week</th>
-        <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Subscribers</th>
-        <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Views</th>
-        <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Watch hrs</th>
-        <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Videos</th>
-      </tr></thead>
-      <tbody>${[...ytWeeks].sort((a,b)=>b.date.localeCompare(a.date)).map((w,i)=>`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--red-l)':'var(--surface)'}">
-        <td style="padding:.5rem .75rem;font-weight:${i===0?700:400}">${w.date}</td>
-        <td style="padding:.5rem;text-align:right">${w.youtube.subs??'—'}</td>
-        <td style="padding:.5rem;text-align:right">${w.youtube.views??'—'}</td>
-        <td style="padding:.5rem;text-align:right">${w.youtube.watchtime??'—'}</td>
-        <td style="padding:.5rem;text-align:right">${w.youtube.videos??'—'}</td>
-      </tr>`).join('')}</tbody>
-      </table></div>`
-      :`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:2rem;text-align:center">
-        <i class="ti ti-brand-youtube" style="font-size:40px;color:#FF0000;display:block;margin-bottom:.75rem;opacity:.4"></i>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:.75rem">No YouTube data yet</div>
-        <button class="btn btn-primary" onclick="openSocialEntry()"><i class="ti ti-plus"></i> Log this week</button>
-        <div style="font-size:11px;color:var(--text3);margin-top:.5rem">Log weekly: subscribers, views, watch hours, videos published</div>
-      </div>`}
+
+function processLinkedInOrgData(fData, sData){
+  const els=fData.elements||[];
+  // Sum followers across time intervals
+  const totalFollowers=els.reduce((s,e)=>{
+    const gains=(e.followerGains||{});
+    return s+(gains.organicFollowerGain||0)+(gains.paidFollowerGain||0);
+  },0);
+  // Latest period total count — try totalFollowerCount on last element
+  const lastEl=els[els.length-1];
+  const totalCount=lastEl?.followerCountsByType?.reduce((s,t)=>s+t.followerCounts.organicFollowerCount+t.followerCounts.paidFollowerCount,0)||totalFollowers;
+
+  const sEls=(sData?.elements||[]);
+  let totalImpr=0,totalClicks=0,totalEngRate=0,engCount=0;
+  sEls.forEach(e=>{
+    const st=e.totalShareStatistics||{};
+    totalImpr+=(st.impressionCount||0);
+    totalClicks+=(st.clickCount||0);
+    if(st.impressionCount){totalEngRate+=(st.engagementRate||0);engCount++;}
+  });
+
+  socLiveData.linkedin={
+    loaded:true,error:'',
+    followers:totalCount||null,
+    impressions:totalImpr||null,
+    clicks:totalClicks||null,
+    engRate:engCount?(totalEngRate/engCount*100):null,
+    posts:sEls.length||null,
+    days:sEls.map((e,i)=>({d:`p${i+1}`,impr:e.totalShareStatistics?.impressionCount||0,clicks:e.totalShareStatistics?.clickCount||0})),
+  };
+  localStorage.setItem('ec-soc-li-live',JSON.stringify(socLiveData.linkedin));
+  toast('LinkedIn organic loaded');
+}
+
+// ════════════════════════════════════════════════════════════════
+// META ORGANIC FETCH (Facebook Page Insights + Instagram Business)
+// Reuses ec-meta-token (system user token)
+// ════════════════════════════════════════════════════════════════
+async function fetchMetaSocialOrganic(){
+  const token=getMetaToken();
+  const fbPageId=getSocFbPageId();
+  const igAccountId=getSocIgAccountId();
+  if(!token){toast('No Meta token saved. Add it in Settings → Meta Ads first.','warn');navTo('settings');return;}
+  if(!fbPageId&&!igAccountId){toast('Add Facebook Page ID and/or Instagram Account ID in Settings → Social Media.','warn');navTo('settings');return;}
+  const btn=document.getElementById('soc-meta-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
+  const range=socDateRange();
+  try{
+    const results=await Promise.allSettled([
+      fbPageId?fetchFbPageInsights(token,fbPageId,range):Promise.resolve(null),
+      igAccountId?fetchIgInsights(token,igAccountId,range):Promise.resolve(null),
+    ]);
+    if(results[0].status==='fulfilled'&&results[0].value)processFbData(results[0].value);
+    else if(results[0].status==='rejected') socLiveData.facebook.error=results[0].reason?.message||'Facebook error';
+    if(results[1].status==='fulfilled'&&results[1].value)processIgData(results[1].value);
+    else if(results[1].status==='rejected') socLiveData.instagram.error=results[1].reason?.message||'Instagram error';
+    toast('Meta organic loaded');
+  }catch(e){
+    toast('Meta organic error: '+(e.message||e),'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span id="soc-meta-btn-lbl">↻ Refresh Meta</span>';}
+    updateSocConnectBtns();
+    updateSocKpiBar();
+    const active=document.querySelector('#page-socialdash .itab.active');
+    if(active&&active.getAttribute('onclick').includes('meta'))renderSocMetaTab();
+    else renderSocOverview();
+  }
+}
+
+async function fetchFbPageInsights(token,pageId,range){
+  const metrics='page_fans,page_impressions,page_reach,page_engaged_users,page_posts_impressions';
+  const url=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${metrics}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+  // Also get page fan count (latest)
+  const fanUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name&access_token=${token}`;
+  const fr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(fanUrl)}`);
+  const fd=await fr.json();
+  return{insights:d.data||[],page:fd};
+}
+
+function processFbData({insights,page}){
+  const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
+  socLiveData.facebook={
+    loaded:true,error:'',
+    followers:page?.fan_count||page?.followers_count||null,
+    reach:sumMetric('page_reach'),
+    impressions:sumMetric('page_impressions'),
+    engRate:null,
+    posts:insights.find(m=>m.name==='page_posts_impressions')?.values?.filter(v=>v.value>0).length||null,
+    days:(insights.find(m=>m.name==='page_reach')?.values||[]).map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
+    pageName:page?.name||'',
+  };
+  localStorage.setItem('ec-soc-fb-live',JSON.stringify(socLiveData.facebook));
+}
+
+async function fetchIgInsights(token,igAccountId,range){
+  const metrics='impressions,reach,profile_views,follower_count';
+  const url=`https://graph.facebook.com/v21.0/${igAccountId}/insights?metric=${metrics}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}`);
+  const d=await r.json();
+  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+  // User info
+  const uUrl=`https://graph.facebook.com/v21.0/${igAccountId}?fields=followers_count,media_count,username&access_token=${token}`;
+  const ur=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(uUrl)}`);
+  const ud=await ur.json();
+  // Recent media
+  const mUrl=`https://graph.facebook.com/v21.0/${igAccountId}/media?fields=id,caption,timestamp,like_count,comments_count,reach,impressions,media_type&limit=25&access_token=${token}`;
+  const mr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(mUrl)}`);
+  const md=await mr.json();
+  return{insights:d.data||[],user:ud,media:md.data||[]};
+}
+
+function processIgData({insights,user,media}){
+  const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
+  const totalReach=sumMetric('reach');
+  const totalImpr=sumMetric('impressions');
+  const totalLikes=media.reduce((s,p)=>s+(p.like_count||0),0);
+  const totalComments=media.reduce((s,p)=>s+(p.comments_count||0),0);
+  const engRate=totalReach?(((totalLikes+totalComments)/totalReach)*100):null;
+  socLiveData.instagram={
+    loaded:true,error:'',
+    followers:user?.followers_count||null,
+    reach:totalReach||null,
+    impressions:totalImpr||null,
+    engRate,
+    posts:media,
+    days:(insights.find(m=>m.name==='reach')?.values||[]).map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
+    username:user?.username||'',
+    mediaCount:user?.media_count||null,
+  };
+  localStorage.setItem('ec-soc-ig-live',JSON.stringify(socLiveData.instagram));
+}
+
+// ════════════════════════════════════════════════════════════════
+// YOUTUBE ANALYTICS FETCH
+// Uses existing Google OAuth (gscToken / ga4Token chain)
+// YouTube Analytics API: /v2/reports
+// ════════════════════════════════════════════════════════════════
+async function fetchYouTubeOrganic(){
+  const channelId=getSocYtChannelId();
+  if(!channelId){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');return;}
+  const btn=document.getElementById('soc-yt-btn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
+  try{
+    // Ensure we have a Google token
+    if(!gscToken){const ok=await refreshAccessToken();if(!ok)throw new Error('Google token refresh failed');}
+    const range=socDateRange();
+    // YouTube Analytics — channel overview
+    const ytUrl=`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${range.since}&endDate=${range.until}&metrics=views,estimatedMinutesWatched,subscribersGained,subscribersLost,videosAddedToPlaylists&dimensions=day&sort=day`;
+    const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    if(r.status===401){
+      const ok=await refreshAccessToken();
+      if(!ok)throw new Error('Could not refresh Google token');
+      const r2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+      const d2=await r2.json();
+      if(d2.error)throw new Error(d2.error.message||JSON.stringify(d2.error));
+      processYtData(d2,range);
+    } else {
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+      processYtData(d,range);
+    }
+    // Also get subscriber count via YouTube Data API
+    const dataUrl=`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`;
+    const dr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(dataUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    const dd=await dr.json();
+    if(dd.items&&dd.items[0]){
+      const stats=dd.items[0].statistics;
+      socLiveData.youtube.subs=parseInt(stats.subscriberCount)||null;
+      socLiveData.youtube.totalViews=parseInt(stats.viewCount)||null;
+    }
+    localStorage.setItem('ec-soc-yt-live',JSON.stringify(socLiveData.youtube));
+    toast('YouTube analytics loaded');
+  }catch(e){
+    socLiveData.youtube.error=e.message||String(e);
+    toast('YouTube: '+socLiveData.youtube.error,'error');
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-youtube"></i> <span id="soc-yt-btn-lbl">↻ Refresh YouTube</span>';}
+    updateSocConnectBtns();
+    updateSocKpiBar();
+    const active=document.querySelector('#page-socialdash .itab.active');
+    if(active&&active.getAttribute('onclick').includes('youtube'))renderSocYouTubeTab();
+    else renderSocOverview();
+  }
+}
+
+function processYtData(d,range){
+  const rows=d.rows||[];
+  const cols=(d.columnHeaders||[]).map(h=>h.name);
+  const idx=name=>cols.indexOf(name);
+  const sum=name=>rows.reduce((s,r)=>s+(r[idx(name)]||0),0);
+  const totalViews=sum('views');
+  const watchMins=sum('estimatedMinutesWatched');
+  const subsGained=sum('subscribersGained');
+  const subsLost=sum('subscribersLost');
+  socLiveData.youtube={
+    ...socLiveData.youtube,
+    loaded:true,error:'',
+    views:totalViews||null,
+    watchHours:watchMins?(watchMins/60).toFixed(1):null,
+    subsGained,subsLost,
+    netSubs:subsGained-subsLost,
+    days:rows.map(r=>({d:r[idx('day')]?.slice(5)||'',views:r[idx('views')]||0,watchMins:r[idx('estimatedMinutesWatched')]||0})),
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ════════════════════════════════════════════════════════════════
+
+function socConnectPrompt(platform, platform_label, color, icon, settingNote){
+  return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:2.5rem;text-align:center;max-width:440px;margin:2rem auto">
+    <div style="width:64px;height:64px;border-radius:50%;background:${color}15;border:2px solid ${color}40;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+      <i class="ti ${icon}" style="font-size:28px;color:${color}"></i>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">YouTube — export CSV (coming)</div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6">YouTube Studio doesn't offer a simple CSV the way Meta does. For now, log weekly figures manually via "Log this week". YouTube Analytics CSV export support can be added when needed — let Daniyal know.</div>
-    </div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:.5rem">${platform_label} not connected</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem;line-height:1.6">${settingNote}</div>
+    <button class="btn btn-primary" onclick="navTo('settings')"><i class="ti ti-settings"></i> Open Settings</button>
   </div>`;
 }
-function socBarChart(series,labels,h,colors){
-  if(!labels||labels.length===0)return`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No data yet</div>`;
-  const W=460,PAD={t:10,r:8,b:32,l:42},dw=W-PAD.l-PAD.r,dh=h-PAD.t-PAD.b;
-  const allVals=series.flatMap(s=>s.vals).filter(v=>v!=null);
-  const maxV=Math.max(1,...allVals);
-  const bw=Math.max(4,Math.floor(dw/labels.length/(series.length+0.4)));
-  const gap=Math.floor(dw/labels.length);
-  let svg=`<svg viewBox="0 0 ${W} ${h}" style="width:100%;overflow:visible">`;
-  // grid lines
-  [0,0.25,0.5,0.75,1].forEach(f=>{
-    const y=PAD.t+dh*(1-f);
-    const lbl=Math.round(maxV*f);
-    svg+=`<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
-    svg+=`<text x="${PAD.l-4}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text3)">${lbl>=1000?(lbl/1000).toFixed(0)+'k':lbl}</text>`;
-  });
-  // bars
-  labels.forEach((lbl,i)=>{
-    const x0=PAD.l+i*gap+gap/2-((series.length*bw+(series.length-1)*2)/2);
-    series.forEach((s,si)=>{
-      const v=s.vals[i]||0;
-      const barH=Math.max(1,Math.round((v/maxV)*dh));
-      const x=x0+si*(bw+2);
-      const y=PAD.t+dh-barH;
-      svg+=`<rect x="${x}" y="${y}" width="${bw}" height="${barH}" fill="${colors[si]}" rx="2" opacity="0.9"/>`;
-    });
-    const step=Math.ceil(labels.length/8);
-    if(i%step===0||i===labels.length-1)
-      svg+=`<text x="${PAD.l+i*gap+gap/2}" y="${PAD.t+dh+18}" text-anchor="middle" font-size="9" fill="var(--text3)">${lbl}</text>`;
-  });
-  svg+='</svg>';return svg;
+
+function socErrorCard(msg){
+  return`<div style="background:var(--red-l);border:1px solid var(--red);border-radius:var(--rl);padding:1rem;color:var(--red);font-size:13px;margin-bottom:1rem"><i class="ti ti-alert-circle"></i> ${esc(msg)}</div>`;
 }
 
-function socAreaChart(vals,labels,color,h){
-  if(!vals||vals.length<2)return`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">Upload more data to see trends</div>`;
-  const W=460,PAD={t:10,r:8,b:28,l:42},dw=W-PAD.l-PAD.r,dh=h-PAD.t-PAD.b;
-  const maxV=Math.max(1,...vals.filter(v=>v!=null));
-  const avg=vals.reduce((s,v)=>s+(v||0),0)/vals.length;
-  const xFor=i=>PAD.l+i*(dw/(vals.length-1));
-  const yFor=v=>PAD.t+dh-Math.round(((v||0)/maxV)*dh*0.92);
-  const pts=vals.map((v,i)=>`${xFor(i)},${yFor(v)}`).join(' ');
-  const areaPath=`${PAD.l},${PAD.t+dh} `+vals.map((v,i)=>`${xFor(i)},${yFor(v)}`).join(' ')+` ${xFor(vals.length-1)},${PAD.t+dh}`;
-  const avgY=PAD.t+dh-Math.round((avg/maxV)*dh*0.92);
-  const step=Math.ceil(labels.length/6);
-  let svg=`<svg viewBox="0 0 ${W} ${h}" style="width:100%;overflow:visible">
-    <defs><linearGradient id="socAreaGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.35"/><stop offset="100%" stop-color="${color}" stop-opacity="0.02"/></linearGradient></defs>`;
-  [0,0.25,0.5,0.75,1].forEach(f=>{
-    const y=PAD.t+dh*(1-f*0.92);
-    svg+=`<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
-    svg+=`<text x="${PAD.l-4}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text3)">${Math.round(maxV*f)>=1000?(Math.round(maxV*f)/1000).toFixed(0)+'k':Math.round(maxV*f)}</text>`;
-  });
-  svg+=`<polygon points="${areaPath}" fill="url(#socAreaGrad)"/>`;
-  svg+=`<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  svg+=`<line x1="${PAD.l}" y1="${avgY}" x2="${W-PAD.r}" y2="${avgY}" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,3"/>`;
-  labels.forEach((l,i)=>{if(i%step===0||i===labels.length-1)svg+=`<text x="${xFor(i)}" y="${PAD.t+dh+18}" text-anchor="middle" font-size="9" fill="var(--text3)">${l}</text>`;});
-  svg+='</svg>';return svg;
+function socKpiTiles(tiles){
+  return`<div style="display:grid;grid-template-columns:repeat(${tiles.length},1fr);gap:12px;margin-bottom:1.25rem">
+    ${tiles.map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;text-align:center">
+      <div style="font-size:22px;font-weight:800;color:${t.color||'var(--text)'}">${t.val}</div>
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${t.label}</div>
+      ${t.sub?`<div style="font-size:11px;color:var(--text3);margin-top:2px">${t.sub}</div>`:''}
+    </div>`).join('')}
+  </div>`;
 }
 
-function renderSocialDash(){
-  const li=socialWeeks.length?socialWeeks[0]:null;
-  const ig=instagramData.length?instagramData[0]:null;
-  const fb=facebookData.length?facebookData[0]:null;
+// ── Overview tab ──────────────────────────────────────────────
+function renderSocOverview(){
+  const el=document.getElementById('soc-tab-overview');if(!el)return;
+  const li=socLiveData.linkedin, fb=socLiveData.facebook, ig=socLiveData.instagram, yt=socLiveData.youtube;
+  const latestLog=socialWeeks.length?[...socialWeeks].sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
 
-  // LinkedIn
-  const liFollowers=li?.liEracore?.followers;
-  const liImpr=li?.liEracore?.impressions;
-  const liEng=li?.liEracore?.eng;
-  const liPosts=li?.liEracore?.posts;
-  const liMZFollowers=li?.liMZ?.followers;
-  const liMZImpr=li?.liMZ?.impressions;
+  const platformCard=(name,color,icon,metrics,loaded,err,fetchFn,btnId)=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem">
+        <div style="width:36px;height:36px;border-radius:50%;background:${color}15;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="ti ${icon}" style="font-size:18px;color:${color}"></i>
+        </div>
+        <div style="font-size:14px;font-weight:700;flex:1">${name}</div>
+        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:${loaded?'var(--green-l)':'var(--surface2)'};color:${loaded?'var(--green)':'var(--text3)'}">${loaded?'Live':'Not connected'}</span>
+      </div>
+      ${err?socErrorCard(err):''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${metrics.map(m=>`<div style="background:var(--surface2);border-radius:var(--r);padding:.625rem .75rem">
+          <div style="font-size:17px;font-weight:700;color:${color}">${m.val}</div>
+          <div style="font-size:11px;color:var(--text2)">${m.label}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
 
-  // Instagram aggregates
-  const igPosts=ig?ig.posts.length:0;
-  const igReach=ig?ig.posts.reduce((s,p)=>s+p.reach,0):0;
-  const igViews=ig?ig.posts.reduce((s,p)=>s+p.views,0):0;
-  const igLikes=ig?ig.posts.reduce((s,p)=>s+p.likes,0):0;
-  const igComments=ig?ig.posts.reduce((s,p)=>s+p.comments,0):0;
-  const igSaves=ig?ig.posts.reduce((s,p)=>s+p.saves,0):0;
-  const igEngRate=ig&&igReach?((igLikes+igComments+igSaves)/igReach*100).toFixed(2):null;
-
-  // Facebook aggregates
-  const fbReach=fb?fb.posts.reduce((s,p)=>s+p.reach,0):0;
-  const fbViews=fb?fb.posts.reduce((s,p)=>s+(p.views3s||0),0):0;
-  const fbEng=fb?fb.posts.reduce((s,p)=>s+p.engagementTotal,0):0;
-  const fbEngRate=fb&&fbReach?(fbEng/fbReach*100).toFixed(2):null;
-
-  // YouTube from latest weekly log
-  const yt=li?.youtube;
-
-  // Update top counter bar
-  const totalImpressions=(liImpr||0)+(liMZImpr||0)+igViews;
-  const totalPostsW=(liPosts||0);
-  const se=document.getElementById('soc-li-followers');if(se)se.textContent=liFollowers!=null?liFollowers.toLocaleString():'—';
-  const ie=document.getElementById('soc-total-impressions');if(ie)ie.textContent=totalImpressions?totalImpressions.toLocaleString():'—';
-  const pe=document.getElementById('soc-posts-this-week');if(pe)pe.textContent=totalPostsW||igPosts||'—';
-  const ae=document.getElementById('soc-eng-rate');if(ae)ae.textContent=igEngRate?igEngRate+'%':(liEng?liEng.toFixed(2)+'%':'—');
-  const ce=document.getElementById('soc-cadence');if(ce){const c=totalPostsW||igPosts||0;ce.textContent=`${c}/2`;ce.style.color=c>=2?'var(--green)':'var(--red)';}
-
-  const el=document.getElementById('social-weeks-list');if(!el)return;
-
-  // ── PLATFORM STAT CARDS ──────────────────────────────────────────────
-  const CARDS=[
-    {platform:'LinkedIn',icon:'ti-brand-linkedin',color:'#0A66C2',val:liFollowers!=null?liFollowers.toLocaleString():'—',label:'Followers (Eracore)'},
-    {platform:'LinkedIn MZ',icon:'ti-brand-linkedin',color:'#004182',val:liMZFollowers!=null?liMZFollowers.toLocaleString():'—',label:'Followers (MZ)'},
-    {platform:'Instagram',icon:'ti-brand-instagram',color:'#dc2743',val:igPosts?igPosts:'—',label:'Posts this period'},
-    {platform:'Facebook',icon:'ti-brand-facebook',color:'#1877F2',val:fbReach?fbReach.toLocaleString():'—',label:'Total reach'},
-    {platform:'YouTube',icon:'ti-brand-youtube',color:'#FF0000',val:yt?.subs!=null?yt.subs.toLocaleString():'—',label:'Subscribers'},
-    {platform:'Impressions',icon:'ti-eye',color:'#7c3aed',val:totalImpressions?totalImpressions.toLocaleString():'—',label:'Total impressions'},
+  // LinkedIn — live or fall back to latest log
+  const liMetrics=[
+    {val:li.followers!=null?socFmt(li.followers):latestLog?.liEracore?.followers!=null?socFmt(latestLog.liEracore.followers):'—',label:'Followers'},
+    {val:li.impressions!=null?socFmt(li.impressions):'—',label:'Impressions (period)'},
+    {val:li.clicks!=null?socFmt(li.clicks):'—',label:'Clicks'},
+    {val:li.engRate!=null?socPct(li.engRate):latestLog?.liEracore?.eng!=null?socPct(latestLog.liEracore.eng):'—',label:'Engagement rate'},
   ];
-  const statCards=CARDS.map(c=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.375rem">
-    <div style="width:48px;height:48px;border-radius:50%;background:${c.color}18;border:2px solid ${c.color}40;display:flex;align-items:center;justify-content:center;margin-bottom:.25rem">
-      <i class="ti ${c.icon}" style="font-size:22px;color:${c.color}"></i>
-    </div>
-    <div style="font-size:22px;font-weight:800;color:var(--text);line-height:1">${c.val}</div>
-    <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em">${c.label}</div>
-  </div>`).join('');
-
-  // ── CHART DATA — weekly logs for impressions/reach bar chart ─────────
-  const chronoWeeks=[...socialWeeks].sort((a,b)=>a.date.localeCompare(b.date)).slice(-12);
-  const wLabels=chronoWeeks.map(w=>w.date.slice(5)); // MM-DD
-  const liImprVals=chronoWeeks.map(w=>(w.liEracore?.impressions||0)+(w.liMZ?.impressions||0));
-  const liFollowerVals=chronoWeeks.map(w=>w.liEracore?.followers||0);
-
-  // Instagram per-post reach for area chart
-  const igPostsSorted=ig?[...ig.posts].sort((a,b)=>(a.publishTime||'').localeCompare(b.publishTime||'')):[];
-  const igReachVals=igPostsSorted.map(p=>p.reach||0);
-  const igViewVals=igPostsSorted.map(p=>p.views||0);
-  const igLabels=igPostsSorted.map((p,i)=>`P${i+1}`);
-
-  // Facebook reach area
-  const fbPosts=fb?[...fb.posts]:[];
-  const fbReachVals=fbPosts.map(p=>p.reach||0);
-  const fbViewVals=fbPosts.map(p=>p.views3s||0);
-  const fbLabels=fbPosts.map((p,i)=>`P${i+1}`);
-
-  const hasWeeklyData=chronoWeeks.length>0;
-  const hasIGData=igPostsSorted.length>0;
-  const hasFBData=fbPosts.length>0;
+  const fbMetrics=[
+    {val:fb.followers!=null?socFmt(fb.followers):latestLog?.facebook?.followers!=null?socFmt(latestLog.facebook?.followers):'—',label:'Followers'},
+    {val:fb.reach!=null?socFmt(fb.reach):'—',label:'Reach (period)'},
+    {val:fb.impressions!=null?socFmt(fb.impressions):'—',label:'Impressions'},
+    {val:fb.posts!=null?fb.posts:'—',label:'Active days'},
+  ];
+  const igMetrics=[
+    {val:ig.followers!=null?socFmt(ig.followers):latestLog?.instagram?.followers!=null?socFmt(latestLog.instagram?.followers):'—',label:'Followers'},
+    {val:ig.reach!=null?socFmt(ig.reach):'—',label:'Reach (period)'},
+    {val:ig.impressions!=null?socFmt(ig.impressions):'—',label:'Impressions'},
+    {val:ig.engRate!=null?socPct(ig.engRate):'—',label:'Engagement rate'},
+  ];
+  const ytMetrics=[
+    {val:yt.subs!=null?socFmt(yt.subs):latestLog?.youtube?.subs!=null?socFmt(latestLog.youtube.subs):'—',label:'Subscribers'},
+    {val:yt.views!=null?socFmt(yt.views):latestLog?.youtube?.views!=null?socFmt(latestLog.youtube.views):'—',label:'Views (period)'},
+    {val:yt.watchHours!=null?yt.watchHours+'h':latestLog?.youtube?.watchtime!=null?latestLog.youtube.watchtime+'h':'—',label:'Watch hours'},
+    {val:yt.netSubs!=null?(yt.netSubs>0?'+':'')+yt.netSubs:'—',label:'Net subscribers'},
+  ];
 
   el.innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <!-- LEFT: Charts -->
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">LinkedIn — Impressions &amp; Followers</div>
-        <div style="display:flex;gap:14px;margin-bottom:.5rem">
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#0A66C2;display:inline-block"></span>Impressions</span>
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#00a0dc;display:inline-block"></span>Followers</span>
-        </div>
-        ${hasWeeklyData
-          ?socBarChart([{vals:liImprVals},{vals:liFollowerVals}],wLabels,140,['#0A66C2','#00a0dc'])
-          :`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">Upload LinkedIn XLS to see weekly trend</div>`}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.375rem">Instagram — Reach per post</div>
-        <div style="display:flex;gap:14px;margin-bottom:.5rem">
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:3px;background:#dc2743;border-radius:2px"></span>Reach</span>
-          <span style="font-size:11px;color:var(--text3)">— Avg reach</span>
-        </div>
-        ${hasIGData
-          ?socAreaChart(igReachVals,igLabels,'#dc2743',130)
-          :`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">Upload Instagram CSV to see post reach</div>`}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.375rem">Facebook — Reach per post</div>
-        <div style="display:flex;gap:14px;margin-bottom:.5rem">
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:14px;height:3px;background:#1877F2;border-radius:2px"></span>Reach</span>
-          <span style="font-size:11px;color:var(--text3)">— Avg reach</span>
-        </div>
-        ${hasFBData
-          ?socAreaChart(fbReachVals,fbLabels,'#1877F2',130)
-          :`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">Upload Facebook CSV to see post reach</div>`}
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      ${platformCard('LinkedIn — Eracore','#0A66C2','ti-brand-linkedin',liMetrics,li.loaded,li.error)}
+      ${platformCard('Meta — Facebook','#1877F2','ti-brand-facebook',fbMetrics,fb.loaded,fb.error)}
+      ${platformCard('Meta — Instagram','#E1306C','ti-brand-instagram',igMetrics,ig.loaded,ig.error)}
+      ${platformCard('YouTube','#FF0000','ti-brand-youtube',ytMetrics,yt.loaded,yt.error)}
     </div>
-    <!-- RIGHT: Stat cards + engagement bar chart -->
-    <div style="display:flex;flex-direction:column;gap:14px">
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-        ${statCards}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Instagram — Views &amp; Likes per post</div>
-        <div style="display:flex;gap:14px;margin-bottom:.5rem">
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#dc2743;display:inline-block"></span>Views</span>
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#f97316;display:inline-block"></span>Likes</span>
-        </div>
-        ${hasIGData
-          ?socBarChart([{vals:igViewVals},{vals:igPostsSorted.map(p=>p.likes||0)}],igLabels,150,['#dc2743','#f97316'])
-          :`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No Instagram data yet</div>`}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Facebook — Engagement per post</div>
-        <div style="display:flex;gap:14px;margin-bottom:.5rem">
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#1877F2;display:inline-block"></span>Total eng.</span>
-          <span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block"></span>3s views</span>
-        </div>
-        ${hasFBData
-          ?socBarChart([{vals:fbPosts.map(p=>p.engagementTotal||0)},{vals:fbViewVals}],fbLabels,150,['#1877F2','#60a5fa'])
-          :`<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No Facebook data yet</div>`}
-      </div>
-    </div>
-  </div>`;
+    ${latestLog?`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;margin-top:1.25rem;font-size:12px;color:var(--text2)">
+      <i class="ti ti-calendar-stats"></i> Latest manual log: <strong>${latestLog.date}</strong> — use the platform tabs above for full live data or <button class="btn" style="font-size:11px;padding:2px 8px;height:auto" onclick="switchSocTab('log',document.querySelectorAll('#page-socialdash .itab')[4])">view all logs</button>
+    </div>`:''}`;
+  updateSocKpiBar();
 }
+
+// ── LinkedIn tab ──────────────────────────────────────────────
+function renderSocLinkedInTab(){
+  const el=document.getElementById('soc-tab-linkedin');if(!el)return;
+  const li=socLiveData.linkedin;
+  if(!getLiToken()||!getSocLiOrgId()){el.innerHTML=socConnectPrompt('linkedin','LinkedIn','#0A66C2','ti-brand-linkedin','Enter your LinkedIn Org ID in Settings → Social Media. Uses your existing LinkedIn Ads OAuth token.');return;}
+  if(!li.loaded&&!li.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchLinkedInOrganic()"><i class="ti ti-brand-linkedin"></i> Fetch LinkedIn organic data</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses your saved LinkedIn Ads token + Organization URN</div></div>`;return;}
+  if(li.error&&!li.loaded){el.innerHTML=socErrorCard(li.error)+`<div style="text-align:center;margin-top:1rem"><button class="btn btn-primary" onclick="fetchLinkedInOrganic()"><i class="ti ti-refresh"></i> Retry</button></div>`;return;}
+
+  // Historical log data as fallback / comparison
+  const logs=[...socialWeeks].sort((a,b)=>a.date.localeCompare(b.date));
+  const logFollowers=logs.map(w=>w.liEracore?.followers||0);
+  const logImpressions=logs.map(w=>w.liEracore?.impressions||0);
+  const logLabels=logs.map(w=>w.date.slice(5));
+
+  el.innerHTML=`
+    ${li.error?socErrorCard(li.error):''}
+    ${socKpiTiles([
+      {val:li.followers!=null?socFmt(li.followers):'—',label:'Followers',color:'#0A66C2'},
+      {val:li.impressions!=null?socFmt(li.impressions):'—',label:'Impressions',color:'#0A66C2'},
+      {val:li.clicks!=null?socFmt(li.clicks):'—',label:'Clicks',color:'#0A66C2'},
+      {val:li.engRate!=null?socPct(li.engRate):'—',label:'Engagement rate',color:'#0A66C2'},
+    ])}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Impressions by period</div>
+        ${li.days.length>=2?socTrendSVG(li.days.map(d=>d.impr),'#0A66C2','impressions'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Not enough data points</div>'}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Followers — weekly log history</div>
+        ${logs.length>=2?socTrendSVG(logFollowers,'#0A66C2','followers'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">No log history — use <em>Log this week</em> to build history</div>'}
+      </div>
+    </div>
+    ${logs.length?`<div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">LinkedIn — weekly log history</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Week</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Followers</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Impressions</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eng rate</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Posts</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Clicks</th>
+        </tr></thead>
+        <tbody>${[...logs].reverse().map((w,i)=>`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--blue-l)':'var(--surface)'}">
+          <td style="padding:.5rem .75rem;font-weight:${i===0?700:400}">${w.date}${i===0?'<span style="font-size:9px;color:var(--blue);margin-left:4px">LATEST</span>':''}</td>
+          <td style="padding:.5rem;text-align:right">${w.liEracore?.followers??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.liEracore?.impressions??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.liEracore?.eng!=null?w.liEracore.eng.toFixed(2)+'%':'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.liEracore?.posts??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.liEracore?.clicks??'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:''}`;
+}
+
+// ── Meta tab (Facebook + Instagram side by side) ──────────────
+function renderSocMetaTab(){
+  const el=document.getElementById('soc-tab-meta');if(!el)return;
+  const fb=socLiveData.facebook, ig=socLiveData.instagram;
+  if(!getMetaToken()){el.innerHTML=socConnectPrompt('meta','Meta (Facebook + Instagram)','#1877F2','ti-brand-facebook','Add your Meta Ads system user token in Settings → Meta Ads, then add your Page ID and Instagram Account ID in Settings → Social Media.');return;}
+  if(!getSocFbPageId()&&!getSocIgAccountId()){el.innerHTML=socConnectPrompt('meta','Meta (Facebook + Instagram)','#1877F2','ti-brand-facebook','Add your Facebook Page ID and Instagram Account ID in Settings → Social Media (below the Meta Ads section).');return;}
+  if(!fb.loaded&&!ig.loaded&&!fb.error&&!ig.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchMetaSocialOrganic()"><i class="ti ti-brand-facebook"></i> Fetch Meta organic data</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Pulls Facebook Page Insights + Instagram Business Insights</div></div>`;return;}
+
+  const igPosts=ig.posts||[];
+
+  el.innerHTML=`
+    ${fb.error?socErrorCard('Facebook: '+fb.error):''}
+    ${ig.error?socErrorCard('Instagram: '+ig.error):''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
+      <!-- Facebook -->
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#1877F2;margin-bottom:.75rem"><i class="ti ti-brand-facebook"></i> Facebook ${fb.pageName?'— '+esc(fb.pageName):''}</div>
+        ${socKpiTiles([
+          {val:fb.followers!=null?socFmt(fb.followers):'—',label:'Followers',color:'#1877F2'},
+          {val:fb.reach!=null?socFmt(fb.reach):'—',label:'Reach',color:'#1877F2'},
+          {val:fb.impressions!=null?socFmt(fb.impressions):'—',label:'Impressions',color:'#1877F2'},
+          {val:fb.posts!=null?fb.posts:'—',label:'Active days',color:'#1877F2'},
+        ])}
+        ${fb.days&&fb.days.length>=2?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Daily reach</div>${socTrendSVG(fb.days.map(d=>d.reach),'#1877F2','reach')}</div>`:''}
+      </div>
+      <!-- Instagram -->
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#E1306C;margin-bottom:.75rem"><i class="ti ti-brand-instagram"></i> Instagram ${ig.username?'@'+esc(ig.username):''}</div>
+        ${socKpiTiles([
+          {val:ig.followers!=null?socFmt(ig.followers):'—',label:'Followers',color:'#E1306C'},
+          {val:ig.reach!=null?socFmt(ig.reach):'—',label:'Reach',color:'#E1306C'},
+          {val:ig.impressions!=null?socFmt(ig.impressions):'—',label:'Impressions',color:'#E1306C'},
+          {val:ig.engRate!=null?socPct(ig.engRate):'—',label:'Engagement rate',color:'#E1306C'},
+        ])}
+        ${ig.days&&ig.days.length>=2?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">Daily reach</div>${socTrendSVG(ig.days.map(d=>d.reach),'#E1306C','reach')}</div>`:''}
+      </div>
+    </div>
+    ${igPosts.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Instagram — recent posts (${igPosts.length})</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Post</th>
+          <th style="padding:.5rem;text-align:center;font-size:11px;color:var(--text2);font-weight:600">Type</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Reach</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Impressions</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Likes</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Comments</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Eng rate</th>
+        </tr></thead>
+        <tbody>${[...igPosts].sort((a,b)=>(b.like_count||0)-(a.like_count||0)).map((p,i)=>{
+          const eng=p.reach?((((p.like_count||0)+(p.comments_count||0))/p.reach)*100).toFixed(1):0;
+          const caption=(p.caption||'').slice(0,60)+(p.caption?.length>60?'…':'');
+          const date=p.timestamp?p.timestamp.slice(0,10):'';
+          return`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--pink-l,#fff0f6)':'var(--surface)'}">
+            <td style="padding:.5rem .75rem;max-width:220px">
+              <div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(caption)||'(no caption)'}</div>
+              <div style="font-size:10px;color:var(--text3)">${date}</div>
+            </td>
+            <td style="padding:.5rem;text-align:center"><span style="font-size:10px;background:var(--surface2);border-radius:4px;padding:1px 5px">${p.media_type||'—'}</span></td>
+            <td style="padding:.5rem;text-align:right">${p.reach!=null?p.reach.toLocaleString():'—'}</td>
+            <td style="padding:.5rem;text-align:right">${p.impressions!=null?p.impressions.toLocaleString():'—'}</td>
+            <td style="padding:.5rem;text-align:right;color:var(--red)">${p.like_count??'—'}</td>
+            <td style="padding:.5rem;text-align:right">${p.comments_count??'—'}</td>
+            <td style="padding:.5rem;text-align:right;font-weight:600;color:${parseFloat(eng)>=3?'var(--green)':parseFloat(eng)>=1?'var(--amber)':'var(--text2)'}">${eng}%</td>
+          </tr>`;}).join('')}</tbody>
+      </table></div>
+    </div>`:''}`;
+}
+
+// ── YouTube tab ───────────────────────────────────────────────
+function renderSocYouTubeTab(){
+  const el=document.getElementById('soc-tab-youtube');if(!el)return;
+  const yt=socLiveData.youtube;
+  if(!getSocYtChannelId()){el.innerHTML=socConnectPrompt('youtube','YouTube Analytics','#FF0000','ti-brand-youtube','Add your YouTube Channel ID in Settings → Social Media. Uses your existing Google OAuth (same as Search Console).');return;}
+  if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses your Google OAuth token — make sure YouTube Analytics API is enabled in Google Cloud</div></div>`;return;}
+  if(yt.error&&!yt.loaded){el.innerHTML=socErrorCard(yt.error)+`<div style="text-align:center;margin-top:1rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-refresh"></i> Retry</button><div style="font-size:12px;color:var(--text3);margin-top:.5rem">Make sure YouTube Analytics API is enabled in Google Cloud Console for your project</div></div>`;return;}
+
+  // Weekly log fallback data
+  const ytLogs=socialWeeks.filter(w=>w.youtube&&(w.youtube.subs||w.youtube.views)).sort((a,b)=>a.date.localeCompare(b.date));
+
+  el.innerHTML=`
+    ${yt.error?socErrorCard(yt.error):''}
+    ${socKpiTiles([
+      {val:yt.subs!=null?socFmt(yt.subs):'—',label:'Subscribers',color:'#FF0000'},
+      {val:yt.views!=null?socFmt(yt.views):'—',label:'Views (period)',color:'#FF0000'},
+      {val:yt.watchHours!=null?yt.watchHours+'h':'—',label:'Watch hours',color:'#FF0000'},
+      {val:yt.netSubs!=null?(yt.netSubs>=0?'+':'')+yt.netSubs:'—',label:'Net subscribers',color:yt.netSubs>=0?'var(--green)':'var(--red)'},
+    ])}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Daily views</div>
+        ${yt.days&&yt.days.length>=2?socTrendSVG(yt.days.map(d=>d.views),'#FF0000','views'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No daily data</div>'}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Subscribers — weekly log</div>
+        ${ytLogs.length>=2?socTrendSVG(ytLogs.map(w=>w.youtube.subs||0),'#FF0000','subs'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Log weekly data to see trend — use <em>Log this week</em></div>'}
+      </div>
+    </div>
+    ${ytLogs.length?`<div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">YouTube — weekly log history</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Week</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Subscribers</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Views</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Watch hrs</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Videos</th>
+        </tr></thead>
+        <tbody>${[...ytLogs].reverse().map((w,i)=>`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--red-l)':'var(--surface)'}">
+          <td style="padding:.5rem .75rem;font-weight:${i===0?700:400}">${w.date}${i===0?'<span style="font-size:9px;color:var(--red);margin-left:4px">LATEST</span>':''}</td>
+          <td style="padding:.5rem;text-align:right">${w.youtube.subs??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.youtube.views??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.youtube.watchtime??'—'}</td>
+          <td style="padding:.5rem;text-align:right">${w.youtube.videos??'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:''}`;
+}
+
+// ── Weekly log tab ─────────────────────────────────────────────
+function renderSocLogTab(){
+  const el=document.getElementById('soc-tab-log');if(!el)return;
+  if(!socialWeeks.length){
+    el.innerHTML=`<div style="text-align:center;padding:3rem">
+      <i class="ti ti-calendar-stats" style="font-size:40px;color:var(--text3);display:block;margin-bottom:1rem"></i>
+      <div style="font-size:14px;font-weight:600;margin-bottom:.5rem">No weekly logs yet</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:1.25rem">Log weekly numbers as a manual backup or for platforms not yet API-connected</div>
+      <button class="btn btn-primary" onclick="openSocialEntry()"><i class="ti ti-plus"></i> Log this week</button>
+    </div>`;
+    return;
+  }
+  const sorted=[...socialWeeks].sort((a,b)=>b.date.localeCompare(a.date));
+  el.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div style="font-size:13px;font-weight:700">${sorted.length} weekly log${sorted.length!==1?'s':''}</div>
+      <button class="btn btn-primary" onclick="openSocialEntry()"><i class="ti ti-plus"></i> Log this week</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${sorted.map((w,i)=>{
+        const li=w.liEracore||{};
+        const ig=w.instagram||{};
+        const fb=w.facebook||{};
+        const yt=w.youtube||{};
+        return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
+            <div style="font-size:14px;font-weight:700">${w.date}</div>
+            ${i===0?'<span style="font-size:10px;background:var(--blue-l);color:var(--blue);padding:2px 7px;border-radius:8px;font-weight:600">LATEST</span>':''}
+            ${w.notes?`<div style="font-size:12px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.notes)}</div>`:''}
+            <button class="btn btn-icon" onclick="deleteSocialWeek('${w.id}')" title="Delete"><i class="ti ti-trash" style="color:var(--text3)"></i></button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:12px">
+            <div style="border-left:3px solid #0A66C2;padding-left:.625rem">
+              <div style="font-size:11px;font-weight:600;color:#0A66C2;margin-bottom:3px">LinkedIn</div>
+              ${li.followers!=null?`<div>Followers: <strong>${li.followers.toLocaleString()}</strong></div>`:''}
+              ${li.impressions!=null?`<div>Impressions: <strong>${li.impressions.toLocaleString()}</strong></div>`:''}
+              ${li.eng!=null?`<div>Eng: <strong>${li.eng.toFixed(2)}%</strong></div>`:''}
+            </div>
+            <div style="border-left:3px solid #E1306C;padding-left:.625rem">
+              <div style="font-size:11px;font-weight:600;color:#E1306C;margin-bottom:3px">Instagram</div>
+              ${ig.followers!=null?`<div>Followers: <strong>${ig.followers.toLocaleString()}</strong></div>`:''}
+              ${ig.reach!=null?`<div>Reach: <strong>${ig.reach.toLocaleString()}</strong></div>`:''}
+              ${ig.eng!=null?`<div>Eng: <strong>${ig.eng.toFixed?ig.eng.toFixed(2):ig.eng}%</strong></div>`:''}
+            </div>
+            <div style="border-left:3px solid #1877F2;padding-left:.625rem">
+              <div style="font-size:11px;font-weight:600;color:#1877F2;margin-bottom:3px">Facebook</div>
+              ${fb.followers!=null?`<div>Followers: <strong>${fb.followers.toLocaleString()}</strong></div>`:''}
+              ${fb.reach!=null?`<div>Reach: <strong>${fb.reach.toLocaleString()}</strong></div>`:''}
+            </div>
+            <div style="border-left:3px solid #FF0000;padding-left:.625rem">
+              <div style="font-size:11px;font-weight:600;color:#FF0000;margin-bottom:3px">YouTube</div>
+              ${yt.subs!=null?`<div>Subscribers: <strong>${yt.subs.toLocaleString()}</strong></div>`:''}
+              ${yt.views!=null?`<div>Views: <strong>${yt.views.toLocaleString()}</strong></div>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── Settings save handlers ─────────────────────────────────────
+function saveSocMetaSettings(){
+  const fbId=(document.getElementById('soc-fb-page-id-input')?.value||'').trim();
+  const igId=(document.getElementById('soc-ig-account-id-input')?.value||'').trim();
+  if(!fbId&&!igId){toast('Enter at least one ID','warn');return;}
+  if(fbId)localStorage.setItem('ec-soc-fb-page-id',fbId);
+  if(igId)localStorage.setItem('ec-soc-ig-account-id',igId);
+  const badge=document.getElementById('soc-meta-settings-badge');
+  const msg=document.getElementById('soc-meta-settings-msg');
+  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  if(msg){msg.textContent='Credentials saved. Go to Social Media → Meta to fetch live data.';msg.style.color='var(--green)';}
+  toast('Meta social settings saved');
+}
+function saveSocLiOrgSettings(){
+  const orgId=(document.getElementById('soc-li-org-id-input')?.value||'').trim();
+  if(!orgId){toast('Enter your LinkedIn Org ID','warn');return;}
+  localStorage.setItem('ec-soc-li-org-id',orgId);
+  const badge=document.getElementById('soc-li-settings-badge');
+  const msg=document.getElementById('soc-li-settings-msg');
+  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  if(msg){msg.textContent='Org ID saved. Go to Social Media → LinkedIn to fetch data.';msg.style.color='var(--green)';}
+  toast('LinkedIn org ID saved');
+}
+function saveSocYtSettings(){
+  const chId=(document.getElementById('soc-yt-channel-id-input')?.value||'').trim();
+  if(!chId){toast('Enter your YouTube Channel ID','warn');return;}
+  localStorage.setItem('ec-soc-yt-channel-id',chId);
+  const badge=document.getElementById('soc-yt-settings-badge');
+  const msg=document.getElementById('soc-yt-settings-msg');
+  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  if(msg){msg.textContent='Channel ID saved. Go to Social Media → YouTube to fetch analytics.';msg.style.color='var(--green)';}
+  toast('YouTube channel ID saved');
+}
+
+// ── Load cached social live data on startup ────────────────────
+function loadSocLiveCache(){
+  try{const d=localStorage.getItem('ec-soc-li-live');if(d)socLiveData.linkedin=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-soc-fb-live');if(d)socLiveData.facebook=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-soc-ig-live');if(d)socLiveData.instagram=JSON.parse(d);}catch(e){}
+  try{const d=localStorage.getItem('ec-soc-yt-live');if(d)socLiveData.youtube=JSON.parse(d);}catch(e){}
+}
+
+// ── Shim: keep old renderSocialDash() calls working ───────────
+function renderSocialDash(){ renderSocOverview(); updateSocKpiBar(); }
+function renderSocialDashInto(weekListId){ renderSocOverview(); }
+function renderSocLinkedinDetail(){ renderSocLinkedInTab(); }
+function renderSocIGDetail(){ renderSocMetaTab(); }
+function renderSocFBDetail(){ renderSocMetaTab(); }
+function socBarChart(){ return ''; }
+function socAreaChart(){ return ''; }
+
+// ── Settings page — pre-fill saved values ─────────────────────
+function initSocSettings(){
+  const fbId=getSocFbPageId();
+  const igId=getSocIgAccountId();
+  const liOrg=getSocLiOrgId();
+  const ytCh=getSocYtChannelId();
+  const el_fb=document.getElementById('soc-fb-page-id-input');if(el_fb&&fbId)el_fb.value=fbId;
+  const el_ig=document.getElementById('soc-ig-account-id-input');if(el_ig&&igId)el_ig.value=igId;
+  const el_li=document.getElementById('soc-li-org-id-input');if(el_li&&liOrg)el_li.value=liOrg;
+  const el_yt=document.getElementById('soc-yt-channel-id-input');if(el_yt&&ytCh)el_yt.value=ytCh;
+  // Badges
+  const metaBadge=document.getElementById('soc-meta-settings-badge');
+  if(metaBadge&&(fbId||igId)){metaBadge.textContent='Configured';metaBadge.style.background='var(--green-l)';metaBadge.style.color='var(--green)';}
+  const liBadge=document.getElementById('soc-li-settings-badge');
+  if(liBadge&&liOrg){liBadge.textContent='Configured';liBadge.style.background='var(--green-l)';liBadge.style.color='var(--green)';}
+  const ytBadge=document.getElementById('soc-yt-settings-badge');
+  if(ytBadge&&ytCh){ytBadge.textContent='Configured';ytBadge.style.background='var(--green-l)';ytBadge.style.color='var(--green)';}
+}
+
+
 
 // ── CONVERSION TRACKING (GA4 page-based + manual calls) ────────────────────
 const CONVERSION_URLS=[
@@ -12868,7 +13320,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.0';
+const APP_HTML_VERSION='10.1';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
