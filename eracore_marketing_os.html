@@ -5706,11 +5706,13 @@ function switchPerfTab(tab, el){
     return;
   }
   if(tab==='social'){
-    const pane=document.getElementById('mpv-social');
-    if(pane&&!pane.querySelector('#mpsocial-weeks-list')){
-      pane.innerHTML='<div id="mpsocial-weeks-list"></div>';
-    }
-    renderSocialDashInto('mpsocial-weeks-list');
+    // Navigate directly to page-socialdash — same pattern as SEO and Paid
+    Object.values(PAGE_MAP).forEach(pid=>{const p=document.getElementById(pid);if(p)p.classList.remove('active');});
+    document.getElementById('page-socialdash')?.classList.add('active');
+    document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('nav-marketingperf')?.classList.add('active');
+    loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();
+    return;
   }
 }
 
@@ -13320,7 +13322,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.1';
+const APP_HTML_VERSION='10.2';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
