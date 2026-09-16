@@ -10486,9 +10486,9 @@ function getPaidDateRange(){
     case 'this_month': return{start:fmt(startOfMonth(now)),end:fmt(now),gads:'THIS_MONTH',meta:'this_month'};
     case 'last_month':{const s=new Date(now.getFullYear(),now.getMonth()-1,1);const e=new Date(now.getFullYear(),now.getMonth(),0);return{start:fmt(s),end:fmt(e),gads:'LAST_MONTH',meta:'last_month'};}
     case 'this_quarter': return{start:fmt(startOfQuarter(now)),end:fmt(now),gads:'THIS_QUARTER',meta:'this_quarter'};
-    case 'last_30_days':{const s=new Date(now);s.setDate(s.getDate()-30);return{start:fmt(s),end:fmt(now),gads:'LAST_30_DAYS',meta:'last_30_days'};}
+    case 'last_30_days':{const s=new Date(now);s.setDate(s.getDate()-30);return{start:fmt(s),end:fmt(now),gads:'LAST_30_DAYS',meta:'last_30d'};}
     case 'this_year': return{start:fmt(startOfYear(now)),end:fmt(now),gads:'THIS_YEAR',meta:'this_year'};
-    default:{const s=new Date(now);s.setDate(s.getDate()-7);return{start:fmt(s),end:fmt(now),gads:'LAST_7_DAYS',meta:'last_7_days'};}
+    default:{const s=new Date(now);s.setDate(s.getDate()-7);return{start:fmt(s),end:fmt(now),gads:'LAST_7_DAYS',meta:'last_7d'};}
   }
 }
 
