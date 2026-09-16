@@ -7061,6 +7061,15 @@ async function syncFromHubSpot(){
     console.error('HubSpot CRM sync error',err);
   }
 }
+function loadMsAdsSettings(){
+  const creds=getMsAdsCreds();
+  if(!creds)return;
+  const fields={'ms-dev-token-input':creds.devToken,'ms-customer-id-input':creds.customerId,'ms-client-id-input':creds.clientId,'ms-client-secret-input':creds.clientSecret};
+  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
+  const badge=document.getElementById('msads-status-badge');
+  if(badge&&creds.devToken){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+}
+
 function initSettings(){
   // ── Claude API key ──
   const key=getApiKey();
@@ -10490,25 +10499,29 @@ function getPaidDateLabel(){
 }
 
 function onPaidDateRangeChange(){
-  // Clear in-memory so loadIfFresh re-evaluates from localStorage for the new range
+  // Clear in-memory so loadIfFresh re-evaluates from localStorage for new range
   gadsData=null;metaAdsData=null;liAdsData=null;
   loadPaidAdsData();
   updatePaidBlendedKPIs();
   renderPaidOverview();
-  // Show loading indicator in tiles while fetching
-  const el=id=>document.getElementById(id);
-  const rl=document.getElementById('paid-range-label');
-  if(rl)rl.textContent='…';
-  ['paid-total-spend','paid-total-clicks','paid-total-impressions','paid-total-conversions','paid-avg-cpl'].forEach(id=>{
-    const e=el(id);if(e&&e.textContent==='—')e.innerHTML='<span style="color:var(--text3);font-size:.8em">fetching…</span>';
-  });
-  // Re-fetch from API based on credentials, not cached data
+  // Only re-fetch if we don't already have matching cached data
+  const hasCache=gadsData||metaAdsData||liAdsData;
+  if(hasCache){
+    // Cache matched — already rendered, nothing more to do
+    const mv=document.getElementById('mpv-master');
+    if(mv&&mv.children.length)renderMasterView();
+    return;
+  }
+  // No matching cache — fetch from APIs with a 15s timeout per platform
+  const withTimeout=(p,ms=15000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
   const fetches=[];
-  if(getGAdsCreds()?.refreshToken)fetches.push(fetchGoogleAdsLive().catch(()=>{}));
-  if(getMetaToken()&&getMetaAdAccount())fetches.push(fetchMetaAds().catch(()=>{}));
-  if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(fetchLinkedInAds().catch(()=>{}));
-  // After all fetches complete, re-render master view too
-  if(fetches.length)Promise.allSettled(fetches).then(()=>{
+  if(getGAdsCreds()?.refreshToken)fetches.push(withTimeout(fetchGoogleAdsLive()).catch(()=>{}));
+  if(getMetaToken()&&getMetaAdAccount())fetches.push(withTimeout(fetchMetaAds()).catch(()=>{}));
+  if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(withTimeout(fetchLinkedInAds()).catch(()=>{}));
+  if(!fetches.length){updatePaidBlendedKPIs();return;}
+  // After all fetches settle (or timeout), update tiles and master view
+  Promise.allSettled(fetches).then(()=>{
+    updatePaidBlendedKPIs();
     const mv=document.getElementById('mpv-master');
     if(mv&&mv.children.length)renderMasterView();
   });
