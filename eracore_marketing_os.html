@@ -1046,7 +1046,7 @@ select.sm:focus{border-color:var(--blue)}
   </div>
   <!-- Blended KPI counters -->
   <div class="counters" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
-    <div class="counter"><div class="counter-val" id="paid-total-spend">—</div><div class="counter-lbl">Total spend (7d)</div></div>
+    <div class="counter"><div class="counter-val" id="paid-total-spend">—</div><div class="counter-lbl">Total spend (<span id="paid-range-label">7d</span>)</div></div>
     <div class="counter"><div class="counter-val" id="paid-total-clicks">—</div><div class="counter-lbl">Total clicks</div></div>
     <div class="counter"><div class="counter-val" id="paid-total-impressions">—</div><div class="counter-lbl">Impressions</div></div>
     <div class="counter"><div class="counter-val" style="color:var(--green)" id="paid-total-conversions">—</div><div class="counter-lbl">Conversions</div></div>
@@ -5944,198 +5944,257 @@ function deleteMQL(id){loadMQLs();mqls=mqls.filter(x=>x.id!==id);saveMQLs();rend
 
 function renderMasterView(){
   const el=document.getElementById('mpv-master');if(!el)return;
-  loadMQLs();
-  loadPaidAdsData();
-  loadPaidGA4();
+  loadMQLs();loadPaidAdsData();loadPaidGA4();
 
-  // ── PAID: pull from live API caches (Google Ads, Meta Ads, LinkedIn Ads, MS Ads) ──
-  const paidImpr=(gadsData?.impressions||0)+(metaAdsData?.impressions||0)+(liAdsData?.impressions||0)+(msAdsData?.impressions||0)||null;
-  const paidClicks=(gadsData?.clicks||0)+(metaAdsData?.clicks||0)+(liAdsData?.clicks||0)+(msAdsData?.clicks||0)||null;
-  const paidSpend=(gadsData?.spend||0)+(metaAdsData?.spend||0)+(liAdsData?.spend||0)+(msAdsData?.spend||0)||null;
-  const paidLeads=(gadsData?.conversions||0)+(metaAdsData?.leads||0)+(liAdsData?.leads||0)+(msAdsData?.conversions||0)||null;
-  const paidSrc=[];
-  if(gadsData?.impressions)paidSrc.push('Google Ads');
-  if(metaAdsData?.impressions)paidSrc.push('Meta');
-  if(liAdsData?.impressions)paidSrc.push('LinkedIn');
-  if(msAdsData?.impressions)paidSrc.push('Microsoft');
+  // ── ACCUMULATE ───────────────────────────────────────────────────────
+  const paidImpr=(gadsData?.impressions||0)+(metaAdsData?.impressions||0)+(liAdsData?.impressions||0)+(msAdsData?.impressions||0);
+  const paidClicks=(gadsData?.clicks||0)+(metaAdsData?.clicks||0)+(liAdsData?.clicks||0)+(msAdsData?.clicks||0);
+  const paidSpend=(gadsData?.spend||0)+(metaAdsData?.spend||0)+(liAdsData?.spend||0)+(msAdsData?.spend||0);
+  const paidLeads=(gadsData?.conversions||0)+(metaAdsData?.leads||0)+(liAdsData?.leads||0)+(msAdsData?.conversions||0);
+  const bu=bingUsable();
+  const organicImpr=(googleStats.impressions||0)+(bu?.totalImpressions7||0);
+  const organicClicks=(googleStats.clicks||0)+(bu?.totalClicks7||0);
+  const li=socLiveData.linkedin,fb=socLiveData.facebook,ig=socLiveData.instagram,yt=socLiveData.youtube;
+  const socialReach=(li.impressions||0)+(fb.reach||0)+(ig.reach||0)+(yt.views||0);
+  const totalImpr=paidImpr+organicImpr+socialReach||null;
+  const totalClicks=paidClicks+organicClicks||null;
+  const totalSessions=googleStats.ai?.allSessions?.cur||((paidGA4Stats.paidSearchSessions||0)+(paidGA4Stats.paidSocialSessions||0)+(googleStats.sessions||0))||null;
+  const totalLeads=paidLeads||null;
+  const totalMQL=mqls.length||null;
+  const blendedCPL=(paidSpend&&paidLeads)?Math.round(paidSpend/paidLeads):null;
+  const blendedCTR=(totalClicks&&totalImpr)?(totalClicks/totalImpr*100):null;
+  const leadRate=(totalLeads&&totalSessions)?(totalLeads/totalSessions*100):null;
+  const mqlRate=(totalMQL&&totalLeads)?(totalMQL/totalLeads*100):null;
 
-  // ── SEO/ORGANIC: pull from googleStats (GSC + GA4) ──
-  const organicClicks=googleStats.clicks||null;
-  const organicImpr=googleStats.impressions||null;
-  const organicSessions=googleStats.sessions||null;
+  // ── FORMAT HELPERS ───────────────────────────────────────────────────
+  const fmt=n=>n==null?'—':n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':Math.round(n).toLocaleString();
+  const fmtPct=n=>n==null?'—':n.toFixed(2)+'%';
+  const curRange=document.getElementById('master-date-range')?.value||'last_7_days';
 
-  // ── SESSIONS: GA4 paid sessions ──
-  const ga4PaidSessions=((paidGA4Stats.paidSearchSessions||0)+(paidGA4Stats.paidSocialSessions||0))||null;
+  // ── TREND LINE SVG ───────────────────────────────────────────────────
+  function trendLine(vals,color,W,H){
+    if(!vals||vals.length<2)return`<div style="display:flex;align-items:center;justify-content:center;height:${H}px;font-size:11px;color:var(--text3)">Connect Google to see trend</div>`;
+    const pad={t:8,r:8,b:24,l:36};
+    const dw=W-pad.l-pad.r,dh=H-pad.t-pad.b;
+    const max=Math.max(...vals,1),min=0;
+    const range=max-min||1;
+    const pts=vals.map((v,i)=>{
+      const x=pad.l+i*(dw/(vals.length-1));
+      const y=pad.t+dh-(v-min)/range*dh;
+      return[x.toFixed(1),y.toFixed(1)];
+    });
+    const polyline=pts.map(p=>p.join(',')).join(' ');
+    const area=`${pad.l},${pad.t+dh} `+pts.map(p=>p.join(',')).join(' ')+` ${pad.l+dw},${pad.t+dh}`;
+    // x-axis labels: first, mid, last
+    const labelIdxs=[0,Math.floor(vals.length/2),vals.length-1];
+    const days=googleStats.dailySessions||[];
+    const labels=labelIdxs.map(i=>{
+      const x=pad.l+i*(dw/(vals.length-1));
+      const d=days[i]?.d||'';
+      const label=d?d.slice(5):'';
+      return`<text x="${x.toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="inherit">${label}</text>`;
+    }).join('');
+    // y-axis: max label
+    const yLabel=`<text x="${pad.l-4}" y="${pad.t+4}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="inherit">${fmt(max)}</text>`;
+    return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible">
+      <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".15"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${area}" fill="url(#tg)"/>
+      <polyline points="${polyline}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.map((p,i)=>i===pts.length-1?`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}" stroke="var(--surface)" stroke-width="1.5"/>`:'').join('')}
+      ${labels}${yLabel}
+    </svg>`;
+  }
 
-  // ── SOCIAL: pull from live social caches ──
-  const li=socLiveData.linkedin;
-  const fb=socLiveData.facebook;
-  const ig=socLiveData.instagram;
-  const yt=socLiveData.youtube;
-  const liFollowers=li.followers||null;
-  const fbFollowers=fb.followers||null;
-  const igFollowers=ig.followers||null;
-  const ytSubs=yt.subs||null;
-  const totalSocialFollowers=(liFollowers||0)+(fbFollowers||0)+(igFollowers||0)+(ytSubs||0)||null;
-  const liImpr=li.impressions||null;
-  const fbReach=fb.reach||null;
-  const igReach=ig.reach||null;
-  const totalSocialReach=(liImpr||0)+(fbReach||0)+(igReach||0)||null;
-  const socSrc=[];
-  if(li.loaded)socSrc.push('LinkedIn');
-  if(fb.loaded)socSrc.push('Facebook');
-  if(ig.loaded)socSrc.push('Instagram');
-  if(yt.loaded)socSrc.push('YouTube');
-
-  // ── CONNECTION STATUS ──
-  const hasGSC=!!localStorage.getItem('ec-gsc-token');
-  const hasGAds=!!(gadsData?.impressions);
-  const hasMeta=!!(metaAdsData?.impressions);
-  const hasLiAds=!!(liAdsData?.impressions);
-  const hasSocLi=li.loaded;
-  const hasSocMeta=fb.loaded||ig.loaded;
-  const hasSocYt=yt.loaded;
-  const connBadge=(label,connected,hint='')=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;background:${connected?'var(--green-l)':'var(--surface2)'};color:${connected?'var(--green)':'var(--text3)'};border:1px solid ${connected?'#C0DD97':'var(--border)'}"><i class="ti ti-${connected?'check':'plug'}" style="font-size:10px"></i>${label}${!connected&&hint?` · <span style="font-weight:400">${hint}</span>`:''}</span>`;
-  const statusBar=`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:1.5rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl)">
-    <span style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">Live sources</span>
-    ${connBadge('GSC + GA4',hasGSC,'Connect Google')}
-    ${connBadge('Google Ads',hasGAds,'Fetch in Paid')}
-    ${connBadge('Meta Ads',hasMeta,'Fetch in Paid')}
-    ${connBadge('LinkedIn Ads',hasLiAds,'Fetch in Paid')}
-    ${connBadge('LinkedIn Social',hasSocLi,'Refresh in Social')}
-    ${connBadge('Meta Social',hasSocMeta,'Refresh in Social')}
-    ${connBadge('YouTube',hasSocYt,'Fetch in Social')}
-  </div>`;
-
-  // ── SECTION BUILDER ──
-  const section=(title,icon,color,rows,note='')=>{
-    const hasAny=rows.some(r=>r.val!=null);
-    return`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:8px;padding:.75rem 1rem;border-bottom:1px solid var(--border);background:var(--surface2)">
-        <div style="width:28px;height:28px;border-radius:8px;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${icon}" style="color:#fff;font-size:13px"></i></div>
-        <div style="font-size:13px;font-weight:700">${title}</div>
-        ${note?`<div style="margin-left:auto;font-size:11px;color:var(--text3)">${note}</div>`:''}
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-        ${rows.map((r,i)=>`<div style="padding:.875rem 1rem;${i>0?'border-left:1px solid var(--border)':''}">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${r.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${r.val!=null?color:'var(--text3)'};line-height:1">${r.val!=null?(typeof r.val==='number'?r.val.toLocaleString():r.val):'—'}</div>
-          ${r.sub?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${r.sub}</div>`:''}
-        </div>`).join('')}
-      </div>
-    </div>`;
-  };
-
-  // ── FUNNEL (MQL table) ──
-  const fmtCR=(a,b)=>(a&&b)?((a/b)*100).toFixed(1)+'%':'—';
-  const funnelRows=[
-    {label:'Paid Impressions',val:paidImpr,sub:paidSrc.length?paidSrc.join(' + '):'No paid data fetched yet'},
-    {label:'Paid Clicks',val:paidClicks,sub:paidClicks&&paidImpr?'CTR '+((paidClicks/paidImpr)*100).toFixed(2)+'%':''},
-    {label:'Paid Sessions',val:ga4PaidSessions,sub:'GA4 · paid channels'},
-    {label:'Paid Leads',val:paidLeads,sub:paidLeads&&paidClicks?'CVR '+((paidLeads/paidClicks)*100).toFixed(2)+'%':''},
+  // ── FUNNEL SVG (proper trapezoid) ────────────────────────────────────
+  const fStages=[
+    {label:'Impressions',val:totalImpr,color:'#7c3aed'},
+    {label:'Clicks',val:totalClicks,color:'#0e7490'},
+    {label:'Sessions',val:totalSessions,color:'#0891b2'},
+    {label:'Leads',val:totalLeads,color:'#059669'},
+    {label:'MQL',val:totalMQL,color:'#d97706'},
   ];
-  const mqlTable=mqls.length?`<div style="border-top:1px solid var(--border);overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead><tr style="background:var(--surface2)">
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">Name</th>
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">Company</th>
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">Source</th>
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">Date</th>
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">Stage</th>
-      <th style="padding:.375rem .75rem;text-align:left;font-size:11px;font-weight:600;color:var(--text2)">HubSpot</th>
-      <th></th>
-    </tr></thead>
-    <tbody>${mqls.map(m=>`<tr style="border-top:1px solid var(--border)">
-      <td style="padding:.375rem .75rem;font-weight:600">${m.fname} ${m.lname}</td>
-      <td style="padding:.375rem .75rem">${m.company}</td>
-      <td style="padding:.375rem .75rem">${m.source}</td>
-      <td style="padding:.375rem .75rem">${m.date}</td>
-      <td style="padding:.375rem .75rem"><span style="padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;background:#fef3c7;color:var(--amber)">${m.stage}</span></td>
-      <td style="padding:.375rem .75rem">${m.hubspot?`<a href="${m.hubspot}" target="_blank" style="color:var(--blue);font-size:11px">HubSpot ↗</a>`:'—'}</td>
-      <td style="padding:.375rem .5rem;display:flex;gap:4px">
-        <button class="btn-icon btn" onclick="openMQLForm('${m.id}')"><i class="ti ti-pencil"></i></button>
-        <button class="btn-icon btn" onclick="deleteMQL('${m.id}')"><i class="ti ti-trash"></i></button>
-      </td>
-    </tr>`).join('')}</tbody>
-  </table></div>`:'';
+  const fMax=fStages.find(s=>s.val)?.val||1;
+  const FW=260,FH=220,pad=12;
+  const segH=(FH-pad*2)/fStages.length;
+  const funnelSVG=`<svg viewBox="0 0 ${FW} ${FH}" style="width:100%;max-width:${FW}px;height:${FH}px;display:block">
+    ${fStages.map((s,i)=>{
+      const ratio=s.val?Math.max(0.18,s.val/fMax):0.18;
+      const nextRatio=fStages[i+1]?.val?Math.max(0.18,fStages[i+1].val/fMax):ratio*0.7;
+      const topW=FW*ratio*0.92,nextW=FW*(fStages[i+1]?nextRatio*0.92:ratio*0.5);
+      const topX=(FW-topW)/2,nextX=(FW-nextW)/2;
+      const y=pad+i*segH,h=segH-2;
+      const cr=i>0&&fStages[i-1].val&&s.val?(s.val/fStages[i-1].val*100).toFixed(1)+'%':null;
+      return`<g>
+        <polygon points="${topX.toFixed(1)},${y.toFixed(1)} ${(topX+topW).toFixed(1)},${y.toFixed(1)} ${(nextX+nextW).toFixed(1)},${(y+h).toFixed(1)} ${nextX.toFixed(1)},${(y+h).toFixed(1)}"
+          fill="${s.color}" fill-opacity="${s.val?0.18:0.06}" stroke="${s.color}" stroke-width="1" stroke-opacity="${s.val?0.5:0.2}"/>
+        <text x="${(FW/2).toFixed(1)}" y="${(y+h/2+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${s.val?s.color:'var(--text3)'}" font-family="inherit">${s.label}</text>
+        <text x="${(FW/2).toFixed(1)}" y="${(y+h/2+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="${s.val?'var(--text)':'var(--text3)'}" font-family="inherit">${fmt(s.val)}</text>
+        ${cr?`<text x="${(FW-4).toFixed(1)}" y="${(y+6).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="inherit">▼ ${cr}</text>`:''}
+      </g>`;
+    }).join('')}
+  </svg>`;
 
-  const html=`<div style="max-width:960px">
-    ${statusBar}
+  // ── DATE SELECTOR ────────────────────────────────────────────────────
+  const rangeOpts=[['last_7_days','Last 7 days'],['this_month','This month'],['last_month','Last month'],['last_30_days','Last 30 days'],['this_quarter','This quarter'],['this_year','This year']];
+  const dateSelector=`<select id="master-date-range" onchange="onMasterDateRangeChange()" style="height:30px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);cursor:pointer">
+    ${rangeOpts.map(([v,l])=>`<option value="${v}"${curRange===v?' selected':''}>${l}</option>`).join('')}
+  </select>`;
 
-    <!-- ── PAID PERFORMANCE ── -->
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Paid</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
-        ${[
-          {label:'Impressions',val:paidImpr,sub:paidSrc.length?paidSrc.join(' + '):'fetch from Paid tab'},
-          {label:'Clicks',val:paidClicks,sub:paidImpr&&paidClicks?'CTR '+((paidClicks/paidImpr)*100).toFixed(2)+'%':''},
-          {label:'Spend',val:paidSpend!=null?'$'+Math.round(paidSpend).toLocaleString():null,sub:'across all platforms'},
-          {label:'Sessions',val:ga4PaidSessions,sub:'GA4 · paid channels'},
-          {label:'Leads',val:paidLeads,sub:paidLeads&&paidClicks?'CVR '+((paidLeads/paidClicks)*100).toFixed(2)+'%':''},
-        ].map((r,i)=>`<div style="padding:.875rem 1rem;${i>0?'border-left:1px solid var(--border)':''}">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${r.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${r.val!=null?'#7c3aed':'var(--text3)'};line-height:1">${r.val!=null?r.val:'—'}</div>
-          ${r.sub?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${r.sub}</div>`:''}
-        </div>`).join('')}
+  // ── KPI STRIP TILE ───────────────────────────────────────────────────
+  const kpiTile=(label,val,sub,accent)=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.375rem">${label}</div>
+      <div style="font-size:1.75rem;font-weight:800;color:${val!=='—'?accent:'var(--text3)'};line-height:1;letter-spacing:-.02em">${val}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:.25rem">${sub}</div>
+    </div>`;
+
+  // ── SOURCE CHIPS ─────────────────────────────────────────────────────
+  const chip=(label,ok)=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9px;font-size:10px;font-weight:600;
+    background:${ok?'var(--green-l)':'var(--surface2)'};color:${ok?'var(--green)':'var(--text3)'};border:1px solid ${ok?'#C0DD97':'var(--border)'}">
+    <i class="ti ti-${ok?'check':'plug'}" style="font-size:9px"></i>${label}</span>`;
+
+  // ── DAILY SESSION VALS FOR TREND ─────────────────────────────────────
+  const sessionVals=(googleStats.dailySessions||[]).slice(-28).map(d=>d.sessions);
+
+  // ── MQL TABLE ────────────────────────────────────────────────────────
+  const stageColor={Won:'var(--green)',Closed:'var(--green)','Proposal sent':'var(--blue)','In discussion':'var(--blue)','Qualified':'var(--amber)','Not qualified':'var(--text3)'};
+  const mqlRows=mqls.map(m=>`<tr style="border-top:1px solid var(--border)">
+    <td style="padding:.5rem .75rem;font-weight:600;font-size:12px;white-space:nowrap">${m.fname} ${m.lname}</td>
+    <td style="padding:.5rem .75rem;font-size:12px;color:var(--text2)">${m.company||'—'}</td>
+    <td style="padding:.5rem .75rem;font-size:12px">${m.source||'—'}</td>
+    <td style="padding:.5rem .75rem;font-size:11px;color:var(--text3);white-space:nowrap">${m.date||'—'}</td>
+    <td style="padding:.5rem .75rem">
+      <span style="padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${(stageColor[m.stage]||'var(--text3)').replace('var(--green)','var(--green-l)').replace('var(--blue)','var(--blue-l)').replace('var(--amber)','var(--amber-l)')};color:${stageColor[m.stage]||'var(--text3)'}">${m.stage||'—'}</span>
+    </td>
+    <td style="padding:.5rem .75rem;font-size:12px">${m.hubspot?`<a href="${m.hubspot}" target="_blank" style="color:var(--blue);font-size:11px;text-decoration:none">HubSpot ↗</a>`:'—'}</td>
+    <td style="padding:.5rem .5rem">
+      <div style="display:flex;gap:3px">
+        <button class="btn-icon btn" onclick="openMQLForm('${m.id}')"><i class="ti ti-pencil" style="font-size:11px"></i></button>
+        <button class="btn-icon btn" onclick="deleteMQL('${m.id}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
+      </div>
+    </td>
+  </tr>`).join('');
+
+  // ── RENDER ───────────────────────────────────────────────────────────
+  el.innerHTML=`<div style="max-width:1080px;display:flex;flex-direction:column;gap:14px">
+
+    <!-- HEADER -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:-.02em">Full-Funnel Performance</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">All channels blended · TOFU → MOFU → BOFU</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${dateSelector}
+        <button class="btn" onclick="refreshMasterView()" style="font-size:12px;height:30px"><i class="ti ti-refresh"></i></button>
+        <button class="btn btn-primary" onclick="openMQLForm(null)" style="font-size:12px;height:30px"><i class="ti ti-plus"></i> Add MQL</button>
       </div>
     </div>
 
-    <!-- ── ORGANIC / SEO ── -->
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Organic (SEO)</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
-        ${[
-          {label:'Impressions',val:organicImpr,sub:'Google Search Console'},
-          {label:'Clicks',val:organicClicks,sub:organicImpr&&organicClicks?'CTR '+((organicClicks/organicImpr)*100).toFixed(2)+'%':'GSC'},
-          {label:'Sessions',val:organicSessions,sub:'GA4 · organic'},
-        ].map((r,i)=>`<div style="padding:.875rem 1rem;${i>0?'border-left:1px solid var(--border)':''}">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${r.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${r.val!=null?'#0891b2':'var(--text3)'};line-height:1">${r.val!=null?r.val.toLocaleString():'—'}</div>
-          ${r.sub?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${r.sub}</div>`:''}
-        </div>`).join('')}
-      </div>
+    <!-- SOURCE CHIPS -->
+    <div style="display:flex;gap:5px;flex-wrap:wrap">
+      ${chip('GSC + GA4',!!localStorage.getItem('ec-gsc-token'))}
+      ${chip('Google Ads',!!gadsData)}
+      ${chip('Meta Ads',!!metaAdsData)}
+      ${chip('LinkedIn Ads',!!liAdsData)}
+      ${chip('LinkedIn Social',li.loaded)}
+      ${chip('Meta Social',fb.loaded||ig.loaded)}
+      ${chip('YouTube',yt.loaded)}
+      ${chip('Bing WMT',!!bu)}
     </div>
 
-    <!-- ── SOCIAL ── -->
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Social (Organic)</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))">
-        ${[
-          {label:'Total Followers',val:totalSocialFollowers,sub:socSrc.length?socSrc.join(' + '):'refresh in Social tab',color:'#0A66C2'},
-          {label:'LinkedIn Followers',val:liFollowers,sub:li.impressions?'Impr '+li.impressions.toLocaleString():'',color:'#0A66C2'},
-          {label:'Instagram',val:igFollowers,sub:ig.reach?'Reach '+ig.reach.toLocaleString():'',color:'#E1306C'},
-          {label:'Facebook',val:fbFollowers,sub:fb.reach?'Reach '+fb.reach.toLocaleString():'',color:'#1877F2'},
-          {label:'YouTube Subs',val:ytSubs,sub:yt.views?'Views '+yt.views.toLocaleString():'',color:'#FF0000'},
-          {label:'Total Reach',val:totalSocialReach,sub:'LinkedIn impr + Meta reach',color:'#7c3aed'},
-        ].map((r,i)=>`<div style="padding:.875rem 1rem;${i>0?'border-left:1px solid var(--border)':''}">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${r.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${r.val!=null?(r.color||'var(--green)'):'var(--text3)'};line-height:1">${r.val!=null?r.val.toLocaleString():'—'}</div>
-          ${r.sub?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${r.sub}</div>`:''}
-        </div>`).join('')}
-      </div>
+    <!-- KPI STRIP -->
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+      ${kpiTile('Impressions',fmt(totalImpr),'Paid + Organic + Social','#7c3aed')}
+      ${kpiTile('Clicks',fmt(totalClicks),'All channels','#0891b2')}
+      ${kpiTile('Sessions',fmt(totalSessions),'GA4 · all channels','#0e7490')}
+      ${kpiTile('Leads',fmt(totalLeads),'All paid platforms','#059669')}
+      ${kpiTile('MQL',fmt(totalMQL),'Pipeline','#d97706')}
+      ${kpiTile('Blended CPL',blendedCPL?'$'+blendedCPL.toLocaleString():'—','Spend / leads','var(--text)')}
     </div>
 
-    <!-- ── MQL FUNNEL ── -->
-    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Pipeline</div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:4px">
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));border-bottom:1px solid var(--border)">
-        ${[
-          {label:'MQL',val:mqls.length||null,sub:'manually logged',color:'#f59e0b'},
-          {label:'Lead → MQL',val:paidLeads&&mqls.length?((mqls.length/paidLeads)*100).toFixed(0)+'%':null,sub:'conversion rate',color:'#f59e0b'},
-        ].map((r,i)=>`<div style="padding:.875rem 1rem;${i>0?'border-left:1px solid var(--border)':''}">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em">${r.label}</div>
-          <div style="font-size:22px;font-weight:800;color:${r.val!=null?(r.color||'var(--amber)'):'var(--text3)'};line-height:1">${r.val!=null?r.val:'—'}</div>
-          ${r.sub?`<div style="font-size:10px;color:var(--text3);margin-top:3px">${r.sub}</div>`:''}
-        </div>`).join('')}
-        <div style="padding:.875rem 1rem;border-left:1px solid var(--border);display:flex;align-items:center">
-          <button class="btn btn-primary btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add MQL</button>
+    <!-- FUNNEL + TREND -->
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px">
+
+      <!-- Funnel -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1rem">Acquisition funnel</div>
+        <div style="display:flex;justify-content:center">${funnelSVG}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem;padding-top:.875rem;border-top:1px solid var(--border)">
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Blended CTR</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--blue)">${fmtPct(blendedCTR)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Lead rate</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--green)">${fmtPct(leadRate)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">MQL rate</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--amber)">${fmtPct(mqlRate)}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Total spend</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--text)">${paidSpend?'$'+fmt(paidSpend):'—'}</div>
+          </div>
         </div>
       </div>
-      ${mqlTable}
-    </div>
-  </div>`;
 
-  el.innerHTML=html;
+      <!-- Sessions trend -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.25rem">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Sessions trend</div>
+          <div style="font-size:10px;color:var(--text3)">GA4 · organic · last 28 days</div>
+        </div>
+        <div style="font-size:1.75rem;font-weight:800;color:var(--blue);letter-spacing:-.02em;margin-bottom:.75rem">${fmt(totalSessions)}</div>
+        <div style="flex:1;min-height:120px">${trendLine(sessionVals,'#185FA5',600,150)}</div>
+        ${sessionVals.length?`<div style="display:flex;gap:16px;margin-top:.875rem;padding-top:.75rem;border-top:1px solid var(--border)">
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Organic sessions</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.sessions)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Paid sessions</div><div style="font-size:13px;font-weight:700">${fmt((paidGA4Stats.paidSearchSessions||0)+(paidGA4Stats.paidSocialSessions||0))}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">AI referrals</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.ai?.total?.cur)}</div></div>
+        </div>`:''}
+      </div>
+    </div>
+
+    <!-- MQL PIPELINE TABLE -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 1rem;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Pipeline</div>
+          ${totalMQL?`<span style="font-size:13px;font-weight:800;color:var(--amber)">${totalMQL} MQLs</span>`:''}
+          ${blendedCPL?`<span style="font-size:11px;color:var(--text3)">· $${blendedCPL} CPL</span>`:''}
+          ${mqlRate?`<span style="font-size:11px;color:var(--text3)">· ${fmtPct(mqlRate)} lead→MQL</span>`:''}
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add MQL</button>
+      </div>
+      ${mqls.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:var(--surface2)">
+          ${['Name','Company','Source','Date','Stage','HubSpot',''].map(h=>`<th style="padding:.5rem .75rem;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
+        </tr></thead>
+        <tbody>${mqlRows}</tbody>
+      </table></div>`
+      :`<div style="padding:2rem;text-align:center;font-size:13px;color:var(--text3)">No MQLs logged yet · <button class="btn btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add first</button></div>`}
+    </div>
+
+  </div>`;
 }
+
+function onMasterDateRangeChange(){
+  const v=document.getElementById('master-date-range')?.value||'last_7_days';
+  const ps=document.getElementById('paid-date-range');
+  if(ps)ps.value=v;
+  renderMasterView();
+}
+
+function refreshMasterView(){
+  onMasterDateRangeChange();
+  if(getGAdsCreds()?.refreshToken)fetchGoogleAdsLive().catch(()=>{});
+  if(getMetaToken())fetchMetaAds().catch(()=>{});
+  if(getLinkedInToken())fetchLinkedInAds().catch(()=>{});
+  if(localStorage.getItem('ec-gsc-token'))fetchLiveData().catch(()=>{});
+  toast('Refreshing all sources…');
+}
+
 
 function switchInnerTab(type,el){
   activeTypeFilter=type;
@@ -10490,6 +10549,10 @@ function updatePaidBlendedKPIs(){
   if(el('paid-total-impressions'))el('paid-total-impressions').textContent=totalImpr>0?(totalImpr/1000).toFixed(1)+'K':'—';
   if(el('paid-total-conversions'))el('paid-total-conversions').textContent=fmt(totalConv);
   if(el('paid-avg-cpl'))el('paid-avg-cpl').textContent=avgCPL!=='—'?'$'+avgCPL:'—';
+  // Keep range label in sync with the date selector
+  const rangeShort={last_7_days:'7d',today:'today',this_week:'this wk',last_week:'last wk',this_month:'this mo',last_month:'last mo',this_quarter:'this qtr',last_30_days:'30d',this_year:'this yr'};
+  const rangeVal=document.getElementById('paid-date-range')?.value||'last_7_days';
+  if(el('paid-range-label'))el('paid-range-label').textContent=rangeShort[rangeVal]||'7d';
   // Update connect button states
   const gadsBtn=el('gads-btn');const metaBtn=el('meta-btn');const liBtn=el('li-btn');
   if(gadsData&&gadsBtn)gadsBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
@@ -10522,7 +10585,7 @@ function renderPaidOverview(){
   const blendedCTR=totalImpr>0?(totalClicks/totalImpr*100).toFixed(2)+'%':'—';
   el.innerHTML=`
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1.25rem">
-    <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.05em">Blended — All platforms · Last 7d</div>
+    <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.05em">Blended — All platforms · ${getPaidDateLabel()}</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
       ${[['Total Spend',totalSpend>0?'$'+Math.round(totalSpend).toLocaleString():'—','var(--text)'],
          ['Total Clicks',totalClicks>0?totalClicks.toLocaleString():'—','var(--text)'],
@@ -10550,7 +10613,7 @@ function renderPaidOverview(){
         ${p.data?'<span style="margin-left:auto;font-size:10px;color:var(--green);font-weight:600">LIVE</span>':'<span style="margin-left:auto;font-size:10px;color:var(--text3)">NOT CONNECTED</span>'}
       </div>
       <div style="font-size:1.5rem;font-weight:700;color:var(--text)">${p.spend?'$'+Math.round(p.spend).toLocaleString():'—'}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem">spend (7d)</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem">spend (${getPaidDateLabel()})</div>
       <div style="display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Clicks</span><span style="font-weight:600">${p.clicks?.toLocaleString()||'—'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Impressions</span><span style="font-weight:600">${p.impressions?(p.impressions/1000).toFixed(1)+'K':'—'}</span></div>
@@ -11388,7 +11451,7 @@ function renderPaidMicrosoftTab(){
     </div>`).join('')}
   </div>
   ${camps.length?`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem">
-    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns — last 7d</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:.875rem">Campaigns — ${getPaidDateLabel()}</div>
     <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;font-size:11px;color:var(--text3);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:600">
       <span>Campaign</span><span style="text-align:right;padding-right:1rem">Spend</span><span style="text-align:right;padding-right:1rem">Clicks</span><span style="text-align:right;padding-right:1rem">Impr</span><span style="text-align:right">Conv</span>
     </div>
@@ -11476,9 +11539,10 @@ async function fetchMetaAds(){
   const btn=document.getElementById('meta-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
+    const metaPreset=getPaidDateRange().meta;
     const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
     // Account-level summary
-    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=last_7d&level=account`;
+    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=${metaPreset}&level=account`;
     const res=await fetch(url);
     const text=await res.text();
     let data;
@@ -11489,7 +11553,7 @@ async function fetchMetaAds(){
     // Campaign-level breakdown
     let campaigns=[];
     try{
-      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=last_7d&level=campaign&sort=spend_descending`;
+      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=${metaPreset}&level=campaign&sort=spend_descending`;
       const campRes=await fetch(campUrl);
       if(campRes.ok){
         const campData=await campRes.json();
@@ -13515,7 +13579,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.5';
+const APP_HTML_VERSION='10.7';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
