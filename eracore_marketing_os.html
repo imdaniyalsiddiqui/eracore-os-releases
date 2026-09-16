@@ -5962,74 +5962,79 @@ function renderMasterView(){
   const totalLeads=paidLeads||null;
   const totalMQL=mqls.length||null;
   const blendedCPL=(paidSpend&&paidLeads)?Math.round(paidSpend/paidLeads):null;
-  const blendedCTR=(totalClicks&&totalImpr)?(totalClicks/totalImpr*100):null;
-  const leadRate=(totalLeads&&totalSessions)?(totalLeads/totalSessions*100):null;
-  const mqlRate=(totalMQL&&totalLeads)?(totalMQL/totalLeads*100):null;
+  // Rates — only show when the comparison makes sense
+  const blendedCTR=(totalClicks&&totalImpr&&totalImpr>totalClicks)?(totalClicks/totalImpr*100):null;
+  const sessionRate=(totalSessions&&totalClicks&&totalClicks>totalSessions)?(totalSessions/totalClicks*100):null;
+  const leadRate=(totalLeads&&totalSessions&&totalSessions>totalLeads)?(totalLeads/totalSessions*100):null;
+  const mqlRate=(totalMQL&&totalLeads&&totalLeads>=totalMQL)?(totalMQL/totalLeads*100):null;
 
-  // ── FORMAT HELPERS ───────────────────────────────────────────────────
+  // ── FORMAT ───────────────────────────────────────────────────────────
   const fmt=n=>n==null?'—':n>=1000000?(n/1000000).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'K':Math.round(n).toLocaleString();
   const fmtPct=n=>n==null?'—':n.toFixed(2)+'%';
   const curRange=document.getElementById('master-date-range')?.value||'last_7_days';
 
   // ── TREND LINE SVG ───────────────────────────────────────────────────
-  function trendLine(vals,color,W,H){
-    if(!vals||vals.length<2)return`<div style="display:flex;align-items:center;justify-content:center;height:${H}px;font-size:11px;color:var(--text3)">Connect Google to see trend</div>`;
-    const pad={t:8,r:8,b:24,l:36};
-    const dw=W-pad.l-pad.r,dh=H-pad.t-pad.b;
-    const max=Math.max(...vals,1),min=0;
-    const range=max-min||1;
+  function trendSVG(vals,color){
+    if(!vals||vals.length<2)return`<div style="height:120px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3)">Connect Google to see trend</div>`;
+    const W=600,H=140,pt={t:10,r:10,b:28,l:38};
+    const dw=W-pt.l-pt.r,dh=H-pt.t-pt.b;
+    const max=Math.max(...vals,1);
     const pts=vals.map((v,i)=>{
-      const x=pad.l+i*(dw/(vals.length-1));
-      const y=pad.t+dh-(v-min)/range*dh;
-      return[x.toFixed(1),y.toFixed(1)];
+      const x=pt.l+i*(dw/(vals.length-1));
+      const y=pt.t+dh-(v/max)*dh;
+      return[+x.toFixed(1),+y.toFixed(1)];
     });
-    const polyline=pts.map(p=>p.join(',')).join(' ');
-    const area=`${pad.l},${pad.t+dh} `+pts.map(p=>p.join(',')).join(' ')+` ${pad.l+dw},${pad.t+dh}`;
-    // x-axis labels: first, mid, last
-    const labelIdxs=[0,Math.floor(vals.length/2),vals.length-1];
+    const poly=pts.map(p=>p.join(',')).join(' ');
+    const area=`${pt.l},${pt.t+dh} `+poly+` ${pt.l+dw},${pt.t+dh}`;
     const days=googleStats.dailySessions||[];
-    const labels=labelIdxs.map(i=>{
-      const x=pad.l+i*(dw/(vals.length-1));
-      const d=days[i]?.d||'';
-      const label=d?d.slice(5):'';
-      return`<text x="${x.toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="var(--text3)" font-family="inherit">${label}</text>`;
+    const lblIdx=[0,Math.floor(vals.length/2),vals.length-1];
+    const xlabels=lblIdx.map(i=>{
+      const x=pt.l+i*(dw/(vals.length-1));
+      const d=(days[i]?.d||'').slice(5);
+      return`<text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="9" fill="var(--text3)">${d}</text>`;
     }).join('');
-    // y-axis: max label
-    const yLabel=`<text x="${pad.l-4}" y="${pad.t+4}" text-anchor="end" font-size="9" fill="var(--text3)" font-family="inherit">${fmt(max)}</text>`;
+    const gridY=[0,0.5,1].map(f=>{
+      const y=(pt.t+dh-f*dh).toFixed(1);
+      return`<line x1="${pt.l}" y1="${y}" x2="${pt.l+dw}" y2="${y}" stroke="var(--border)" stroke-width="0.5"/>
+        <text x="${(pt.l-4).toFixed(1)}" y="${(+y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--text3)">${fmt(Math.round(max*f))}</text>`;
+    }).join('');
+    const last=pts[pts.length-1];
     return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px;display:block;overflow:visible">
-      <defs><linearGradient id="tg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".15"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-      <polygon points="${area}" fill="url(#tg)"/>
-      <polyline points="${polyline}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${pts.map((p,i)=>i===pts.length-1?`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${color}" stroke="var(--surface)" stroke-width="1.5"/>`:'').join('')}
-      ${labels}${yLabel}
+      <defs><linearGradient id="mvtg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".12"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+      ${gridY}
+      <polygon points="${area}" fill="url(#mvtg)"/>
+      <polyline points="${poly}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="${color}" stroke="var(--surface)" stroke-width="1.5"/>
+      ${xlabels}
     </svg>`;
   }
 
-  // ── FUNNEL SVG (proper trapezoid) ────────────────────────────────────
+  // ── FUNNEL — fixed visual widths, not data-driven ────────────────────
+  // Each stage gets a fixed visual width so the funnel always looks like a funnel
+  // Data is shown as text, not encoded in shape size
   const fStages=[
-    {label:'Impressions',val:totalImpr,color:'#7c3aed'},
-    {label:'Clicks',val:totalClicks,color:'#0e7490'},
-    {label:'Sessions',val:totalSessions,color:'#0891b2'},
-    {label:'Leads',val:totalLeads,color:'#059669'},
-    {label:'MQL',val:totalMQL,color:'#d97706'},
+    {label:'Impressions', val:totalImpr,   color:'#7c3aed', w:1.00},
+    {label:'Clicks',      val:totalClicks, color:'#0891b2', w:0.76},
+    {label:'Sessions',    val:totalSessions,color:'#0e7490',w:0.58},
+    {label:'Leads',       val:totalLeads,  color:'#059669', w:0.40},
+    {label:'MQL',         val:totalMQL,    color:'#d97706', w:0.26},
   ];
-  const fMax=fStages.find(s=>s.val)?.val||1;
-  const FW=260,FH=220,pad=12;
-  const segH=(FH-pad*2)/fStages.length;
-  const funnelSVG=`<svg viewBox="0 0 ${FW} ${FH}" style="width:100%;max-width:${FW}px;height:${FH}px;display:block">
+  // Drop-off rates — only between adjacent stages where comparison is logical
+  const dropRates=[null, blendedCTR, sessionRate, leadRate, mqlRate];
+  const FW=260,segH=38,FH=fStages.length*segH+8;
+  const funnelSVG=`<svg viewBox="0 0 ${FW} ${FH}" style="width:100%;height:${FH}px;display:block">
     ${fStages.map((s,i)=>{
-      const ratio=s.val?Math.max(0.18,s.val/fMax):0.18;
-      const nextRatio=fStages[i+1]?.val?Math.max(0.18,fStages[i+1].val/fMax):ratio*0.7;
-      const topW=FW*ratio*0.92,nextW=FW*(fStages[i+1]?nextRatio*0.92:ratio*0.5);
-      const topX=(FW-topW)/2,nextX=(FW-nextW)/2;
-      const y=pad+i*segH,h=segH-2;
-      const cr=i>0&&fStages[i-1].val&&s.val?(s.val/fStages[i-1].val*100).toFixed(1)+'%':null;
+      const topW=FW*s.w*0.9;
+      const nextW=FW*(fStages[i+1]?.w||s.w*0.7)*0.9;
+      const topX=(FW-topW)/2, nextX=(FW-nextW)/2;
+      const y=i*segH+4, h=segH-3;
+      const hasVal=s.val!=null&&s.val>0;
+      const dr=dropRates[i];
       return`<g>
         <polygon points="${topX.toFixed(1)},${y.toFixed(1)} ${(topX+topW).toFixed(1)},${y.toFixed(1)} ${(nextX+nextW).toFixed(1)},${(y+h).toFixed(1)} ${nextX.toFixed(1)},${(y+h).toFixed(1)}"
-          fill="${s.color}" fill-opacity="${s.val?0.18:0.06}" stroke="${s.color}" stroke-width="1" stroke-opacity="${s.val?0.5:0.2}"/>
-        <text x="${(FW/2).toFixed(1)}" y="${(y+h/2+4).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="700" fill="${s.val?s.color:'var(--text3)'}" font-family="inherit">${s.label}</text>
-        <text x="${(FW/2).toFixed(1)}" y="${(y+h/2+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="${s.val?'var(--text)':'var(--text3)'}" font-family="inherit">${fmt(s.val)}</text>
-        ${cr?`<text x="${(FW-4).toFixed(1)}" y="${(y+6).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--text3)" font-family="inherit">▼ ${cr}</text>`:''}
+          fill="${s.color}" fill-opacity="${hasVal?0.15:0.05}" stroke="${s.color}" stroke-width="${hasVal?1:0.5}" stroke-opacity="${hasVal?0.6:0.2}" rx="2"/>
+        <text x="${(FW/2).toFixed(1)}" y="${(y+h/2+1).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="${hasVal?s.color:'var(--text3)'}" font-family="inherit">${s.label} · ${fmt(s.val)}</text>
+        ${dr!=null?`<text x="${(FW-2).toFixed(1)}" y="${(y+2).toFixed(1)}" text-anchor="end" dominant-baseline="hanging" font-size="8" fill="var(--text3)" font-family="inherit">▼${dr.toFixed(1)}%</text>`:''}
       </g>`;
     }).join('')}
   </svg>`;
@@ -6040,39 +6045,34 @@ function renderMasterView(){
     ${rangeOpts.map(([v,l])=>`<option value="${v}"${curRange===v?' selected':''}>${l}</option>`).join('')}
   </select>`;
 
-  // ── KPI STRIP TILE ───────────────────────────────────────────────────
+  // ── KPI TILE ─────────────────────────────────────────────────────────
   const kpiTile=(label,val,sub,accent)=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.125rem">
-      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.375rem">${label}</div>
-      <div style="font-size:1.75rem;font-weight:800;color:${val!=='—'?accent:'var(--text3)'};line-height:1;letter-spacing:-.02em">${val}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem">${label}</div>
+      <div style="font-size:1.625rem;font-weight:800;color:${val!=='—'?accent:'var(--text3)'};line-height:1;letter-spacing:-.01em">${val}</div>
       <div style="font-size:10px;color:var(--text3);margin-top:.25rem">${sub}</div>
     </div>`;
 
   // ── SOURCE CHIPS ─────────────────────────────────────────────────────
-  const chip=(label,ok)=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9px;font-size:10px;font-weight:600;
-    background:${ok?'var(--green-l)':'var(--surface2)'};color:${ok?'var(--green)':'var(--text3)'};border:1px solid ${ok?'#C0DD97':'var(--border)'}">
-    <i class="ti ti-${ok?'check':'plug'}" style="font-size:9px"></i>${label}</span>`;
+  const chip=(label,ok)=>`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9px;font-size:10px;font-weight:600;background:${ok?'var(--green-l)':'var(--surface2)'};color:${ok?'var(--green)':'var(--text3)'};border:1px solid ${ok?'#C0DD97':'var(--border)'}"><i class="ti ti-${ok?'check':'plug'}" style="font-size:9px"></i>${label}</span>`;
 
-  // ── DAILY SESSION VALS FOR TREND ─────────────────────────────────────
+  // ── DAILY SESSION VALS ────────────────────────────────────────────────
   const sessionVals=(googleStats.dailySessions||[]).slice(-28).map(d=>d.sessions);
 
   // ── MQL TABLE ────────────────────────────────────────────────────────
-  const stageColor={Won:'var(--green)',Closed:'var(--green)','Proposal sent':'var(--blue)','In discussion':'var(--blue)','Qualified':'var(--amber)','Not qualified':'var(--text3)'};
+  const stageBg={Won:'var(--green-l)','Closed':'var(--green-l)','Proposal sent':'var(--blue-l)','In discussion':'var(--blue-l)','Qualified':'var(--amber-l)','Not qualified':'var(--surface2)'};
+  const stageFg={Won:'var(--green)','Closed':'var(--green)','Proposal sent':'var(--blue)','In discussion':'var(--blue)','Qualified':'var(--amber)','Not qualified':'var(--text3)'};
   const mqlRows=mqls.map(m=>`<tr style="border-top:1px solid var(--border)">
     <td style="padding:.5rem .75rem;font-weight:600;font-size:12px;white-space:nowrap">${m.fname} ${m.lname}</td>
     <td style="padding:.5rem .75rem;font-size:12px;color:var(--text2)">${m.company||'—'}</td>
     <td style="padding:.5rem .75rem;font-size:12px">${m.source||'—'}</td>
     <td style="padding:.5rem .75rem;font-size:11px;color:var(--text3);white-space:nowrap">${m.date||'—'}</td>
-    <td style="padding:.5rem .75rem">
-      <span style="padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${(stageColor[m.stage]||'var(--text3)').replace('var(--green)','var(--green-l)').replace('var(--blue)','var(--blue-l)').replace('var(--amber)','var(--amber-l)')};color:${stageColor[m.stage]||'var(--text3)'}">${m.stage||'—'}</span>
-    </td>
+    <td style="padding:.5rem .75rem"><span style="padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;background:${stageBg[m.stage]||'var(--surface2)'};color:${stageFg[m.stage]||'var(--text3)'}">${m.stage||'—'}</span></td>
     <td style="padding:.5rem .75rem;font-size:12px">${m.hubspot?`<a href="${m.hubspot}" target="_blank" style="color:var(--blue);font-size:11px;text-decoration:none">HubSpot ↗</a>`:'—'}</td>
-    <td style="padding:.5rem .5rem">
-      <div style="display:flex;gap:3px">
-        <button class="btn-icon btn" onclick="openMQLForm('${m.id}')"><i class="ti ti-pencil" style="font-size:11px"></i></button>
-        <button class="btn-icon btn" onclick="deleteMQL('${m.id}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
-      </div>
-    </td>
+    <td style="padding:.5rem .5rem"><div style="display:flex;gap:3px">
+      <button class="btn-icon btn" onclick="openMQLForm('${m.id}')"><i class="ti ti-pencil" style="font-size:11px"></i></button>
+      <button class="btn-icon btn" onclick="deleteMQL('${m.id}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
+    </div></td>
   </tr>`).join('');
 
   // ── RENDER ───────────────────────────────────────────────────────────
@@ -6084,9 +6084,9 @@ function renderMasterView(){
         <div style="font-size:16px;font-weight:800;letter-spacing:-.02em">Full-Funnel Performance</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">All channels blended · TOFU → MOFU → BOFU</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center">
         ${dateSelector}
-        <button class="btn" onclick="refreshMasterView()" style="font-size:12px;height:30px"><i class="ti ti-refresh"></i></button>
+        <button class="btn" onclick="refreshMasterView()" style="height:30px;width:30px;padding:0;display:flex;align-items:center;justify-content:center"><i class="ti ti-refresh" style="font-size:13px"></i></button>
         <button class="btn btn-primary" onclick="openMQLForm(null)" style="font-size:12px;height:30px"><i class="ti ti-plus"></i> Add MQL</button>
       </div>
     </div>
@@ -6094,13 +6094,9 @@ function renderMasterView(){
     <!-- SOURCE CHIPS -->
     <div style="display:flex;gap:5px;flex-wrap:wrap">
       ${chip('GSC + GA4',!!localStorage.getItem('ec-gsc-token'))}
-      ${chip('Google Ads',!!gadsData)}
-      ${chip('Meta Ads',!!metaAdsData)}
-      ${chip('LinkedIn Ads',!!liAdsData)}
-      ${chip('LinkedIn Social',li.loaded)}
-      ${chip('Meta Social',fb.loaded||ig.loaded)}
-      ${chip('YouTube',yt.loaded)}
-      ${chip('Bing WMT',!!bu)}
+      ${chip('Google Ads',!!gadsData)}${chip('Meta Ads',!!metaAdsData)}${chip('LinkedIn Ads',!!liAdsData)}
+      ${chip('LinkedIn Social',li.loaded)}${chip('Meta Social',fb.loaded||ig.loaded)}
+      ${chip('YouTube',yt.loaded)}${chip('Bing WMT',!!bu)}
     </div>
 
     <!-- KPI STRIP -->
@@ -6110,70 +6106,64 @@ function renderMasterView(){
       ${kpiTile('Sessions',fmt(totalSessions),'GA4 · all channels','#0e7490')}
       ${kpiTile('Leads',fmt(totalLeads),'All paid platforms','#059669')}
       ${kpiTile('MQL',fmt(totalMQL),'Pipeline','#d97706')}
-      ${kpiTile('Blended CPL',blendedCPL?'$'+blendedCPL.toLocaleString():'—','Spend / leads','var(--text)')}
+      ${kpiTile('Blended CPL',blendedCPL?'$'+blendedCPL.toLocaleString():'—','Spend ÷ leads','var(--text)')}
     </div>
 
-    <!-- FUNNEL + TREND -->
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:14px">
+    <!-- FUNNEL + TREND CHART -->
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;align-items:start">
 
-      <!-- Funnel -->
+      <!-- Funnel card -->
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
         <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1rem">Acquisition funnel</div>
-        <div style="display:flex;justify-content:center">${funnelSVG}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:1rem;padding-top:.875rem;border-top:1px solid var(--border)">
-          <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Blended CTR</div>
-            <div style="font-size:1.125rem;font-weight:800;color:var(--blue)">${fmtPct(blendedCTR)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Lead rate</div>
-            <div style="font-size:1.125rem;font-weight:800;color:var(--green)">${fmtPct(leadRate)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">MQL rate</div>
-            <div style="font-size:1.125rem;font-weight:800;color:var(--amber)">${fmtPct(mqlRate)}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Total spend</div>
-            <div style="font-size:1.125rem;font-weight:800;color:var(--text)">${paidSpend?'$'+fmt(paidSpend):'—'}</div>
-          </div>
+        ${funnelSVG}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem;padding-top:.875rem;border-top:1px solid var(--border)">
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Blended CTR</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--blue)">${blendedCTR!=null?blendedCTR.toFixed(2)+'%':'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Lead rate</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--green)">${leadRate!=null?leadRate.toFixed(2)+'%':'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Total spend</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--text)">${paidSpend?'$'+fmt(paidSpend):'—'}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">MQL rate</div>
+            <div style="font-size:1.125rem;font-weight:800;color:var(--amber)">${mqlRate!=null?mqlRate.toFixed(1)+'%':'—'}</div></div>
         </div>
       </div>
 
-      <!-- Sessions trend -->
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;display:flex;flex-direction:column">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.25rem">
+      <!-- Sessions trend card -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:.125rem">
           <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Sessions trend</div>
           <div style="font-size:10px;color:var(--text3)">GA4 · organic · last 28 days</div>
         </div>
-        <div style="font-size:1.75rem;font-weight:800;color:var(--blue);letter-spacing:-.02em;margin-bottom:.75rem">${fmt(totalSessions)}</div>
-        <div style="flex:1;min-height:120px">${trendLine(sessionVals,'#185FA5',600,150)}</div>
-        ${sessionVals.length?`<div style="display:flex;gap:16px;margin-top:.875rem;padding-top:.75rem;border-top:1px solid var(--border)">
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Organic sessions</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.sessions)}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Paid sessions</div><div style="font-size:13px;font-weight:700">${fmt((paidGA4Stats.paidSearchSessions||0)+(paidGA4Stats.paidSocialSessions||0))}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">AI referrals</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.ai?.total?.cur)}</div></div>
-        </div>`:''}
+        <div style="font-size:1.875rem;font-weight:800;color:var(--blue);letter-spacing:-.02em;margin-bottom:.875rem">${fmt(totalSessions)}</div>
+        ${trendSVG(sessionVals,'#185FA5')}
+        <div style="display:flex;gap:24px;margin-top:.875rem;padding-top:.75rem;border-top:1px solid var(--border)">
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Organic</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.sessions)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Paid</div><div style="font-size:13px;font-weight:700">${fmt((paidGA4Stats.paidSearchSessions||0)+(paidGA4Stats.paidSocialSessions||0)||null)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">AI referrals</div><div style="font-size:13px;font-weight:700">${fmt(googleStats.ai?.total?.cur||null)}</div></div>
+          <div><div style="font-size:10px;color:var(--text3);margin-bottom:2px">Cost/session</div><div style="font-size:13px;font-weight:700">${paidSpend&&totalSessions?'$'+(paidSpend/totalSessions).toFixed(2):'—'}</div></div>
+        </div>
       </div>
     </div>
 
-    <!-- MQL PIPELINE TABLE -->
+    <!-- PIPELINE TABLE -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:.875rem 1rem;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Pipeline</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.06em">Pipeline</span>
           ${totalMQL?`<span style="font-size:13px;font-weight:800;color:var(--amber)">${totalMQL} MQLs</span>`:''}
           ${blendedCPL?`<span style="font-size:11px;color:var(--text3)">· $${blendedCPL} CPL</span>`:''}
-          ${mqlRate?`<span style="font-size:11px;color:var(--text3)">· ${fmtPct(mqlRate)} lead→MQL</span>`:''}
+          ${mqlRate!=null?`<span style="font-size:11px;color:var(--text3)">· ${mqlRate.toFixed(1)}% lead → MQL</span>`:''}
         </div>
         <button class="btn btn-primary btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add MQL</button>
       </div>
-      ${mqls.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-        <thead><tr style="background:var(--surface2)">
-          ${['Name','Company','Source','Date','Stage','HubSpot',''].map(h=>`<th style="padding:.5rem .75rem;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
-        </tr></thead>
-        <tbody>${mqlRows}</tbody>
-      </table></div>`
-      :`<div style="padding:2rem;text-align:center;font-size:13px;color:var(--text3)">No MQLs logged yet · <button class="btn btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add first</button></div>`}
+      ${mqls.length
+        ?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--surface2)">
+            ${['Name','Company','Source','Date','Stage','HubSpot',''].map(h=>`<th style="padding:.5rem .75rem;text-align:left;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">${h}</th>`).join('')}
+          </tr></thead>
+          <tbody>${mqlRows}</tbody>
+        </table></div>`
+        :`<div style="padding:2rem;text-align:center;font-size:13px;color:var(--text3)">No MQLs logged yet · <button class="btn btn-sm" onclick="openMQLForm(null)"><i class="ti ti-plus"></i> Add first</button></div>`}
     </div>
 
   </div>`;
@@ -10529,10 +10519,19 @@ function switchPaidTab(tab,el){
 }
 
 function loadPaidAdsData(){
-  try{const d=localStorage.getItem('ec-gads-data');if(d)gadsData=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('ec-meta-live');if(d)metaAdsData=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('ec-li-live');if(d)liAdsData=JSON.parse(d);}catch(e){}
-  try{const d=localStorage.getItem('ec-msads-data');if(d)msAdsData=JSON.parse(d);}catch(e){}
+  const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
+  function loadIfFresh(key){
+    try{
+      const d=localStorage.getItem(key);if(!d)return null;
+      const parsed=JSON.parse(d);
+      if(parsed&&parsed.preset&&parsed.preset!==curPreset)return null;
+      return parsed;
+    }catch(e){return null;}
+  }
+  gadsData=loadIfFresh('ec-gads-data');
+  metaAdsData=loadIfFresh('ec-meta-live');
+  liAdsData=loadIfFresh('ec-li-live');
+  msAdsData=loadIfFresh('ec-msads-data');
 }
 
 function updatePaidBlendedKPIs(){
@@ -11501,6 +11500,7 @@ async function fetchGoogleAdsLive(){
     if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
     if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
     const rows=data.results||[];
+    const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
     gadsData={
       spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
       clicks:rows.reduce((s,r)=>s+(parseInt(r.metrics?.clicks)||0),0),
@@ -11513,9 +11513,13 @@ async function fetchGoogleAdsLive(){
         impressions:parseInt(r.metrics?.impressions)||0,
         conversions:parseFloat(r.metrics?.conversions)||0
       })),
-      dateRange:range.gads,fetched:Date.now()
+      dateRange:range.gads,preset:curPreset,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
+    // Invalidate other platform caches if they were fetched for a different range
+    ['ec-meta-live','ec-li-live','ec-msads-data'].forEach(k=>{
+      try{const d=JSON.parse(localStorage.getItem(k)||'null');if(d&&d.preset&&d.preset!==curPreset){localStorage.removeItem(k);if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
     toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks · ${rows.length} campaigns`);
@@ -11568,8 +11572,13 @@ async function fetchMetaAds(){
         }));
       }
     }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
-    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,fetched:Date.now()};
+    const metaPresetNow=document.getElementById('paid-date-range')?.value||'last_7_days';
+    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,preset:metaPresetNow,fetched:Date.now()};
     localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
+    // Invalidate other platform caches from a different range
+    ['ec-gads-data','ec-li-live','ec-msads-data'].forEach(k=>{
+      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==metaPresetNow){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
     toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
@@ -11619,14 +11628,19 @@ async function fetchLinkedInAds(){
       throw new Error(data.message||('LinkedIn API '+res.status));
     }
     const el=data.elements?.[0]||{};
+    const liPresetNow=document.getElementById('paid-date-range')?.value||'last_7_days';
     liAdsData={
       spend:parseFloat(el.costInLocalCurrency)||0,
       impressions:el.impressions||0,
       clicks:el.clicks||0,
       leads:(el.oneClickLeads||0)+(el.externalWebsiteConversions||0),
-      fetched:Date.now()
+      preset:liPresetNow,fetched:Date.now()
     };
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
+    // Invalidate other platform caches from a different range
+    ['ec-gads-data','ec-meta-live','ec-msads-data'].forEach(k=>{
+      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==liPresetNow){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
     toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${(liAdsData.clicks||0).toLocaleString()} clicks`);
