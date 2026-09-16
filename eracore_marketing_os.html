@@ -10490,13 +10490,28 @@ function getPaidDateLabel(){
 }
 
 function onPaidDateRangeChange(){
-  // Re-fetch all connected platforms with new date range
+  // Clear in-memory so loadIfFresh re-evaluates from localStorage for the new range
+  gadsData=null;metaAdsData=null;liAdsData=null;
+  loadPaidAdsData();
   updatePaidBlendedKPIs();
   renderPaidOverview();
-  // Re-fetch live data if connected
-  if(gadsData)fetchGoogleAdsLive();
-  if(metaAdsData)fetchMetaAdsLive();
-  if(liAdsData)fetchLinkedInAdsLive();
+  // Show loading indicator in tiles while fetching
+  const el=id=>document.getElementById(id);
+  const rl=document.getElementById('paid-range-label');
+  if(rl)rl.textContent='…';
+  ['paid-total-spend','paid-total-clicks','paid-total-impressions','paid-total-conversions','paid-avg-cpl'].forEach(id=>{
+    const e=el(id);if(e&&e.textContent==='—')e.innerHTML='<span style="color:var(--text3);font-size:.8em">fetching…</span>';
+  });
+  // Re-fetch from API based on credentials, not cached data
+  const fetches=[];
+  if(getGAdsCreds()?.refreshToken)fetches.push(fetchGoogleAdsLive().catch(()=>{}));
+  if(getMetaToken()&&getMetaAdAccount())fetches.push(fetchMetaAds().catch(()=>{}));
+  if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(fetchLinkedInAds().catch(()=>{}));
+  // After all fetches complete, re-render master view too
+  if(fetches.length)Promise.allSettled(fetches).then(()=>{
+    const mv=document.getElementById('mpv-master');
+    if(mv&&mv.children.length)renderMasterView();
+  });
 }
 
 // ── PAID ADS — tab system + blended KPIs ──────────────────────────────────
@@ -13593,7 +13608,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.7';
+const APP_HTML_VERSION='10.9';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
