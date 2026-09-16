@@ -11658,6 +11658,58 @@ function parsePaidProgressXLSXData(arrayBuffer,fileName){
   }
 }
 
+
+function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
+function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
+async function fetchMetaAdsLive(){return fetchMetaAds();}
+async function fetchLinkedInAdsLive(){return fetchLinkedInAds();}
+async function fetchGoogleAds(){return fetchGoogleAdsLive();}
+
+// ── META ADS — live API ────────────────────────────────────────────────────
+async function fetchMetaAds(){
+  const token=getMetaToken();const actId=getMetaAdAccount().replace('act_','');
+  if(!token||!actId){toast('Set Meta Ads credentials in Settings first');openSettingsToSection('meta-ads');return;}
+  const btn=document.getElementById('meta-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const metaPreset=getPaidDateRange().meta;
+    const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
+    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=${metaPreset}&level=account`;
+    const res=await fetch(url);
+    const text=await res.text();
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('Meta returned non-JSON: '+text.slice(0,100));}
+    if(!res.ok||data.error)throw new Error(data.error?.message||data.error?.type||'Meta API '+res.status);
+    const d=data.data?.[0]||{};
+    const leads=(d.actions||[]).find(a=>a.action_type==='lead')?.value||0;
+    let campaigns=[];
+    try{
+      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=${metaPreset}&level=campaign&sort=spend_descending`;
+      const campRes=await fetch(campUrl);
+      if(campRes.ok){
+        const campData=await campRes.json();
+        campaigns=(campData.data||[]).map(c=>({
+          name:c.campaign_name||'',spend:parseFloat(c.spend||0),impressions:parseInt(c.impressions||0),
+          clicks:parseInt(c.clicks||0),leads:parseInt((c.actions||[]).find(a=>a.action_type==='lead')?.value||0),
+          ctr:parseFloat(c.ctr||0),cpc:parseFloat(c.cpc||0)
+        }));
+      }
+    }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
+    const metaPresetNow=document.getElementById('paid-date-range')?.value||'last_7_days';
+    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,preset:metaPresetNow,fetched:Date.now()};
+    localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
+    ['ec-gads-data','ec-li-live','ec-msads-data'].forEach(k=>{
+      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==metaPresetNow){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
+    toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
+    toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
+  }
+}
+
 async function fetchMsAds(){
   // Replaced by XLSX upload — show the Microsoft tab
   const tab=document.getElementById('mptab-microsoft')||document.querySelector('[onclick*="microsoft"]');
@@ -13412,7 +13464,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='10.9';
+const APP_HTML_VERSION='11.0';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
