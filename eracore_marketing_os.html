@@ -4911,7 +4911,16 @@ function onNavTo(id){
     if(getLinkedInToken()&&getLinkedInAdAccount()){try{fetchLinkedInAds();}catch(e){}}
     if(getMsRefreshToken()){try{fetchMsAds();}catch(e){}}
   }
-  if(id==='socialdash'){loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();}
+  if(id==='socialdash'){
+    loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();
+    // Auto-refresh in background if cache is empty but credentials exist
+    const cacheEmpty=!socLiveData.linkedin.loaded&&!socLiveData.facebook.loaded&&!socLiveData.instagram.loaded;
+    if(cacheEmpty){
+      if(getLinkedInToken())fetchLinkedInOrganic().catch(()=>{});
+      if(getMetaToken()&&(getSocFbPageId()||getSocIgAccountId()))fetchMetaSocialOrganic().catch(()=>{});
+      if(localStorage.getItem('ec-yt-refresh-token')||localStorage.getItem('ec-gsc-token'))fetchYouTubeOrganic().catch(()=>{});
+    }
+  }
   if(id==='mktdash'){renderDashboard();buildNotifications();}
   if(id==='standup')renderStandupHistory();
   if(id==='mzreport')renderMZReport();
@@ -12412,29 +12421,37 @@ async function fetchMetaSocialOrganic(){
 }
 
 async function fetchFbPageInsights(token,pageId,range){
-  // ── Day-period metrics (valid for period=day) ──
+  // ── Day-period insights (requires pages_read_engagement) ──
   const dayMetrics='page_impressions,page_reach,page_engaged_users';
   const insightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
   const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insightsUrl)}`);
   const insightsData=await ir.json();
   console.log('[FB insights day]',JSON.stringify(insightsData).slice(0,300));
 
-  // ── Fan count (period=lifetime, single value) ──
-  const fanMetrics='page_fans,page_followers';
-  const fanInsightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(fanMetrics)}&period=lifetime&access_token=${token}`;
+  // ── Fan count via lifetime insights ──
+  const fanInsightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=page_fans&period=lifetime&access_token=${token}`;
   const fir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(fanInsightsUrl)}`);
   const fanInsightsData=await fir.json();
   console.log('[FB insights lifetime]',JSON.stringify(fanInsightsData).slice(0,200));
 
-  // ── Page basic fields (name, fan_count directly on page object) ──
-  const pageUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name&access_token=${token}`;
+  // ── Page fields — try with engagement fields, fall back to name only ──
+  // fan_count/followers_count require pages_read_engagement; name is always public
+  const pageUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name,about&access_token=${token}`;
   const pr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pageUrl)}`);
   const pageData=await pr.json();
   console.log('[FB page]',JSON.stringify(pageData).slice(0,200));
 
-  // If insights errored (common with restricted tokens), still use page basic data
+  // If page fields errored (missing permission), try public fields only
+  let finalPage=pageData;
+  if(pageData.error){
+    const pubUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=name,fan_count&access_token=${token}`;
+    const pubR=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pubUrl)}`);
+    finalPage=await pubR.json();
+    console.log('[FB page fallback]',JSON.stringify(finalPage).slice(0,200));
+  }
+
   const insightsArr=insightsData.error?[]:insightsData.data||[];
-  return{insights:insightsArr,fanInsights:fanInsightsData.data||[],page:pageData};
+  return{insights:insightsArr,fanInsights:fanInsightsData.data||[],page:finalPage};
 }
 
 function processFbData({insights,fanInsights,page}){
@@ -12491,9 +12508,9 @@ async function fetchIgInsights(token,igAccountId,range){
     throw new Error(ud.error.message||'Instagram account not accessible — check your Account ID in Settings.');
   }
 
-  // ── Step 2: Insights (impressions, reach — valid for period=day) ──
-  // follower_count is NOT valid for period=day — use period=lifetime separately
-  const dayMetrics='impressions,reach,profile_views';
+  // ── Step 2: Insights — use valid metrics for Instagram Graph API v21 ──
+  // 'impressions' is no longer valid; use reach, profile_views, accounts_engaged
+  const dayMetrics='reach,profile_views,accounts_engaged';
   const insUrl=`https://graph.facebook.com/v21.0/${resolvedId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
   const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insUrl)}`);
   const insData=await ir.json();
@@ -12512,7 +12529,8 @@ async function fetchIgInsights(token,igAccountId,range){
 function processIgData({insights,user,media}){
   const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
   const totalReach=sumMetric('reach');
-  const totalImpr=sumMetric('impressions');
+  const totalEngaged=sumMetric('accounts_engaged');
+  const totalProfileViews=sumMetric('profile_views');
   const totalLikes=media.reduce((s,p)=>s+(p.like_count||0),0);
   const totalComments=media.reduce((s,p)=>s+(p.comments_count||0),0);
   const engRate=totalReach?(((totalLikes+totalComments)/totalReach)*100):null;
@@ -12520,7 +12538,8 @@ function processIgData({insights,user,media}){
     loaded:true,error:'',
     followers:user?.followers_count||null,
     reach:totalReach||null,
-    impressions:totalImpr||null,
+    impressions:totalEngaged||null,
+    profileViews:totalProfileViews||null,
     engRate,
     posts:media,
     days:(insights.find(m=>m.name==='reach')?.values||[]).map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
@@ -13464,7 +13483,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.0';
+const APP_HTML_VERSION='11.1';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
