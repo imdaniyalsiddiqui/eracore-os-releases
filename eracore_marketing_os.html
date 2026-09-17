@@ -764,7 +764,7 @@ select.sm:focus{border-color:var(--blue)}
       <button class="btn" id="bing-connect-btn" onclick="fetchBingWmt()"><i class="ti ti-brand-bing"></i> <span id="bing-btn-label">Connect Bing</span></button>
       <button class="btn" id="semrush-connect-btn" onclick="fetchSemrush()"><i class="ti ti-trending-up"></i> <span id="semrush-btn-label">Connect SEMrush</span></button>
       <button class="btn" onclick="openBingUpload()"><i class="ti ti-upload" style="font-size:11px"></i> CSV</button>
-      <button class="btn" onclick="openSEMrushUpload()"><i class="ti ti-upload" style="font-size:11px"></i> CSV</button>
+      
     </div>
   </div>
   <div id="gsc-oauth-status" style="margin-bottom:1rem"></div>
@@ -1410,7 +1410,7 @@ select.sm:focus{border-color:var(--blue)}
         <input type="password" id="meta-token-input" placeholder="System User Access Token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
         <input type="text" id="meta-account-input" placeholder="Ad Account ID (act_12345)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
       </div>
-      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('meta-token-input').value.trim();const a=document.getElementById('meta-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-meta-token',t);localStorage.setItem('ec-meta-ad-account',a);toast('Meta Ads credentials saved');fetchMetaAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('meta-token-input').value.trim();const a=document.getElementById('meta-account-input').value.trim().replace(/^act[_=]/,'');if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-meta-token',t);localStorage.setItem('ec-meta-ad-account',a);localStorage.removeItem('ec-meta-last-error');toast('Meta Ads credentials saved');fetchMetaAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
 
     <!-- LinkedIn Ads -->
@@ -1421,7 +1421,7 @@ select.sm:focus{border-color:var(--blue)}
         <input type="password" id="li-token-input" placeholder="LinkedIn OAuth access token" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
         <input type="text" id="li-account-input" placeholder="Ad Account ID (123456789)" style="height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
       </div>
-      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
+      <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);localStorage.removeItem('ec-li-last-error');toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
 
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
@@ -4815,6 +4815,7 @@ function loadData(){
   if(!mqls.length)mqls=JSON.parse(JSON.stringify(SEED_MQLS));
   renderAll();
   try{document.getElementById('standup-date').value=todayStr();}catch(e){}
+  setTimeout(()=>{try{autoFetchConnectedSources();}catch(e){console.warn('[boot auto-fetch]',e);}},1200);
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────
@@ -4904,22 +4905,21 @@ function onNavTo(id){
     }
   }
   if(id==='paiddash'){
-    loadPaidAdsData();updatePaidBlendedKPIs();renderPaidDash();renderHubSpotAdsBlock();
-    // Auto-refresh live data if credentials available
-    if(getGAdsCreds()?.refreshToken){try{fetchGoogleAdsLive();}catch(e){}}
-    if(getMetaToken()&&getMetaAdAccount()){try{fetchMetaAds();}catch(e){}}
-    if(getLinkedInToken()&&getLinkedInAdAccount()){try{fetchLinkedInAds();}catch(e){}}
-    if(getMsRefreshToken()){try{fetchMsAds();}catch(e){}}
+    loadPaidAdsData();updatePaidBlendedKPIs();renderPaidDash();renderHubSpotAdsBlock();updatePaidConnectBtns();
+    // Cache-first: only refetch silently when a source is empty or older than 30 min
+    const STALE=30*60*1000;const stale=d=>!d||!d.fetched||(Date.now()-d.fetched)>STALE;
+    if((getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'))&&stale(gadsData))fetchGoogleAdsLive({silent:true}).catch(()=>{});
+    if(getMetaToken()&&getMetaAdAccount()&&stale(metaAdsData))fetchMetaAds({silent:true}).catch(()=>{});
+    if(getLinkedInToken()&&getLinkedInAdAccount()&&stale(liAdsData))fetchLinkedInAds({silent:true}).catch(()=>{});
+    if(getMsRefreshToken()&&stale(msAdsData))fetchMsAds({silent:true}).catch(()=>{});
   }
   if(id==='socialdash'){
     loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();
     // Auto-refresh in background if cache is empty but credentials exist
-    const cacheEmpty=!socLiveData.linkedin.loaded&&!socLiveData.facebook.loaded&&!socLiveData.instagram.loaded;
-    if(cacheEmpty){
-      if(getLinkedInToken())fetchLinkedInOrganic().catch(()=>{});
-      if(getMetaToken()&&(getSocFbPageId()||getSocIgAccountId()))fetchMetaSocialOrganic().catch(()=>{});
-      if(localStorage.getItem('ec-yt-refresh-token')||localStorage.getItem('ec-gsc-token'))fetchYouTubeOrganic().catch(()=>{});
-    }
+    const STALE=30*60*1000;const stale=d=>!d||!d.loaded||!d.fetched||(Date.now()-d.fetched)>STALE;
+    if(getLinkedInToken()&&stale(socLiveData.linkedin))fetchLinkedInOrganic({silent:true}).catch(()=>{});
+    if(getMetaToken()&&(getSocFbPageId()||getSocIgAccountId())&&(stale(socLiveData.facebook)||stale(socLiveData.instagram)))fetchMetaSocialOrganic({silent:true}).catch(()=>{});
+    if(getSocYtChannelId()&&(localStorage.getItem('ec-yt-refresh-token')||localStorage.getItem('ec-gsc-refresh-token'))&&stale(socLiveData.youtube))fetchYouTubeOrganic({silent:true}).catch(()=>{});
   }
   if(id==='mktdash'){renderDashboard();buildNotifications();}
   if(id==='standup')renderStandupHistory();
@@ -6182,7 +6182,8 @@ function onMasterDateRangeChange(){
   const v=document.getElementById('master-date-range')?.value||'last_7_days';
   const ps=document.getElementById('paid-date-range');
   if(ps)ps.value=v;
-  renderMasterView();
+  renderMasterView();               // instant: cached numbers
+  onPaidDateRangeChange();          // then refetch every platform for the new range; re-renders master when settled
 }
 
 function refreshMasterView(){
@@ -7070,15 +7071,6 @@ async function syncFromHubSpot(){
     console.error('HubSpot CRM sync error',err);
   }
 }
-function loadMsAdsSettings(){
-  const creds=getMsAdsCreds();
-  if(!creds)return;
-  const fields={'ms-dev-token-input':creds.devToken,'ms-customer-id-input':creds.customerId,'ms-client-id-input':creds.clientId,'ms-client-secret-input':creds.clientSecret};
-  Object.entries(fields).forEach(([id,val])=>{const el=document.getElementById(id);if(el&&val)el.value=val;});
-  const badge=document.getElementById('msads-status-badge');
-  if(badge&&creds.devToken){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
-}
-
 function initSettings(){
   // ── Claude API key ──
   const key=getApiKey();
@@ -7105,6 +7097,11 @@ function initSettings(){
   const portalEl=document.getElementById('hs-portal-id');
   if(portalEl)portalEl.value=getHubSpotPortalId();
   loadMsAdsSettings();
+  // ── Meta Ads + LinkedIn Ads fields (prefill so nothing has to be retyped) ──
+  const mtE=document.getElementById('meta-token-input');if(mtE&&getMetaToken())mtE.value=getMetaToken();
+  const maE=document.getElementById('meta-account-input');if(maE&&getMetaAdAccount())maE.value=getMetaAdAccount().replace(/^act[_=]/,'');
+  const ltE=document.getElementById('li-token-input');if(ltE&&getLinkedInToken())ltE.value=getLinkedInToken();
+  const laE=document.getElementById('li-account-input');if(laE&&getLinkedInAdAccount())laE.value=getLinkedInAdAccount();
   // ── GSC secret status ──
   const secretSaved=localStorage.getItem('ec-gsc-client-secret');
   const idSaved=localStorage.getItem('ec-gsc-client-id');
@@ -10512,20 +10509,12 @@ function onPaidDateRangeChange(){
   loadPaidAdsData();
   updatePaidBlendedKPIs();
   renderPaidOverview();
-  // Only re-fetch if we don't already have matching cached data
-  const hasCache=gadsData||metaAdsData||liAdsData;
-  if(hasCache){
-    // Cache matched — already rendered, nothing more to do
-    const mv=document.getElementById('mpv-master');
-    if(mv&&mv.children.length)renderMasterView();
-    return;
-  }
-  // No matching cache — fetch from APIs with a 15s timeout per platform
+  // Cached numbers stay on screen; every configured platform refetches for the new range (15s timeout each)
   const withTimeout=(p,ms=15000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
   const fetches=[];
-  if(getGAdsCreds()?.refreshToken)fetches.push(withTimeout(fetchGoogleAdsLive()).catch(()=>{}));
-  if(getMetaToken()&&getMetaAdAccount())fetches.push(withTimeout(fetchMetaAds()).catch(()=>{}));
-  if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(withTimeout(fetchLinkedInAds()).catch(()=>{}));
+  if(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'))fetches.push(withTimeout(fetchGoogleAdsLive({silent:true})).catch(()=>{}));
+  if(getMetaToken()&&getMetaAdAccount())fetches.push(withTimeout(fetchMetaAds({silent:true})).catch(()=>{}));
+  if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(withTimeout(fetchLinkedInAds({silent:true})).catch(()=>{}));
   if(!fetches.length){updatePaidBlendedKPIs();return;}
   // After all fetches settle (or timeout), update tiles and master view
   Promise.allSettled(fetches).then(()=>{
@@ -10571,6 +10560,46 @@ function loadPaidAdsData(){
   });
 }
 
+// ── Plain-English fix for an API error (shown in cards/diagnostics so nobody has to decode console output) ──
+function apiErrorHint(platform,msg){
+  const m=String(msg||'');
+  if(/^google|gads/i.test(platform)){
+    if(/invalid_grant|expired|revoked|No adwords refresh token|Token refresh failed/i.test(m))return{title:'Google login expired or was cleared',fix:'SEO/AIEO → Connect Google and sign in with imdaniyalsiddiqui@gmail.com. One login restores Google Ads, Search Console and GA4 together.'};
+    if(/developer.token|DEVELOPER_TOKEN|not approved/i.test(m))return{title:'Google Ads developer token issue',fix:'Google Ads → Tools → API Center: check the developer token status, then paste it again in Settings → Google Ads.'};
+  }
+  if(/linkedin|^li$/i.test(platform)){
+    if(/401|expired|REVOKED|invalid|Unauthorized|token/i.test(m))return{title:'LinkedIn token expired (they last 60 days)',fix:'LinkedIn Developer Portal → your app → Auth → generate a new access token → Settings → LinkedIn Ads → Save & connect.'};
+  }
+  if(/meta|facebook|instagram|^fb$|^ig$/i.test(platform)){
+    if(/\(#10\)|does not have permission|requires the 'pages_read_engagement'/i.test(m))return{title:'Token is valid but the System User can\u2019t see this Page/Instagram asset',fix:'business.facebook.com → Users → System users → Eracoremarketingos → Assign assets → Pages → add the Eracore Page with Full control (the linked Instagram account comes with it) → Generate token again → paste in Settings → Meta Ads.'};
+    if(/\(#200\)|ads_management or ads_read|missing permission/i.test(m))return{title:'App is missing a permission scope',fix:'developers.facebook.com → Use cases → add the missing use case → Business Manager → System users → Generate token again.'};
+    if(/\(#100\)|valid insights metric|metric_type/i.test(m))return{title:'The app asked Meta for a metric it no longer supports',fix:'This is a code issue, not a settings issue. Copy the console line starting with [FB or [IG and send it to Claude.'};
+    if(/\(#190\)|Session has expired|access token could not be decrypted|Error validating access token/i.test(m))return{title:'Meta token expired or invalid',fix:'business.facebook.com → System users → Eracoremarketingos → Generate token (never expires) → Settings → Meta Ads → Save & connect.'};
+    if(/payment|disabled|billing/i.test(m))return{title:'Ad account is disabled for billing',fix:'Ads Manager → Billing → fix the payment method. API access resumes as soon as the account is active.'};
+    if(/does not exist|act_act/i.test(m))return{title:'Wrong ad account ID',fix:'Settings → Meta Ads → enter just the number 857329476575377 (no act_ prefix).'};
+  }
+  if(/microsoft|bing|^ms$/i.test(platform)){
+    if(/consent|AADSTS|admin/i.test(m))return{title:'Azure admin consent still pending',fix:'MZ needs to approve the Eracore Marketing OS app in Azure. Until then, upload Sauleh\u2019s Paid Marketing Progress.xlsx in the Microsoft tab.'};
+  }
+  return{title:'Last attempt failed',fix:m.slice(0,160)};
+}
+function paidLastError(key){try{return JSON.parse(localStorage.getItem(key)||'null');}catch(e){return null;}}
+function fmtAgo(ts){if(!ts)return'';const m=Math.round((Date.now()-ts)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':Math.round(m/1440)+'d ago';}
+
+// ── Paid connect buttons reflect real state on load (mirrors updateSocConnectBtns) ──
+function updatePaidConnectBtns(){
+  const set=(id,icon,label,ok,warn,title)=>{const b=document.getElementById(id);if(!b)return;b.title=title||'';b.style.borderColor=warn?'var(--amber)':'';b.innerHTML=(ok?'<i class="ti ti-check" style="color:var(--green)"></i> ':warn?'<i class="ti ti-refresh-alert" style="color:var(--amber)"></i> ':'<i class="ti '+icon+'"></i> ')+'<span>'+label+'</span>';};
+  const gadsCreds=!!(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'));
+  const gErr=paidLastError('ec-gads-last-error');
+  set('gads-btn','ti-brand-google',gadsData?'Google Ads \u2713':gErr&&gadsCreds?'Reconnect Google':gadsCreds?'Google Ads':'Connect Google Ads',!!gadsData,!gadsData&&!!gErr,gadsData?'Updated '+fmtAgo(gadsData.fetched):gErr?apiErrorHint('google',gErr.msg).title:'');
+  const metaCreds=!!(getMetaToken()&&getMetaAdAccount());
+  const mErr=paidLastError('ec-meta-last-error');
+  set('meta-btn','ti-brand-facebook',metaAdsData?'Meta \u2713':mErr&&metaCreds?'Reconnect Meta':metaCreds?'Meta':'Connect Meta',!!metaAdsData,!metaAdsData&&!!mErr,metaAdsData?'Updated '+fmtAgo(metaAdsData.fetched):mErr?apiErrorHint('meta',mErr.msg).title:'');
+  const liCreds=!!(getLinkedInToken()&&getLinkedInAdAccount());
+  const lErr=paidLastError('ec-li-last-error');
+  set('li-btn','ti-brand-linkedin',liAdsData?'LinkedIn \u2713':lErr&&liCreds?'Reconnect LinkedIn':liCreds?'LinkedIn':'Connect LinkedIn',!!liAdsData,!liAdsData&&!!lErr,liAdsData?'Updated '+fmtAgo(liAdsData.fetched):lErr?apiErrorHint('linkedin',lErr.msg).title:'');
+}
+
 function updatePaidBlendedKPIs(){
   loadPaidAdsData();
   const totalSpend=(gadsData?.spend||0)+(metaAdsData?.spend||0)+(liAdsData?.spend||0)+(msAdsData?.spend||0);
@@ -10589,6 +10618,7 @@ function updatePaidBlendedKPIs(){
   const rangeShort={last_7_days:'7d',today:'today',this_week:'this wk',last_week:'last wk',this_month:'this mo',last_month:'last mo',this_quarter:'this qtr',last_30_days:'30d',this_year:'this yr'};
   const rangeVal=document.getElementById('paid-date-range')?.value||'last_7_days';
   if(el('paid-range-label'))el('paid-range-label').textContent=rangeShort[rangeVal]||'7d';
+  updatePaidConnectBtns();
   // Update connect button states
   const gadsBtn=el('gads-btn');const metaBtn=el('meta-btn');const liBtn=el('li-btn');
   if(gadsData&&gadsBtn)gadsBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
@@ -10605,13 +10635,17 @@ function renderPaidOverview(){
     {name:'LinkedIn',icon:'ti-brand-linkedin',color:'#0A66C2',data:liAdsData,spend:liAdsData?.spend,clicks:liAdsData?.clicks,impressions:liAdsData?.impressions,conv:liAdsData?.leads},
     {name:'Microsoft',icon:'ti-brand-bing',color:'var(--purple)',data:msAdsData,spend:msAdsData?.spend,clicks:msAdsData?.clicks,impressions:msAdsData?.impressions,conv:msAdsData?.conversions},
   ];
+  const errKey={'Google Ads':'ec-gads-last-error','Meta':'ec-meta-last-error','LinkedIn':'ec-li-last-error','Microsoft':'ec-msads-last-error'};
+  const hintFor=p=>{const e=paidLastError(errKey[p.name]);if(!e||p.data)return'';const hnt=apiErrorHint(p.name,e.msg);return`<div style="margin-top:.5rem;padding:.5rem .625rem;background:var(--amber-l);border-radius:var(--r);font-size:11px;line-height:1.45;opacity:1"><div style="font-weight:700;color:var(--amber)">${esc(hnt.title)}</div><div style="color:var(--text2);margin-top:2px">${esc(hnt.fix)}</div><div style="color:var(--text3);margin-top:2px">Last tried ${fmtAgo(e.ts)}</div></div>`;};
   const totalSpend=platforms.reduce((s,p)=>s+(p.spend||0),0);
   const connected=platforms.filter(p=>p.data);
   if(!connected.length){
-    el.innerHTML=`<div style="padding:3rem;text-align:center;color:var(--text2)">
+    const hints=platforms.map(p=>{const e=paidLastError(errKey[p.name]);if(!e)return'';const hnt=apiErrorHint(p.name,e.msg);return`<div style="text-align:left;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--rl);padding:.75rem 1rem;font-size:12px;line-height:1.5"><div style="font-weight:700"><i class="ti ${p.icon}"></i> ${p.name} — ${esc(hnt.title)}</div><div style="color:var(--text2);margin-top:2px">${esc(hnt.fix)}</div></div>`;}).filter(Boolean).join('');
+    el.innerHTML=`<div style="padding:2rem 3rem;text-align:center;color:var(--text2)">
       <i class="ti ti-chart-bar" style="font-size:2.5rem;display:block;margin-bottom:1rem"></i>
-      <div style="font-weight:600;font-size:15px;margin-bottom:.5rem">No ad platforms connected</div>
-      <div style="font-size:13px">Connect Google Ads, Meta, or LinkedIn above to see blended performance</div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:.5rem">${hints?'Ad platforms need attention':'No ad platforms connected'}</div>
+      <div style="font-size:13px;margin-bottom:1rem">${hints?'Data will load automatically once these are fixed':'Add credentials in Settings — data then loads automatically'}</div>
+      <div style="display:grid;gap:8px;max-width:720px;margin:0 auto">${hints}</div>
     </div>`;return;
   }
   const totalClicks=platforms.reduce((s,p)=>s+(p.clicks||0),0);
@@ -10642,14 +10676,14 @@ function renderPaidOverview(){
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
     ${platforms.map(p=>`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;opacity:${p.data?1:0.4}">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.125rem;opacity:${p.data||paidLastError(errKey[p.name])?1:0.4}">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:.875rem">
         <i class="ti ${p.icon}" style="color:${p.color};font-size:15px"></i>
         <span style="font-size:12px;font-weight:600;color:var(--text2)">${p.name}</span>
-        ${p.data?'<span style="margin-left:auto;font-size:10px;color:var(--green);font-weight:600">LIVE</span>':'<span style="margin-left:auto;font-size:10px;color:var(--text3)">NOT CONNECTED</span>'}
+        ${p.data?'<span style="margin-left:auto;font-size:10px;color:var(--green);font-weight:600">LIVE</span>':paidLastError(errKey[p.name])?'<span style="margin-left:auto;font-size:10px;color:var(--amber);font-weight:700">NEEDS ATTENTION</span>':'<span style="margin-left:auto;font-size:10px;color:var(--text3)">NOT CONNECTED</span>'}
       </div>
       <div style="font-size:1.5rem;font-weight:700;color:var(--text)">${p.spend?'$'+Math.round(p.spend).toLocaleString():'—'}</div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem">spend (${getPaidDateLabel()})</div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:.75rem">spend (${getPaidDateLabel()})</div>${hintFor(p)}
       <div style="display:flex;flex-direction:column;gap:4px">
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Clicks</span><span style="font-weight:600">${p.clicks?.toLocaleString()||'—'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Impressions</span><span style="font-weight:600">${p.impressions?(p.impressions/1000).toFixed(1)+'K':'—'}</span></div>
@@ -11622,19 +11656,19 @@ function parsePaidProgressXLSXData(arrayBuffer,fileName){
 
     if(!monthly.length){toast('Could not parse any Summary tabs — check column structure');return;}
 
-    // Sort chronologically by trying to detect month order
+    // Sort chronologically by YEAR then month (tab names: "September -26", "Jan26", "Dec'25" …)
     const MONTH_ORDER=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-    monthly.sort((a,b)=>{
-      const ai=MONTH_ORDER.findIndex(m=>a.month.toLowerCase().includes(m));
-      const bi=MONTH_ORDER.findIndex(m=>b.month.toLowerCase().includes(m));
-      return ai-bi;
-    });
+    const key=m=>{const s=m.sheetName.toLowerCase().replace(/summary/g,'').trim();const mi=MONTH_ORDER.findIndex(x=>s.startsWith(x));const y=(s.match(/(\d{2})(?!\d)/)||[])[1];return(y?2000+parseInt(y):0)*12+(mi<0?0:mi);};
+    monthly.forEach(m=>m.sortKey=key(m));
+    monthly.sort((a,b)=>a.sortKey-b.sortKey);
 
     // Save monthly history
     localStorage.setItem('ec-ms-monthly',JSON.stringify(monthly));
 
-    // Use the most recent Summary tab for the current msAdsData (Bing column)
-    const latest=monthly[monthly.length-1];
+    // Feed Microsoft KPIs from the most recent month that actually has Bing data
+    // (the current month's tab is often still empty while Sauleh fills it in)
+    const withBing=monthly.filter(m=>(m.bing.spend||0)>0||(m.bing.impressions||0)>0);
+    const latest=withBing.length?withBing[withBing.length-1]:monthly[monthly.length-1];
     const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
     msAdsData={
       spend:latest.bing.spend||0,
@@ -11668,69 +11702,43 @@ function parsePaidProgressXLSXData(arrayBuffer,fileName){
 }
 
 
-function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
-function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
-async function fetchMetaAdsLive(){return fetchMetaAds();}
-async function fetchLinkedInAdsLive(){return fetchLinkedInAds();}
-async function fetchGoogleAds(){return fetchGoogleAdsLive();}
-
-// ── META ADS — live API ────────────────────────────────────────────────────
-async function fetchMetaAds(){
-  const token=getMetaToken();const actId=getMetaAdAccount().replace('act_','');
-  if(!token||!actId){toast('Set Meta Ads credentials in Settings first');openSettingsToSection('meta-ads');return;}
-  const btn=document.getElementById('meta-btn');
-  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
-  try{
-    const metaPreset=getPaidDateRange().meta;
-    const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
-    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=${metaPreset}&level=account`;
-    const res=await fetch(url);
-    const text=await res.text();
-    let data;
-    try{data=JSON.parse(text);}catch(e){throw new Error('Meta returned non-JSON: '+text.slice(0,100));}
-    if(!res.ok||data.error)throw new Error(data.error?.message||data.error?.type||'Meta API '+res.status);
-    const d=data.data?.[0]||{};
-    const leads=(d.actions||[]).find(a=>a.action_type==='lead')?.value||0;
-    let campaigns=[];
-    try{
-      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=${metaPreset}&level=campaign&sort=spend_descending`;
-      const campRes=await fetch(campUrl);
-      if(campRes.ok){
-        const campData=await campRes.json();
-        campaigns=(campData.data||[]).map(c=>({
-          name:c.campaign_name||'',spend:parseFloat(c.spend||0),impressions:parseInt(c.impressions||0),
-          clicks:parseInt(c.clicks||0),leads:parseInt((c.actions||[]).find(a=>a.action_type==='lead')?.value||0),
-          ctr:parseFloat(c.ctr||0),cpc:parseFloat(c.cpc||0)
-        }));
-      }
-    }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
-    const metaPresetNow=document.getElementById('paid-date-range')?.value||'last_7_days';
-    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,preset:metaPresetNow,fetched:Date.now()};
-    localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
-    // Cross-platform cache invalidation removed — platforms cache independently
-
-    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
-    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
-    toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
-  }catch(e){
-    if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
-    toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
-  }
+function renderPaidWeeklyTab(){
+  const el=document.getElementById('paid-tab-weekly');if(!el)return;
+  // Render existing manual weekly log
+  const tmp=document.createElement('div');
+  renderPaidDashInto('paid-weeks-list-tmp','hs-block-tmp');
+  el.innerHTML=`<div style="margin-top:.5rem"><button class="btn btn-primary" onclick="openPaidEntry()" style="margin-bottom:1rem"><i class="ti ti-plus"></i> Log this week</button><div id="paid-weeks-list"></div></div>`;
+  renderPaidDash();
 }
 
-
-// ── GOOGLE ADS LIVE FETCH ──────────────────────────────────────────────────
-async function fetchGoogleAdsLive(){
+function paidPermanentFail(key,re){const le=paidLastError(key);return!!(le&&re.test(le.msg||'')&&(Date.now()-le.ts)<30*60*1000);}
+async function fetchGoogleAdsLive(opts={}){
+  if(opts.silent&&paidPermanentFail('ec-gads-last-error',/invalid_grant|expired|revoked|developer token|DEVELOPER_TOKEN/i))return;
   const creds=getGAdsCreds();
-  if(!creds?.refreshToken){toast('Set Google Ads credentials in Settings first');return;}
+  const devToken=creds?.devToken||'';
+  const cid=(creds?.customerId||'').replace(/-/g,'');
+  if(!devToken||!cid){if(!opts.silent){toast('Google Ads credentials not set — check Settings');openSettingsToSection('google-ads');}return;}
+  if(!creds?.refreshToken){const shared=localStorage.getItem('ec-gsc-refresh-token');if(shared){creds.refreshToken=shared;localStorage.setItem('ec-gads-creds',JSON.stringify(creds));}else{if(!opts.silent){toast('No Google Ads refresh token — connect Google in SEO/AIEO');openSettingsToSection('google-ads');}return;}}
   const btn=document.getElementById('gads-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  const range=getPaidDateRange();
   try{
-    const range=getPaidDateRange();
-    const token=await getGAdsAccessToken(creds.refreshToken);
-    const query=`SELECT campaign.name,campaign.status,metrics.impressions,metrics.clicks,metrics.cost_micros,metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 100`;
-    const rows=await gadsQuery(creds,token,query);
-    const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
+    // Get a fresh access token using the adwords-scoped refresh token
+    const accessToken=await getGAdsAccessToken();
+    const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
+    // Route through main.js /gads-query proxy (required to bypass CORS)
+    const res=await fetch('http://127.0.0.1:8742/gads-query',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({customerId:cid,devToken,accessToken,query})
+    });
+    const text=await res.text();
+    let data;
+    console.log('[GAds] Raw response:', text.slice(0,500));
+    try{data=JSON.parse(text);}catch(e){throw new Error('Server response ('+res.status+'): '+text.slice(0,200));}
+    if(!res.ok)throw new Error(data?.error||'HTTP '+res.status);
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    const rows=data.results||[];
     gadsData={
       spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
       clicks:rows.reduce((s,r)=>s+(parseInt(r.metrics?.clicks)||0),0),
@@ -11743,65 +11751,331 @@ async function fetchGoogleAdsLive(){
         impressions:parseInt(r.metrics?.impressions)||0,
         conversions:parseFloat(r.metrics?.conversions)||0
       })),
-      dateRange:range.gads,preset:curPreset,fetched:Date.now()
+      dateRange:range.gads,preset:(document.getElementById('paid-date-range')?.value||'last_7_days'),fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
-    // Cross-platform cache invalidation removed — platforms cache independently
-
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
-    toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks`);
+    localStorage.removeItem('ec-gads-last-error');updatePaidConnectBtns();
+    if(!opts.silent)toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks · ${rows.length} campaigns`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-google"></i> <span>Connect Google Ads</span>';
-    toast('Google Ads error: '+e.message);console.error('[Google Ads]',e);
+    localStorage.setItem('ec-gads-last-error',JSON.stringify({msg:e.message,ts:Date.now()}));updatePaidConnectBtns();renderPaidOverview();
+    if(!opts.silent)toast('Google Ads error: '+e.message);
+    console.error('[Google Ads]',e);
   }
 }
 
-// ── LINKEDIN ADS LIVE FETCH ────────────────────────────────────────────────
-async function fetchLinkedInAds(){
-  const token=getLinkedInToken();const account=getLinkedInAdAccount();
-  if(!token||!account){toast('Set LinkedIn Ads credentials in Settings first');return;}
+function startMetaOAuth(){toast('Meta Ads — paste your System User Access Token and Ad Account ID in Settings → Meta Ads');}
+function startLinkedInOAuth(){toast('LinkedIn Ads — paste your OAuth token and Account ID in Settings → LinkedIn Ads');}
+async function fetchMetaAdsLive(){return fetchMetaAds();}
+async function fetchLinkedInAdsLive(){return fetchLinkedInAds();}
+async function fetchGoogleAds(){return fetchGoogleAdsLive();}
+
+// ── META ADS — live API ────────────────────────────────────────────────────
+async function fetchMetaAds(opts={}){
+  const token=getMetaToken();const actId=getMetaAdAccount().replace(/^act[_=]/,'');
+  if(!token||!actId){if(!opts.silent){toast('Set Meta Ads credentials in Settings first');openSettingsToSection('meta-ads');}return;}
+  const btn=document.getElementById('meta-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
+    // Account-level summary
+    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=${getPaidDateRange().meta}&level=account`;
+    const res=await fetch(url);
+    const text=await res.text();
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error('Meta returned non-JSON: '+text.slice(0,100));}
+    if(!res.ok||data.error)throw new Error(data.error?.message||data.error?.type||'Meta API '+res.status);
+    const d=data.data?.[0]||{};
+    const leads=(d.actions||[]).find(a=>a.action_type==='lead')?.value||0;
+    // Campaign-level breakdown
+    let campaigns=[];
+    try{
+      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=${getPaidDateRange().meta}&level=campaign&sort=spend_descending`;
+      const campRes=await fetch(campUrl);
+      if(campRes.ok){
+        const campData=await campRes.json();
+        campaigns=(campData.data||[]).map(c=>({
+          name:c.campaign_name||'',
+          spend:parseFloat(c.spend||0),
+          impressions:parseInt(c.impressions||0),
+          clicks:parseInt(c.clicks||0),
+          leads:parseInt((c.actions||[]).find(a=>a.action_type==='lead')?.value||0),
+          ctr:parseFloat(c.ctr||0),
+          cpc:parseFloat(c.cpc||0)
+        }));
+      }
+    }catch(ce){console.warn('[Meta] Campaign fetch error:',ce.message);}
+    metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,preset:(document.getElementById('paid-date-range')?.value||'last_7_days'),fetched:Date.now()};
+    localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
+    localStorage.removeItem('ec-meta-last-error');updatePaidConnectBtns();
+    if(!opts.silent)toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span>Connect Meta</span>';
+    localStorage.setItem('ec-meta-last-error',JSON.stringify({msg:e.message,ts:Date.now()}));updatePaidConnectBtns();renderPaidOverview();
+    if(!opts.silent)toast('Meta Ads error: '+e.message);console.error('[Meta Ads]',e);
+  }
+}
+
+// ── LINKEDIN ADS — live API ────────────────────────────────────────────────
+// LinkedIn versioned Marketing API — new apps are locked out of legacy v2
+// (403), so all calls use /rest/* with LinkedIn-Version headers, sent through
+// the header-capable /proxy (main.js ≥ this build).
+// LinkedIn retires API versions ~12 months after release, so never pin one:
+// compute a safely-released version (2 months back), and if LinkedIn still
+// says "not active", retry once with an older fallback (5 months back).
+function liVersion(monthsBack){
+  const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-monthsBack);
+  return String(d.getFullYear())+String(d.getMonth()+1).padStart(2,'0');
+}
+function liProxy(url,token,ver){
+  const hdrs=JSON.stringify({'LinkedIn-Version':ver,'X-Restli-Protocol-Version':'2.0.0'});
+  return `http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent('Bearer '+token)}&headers=${encodeURIComponent(hdrs)}`;
+}
+async function liFetch(url,token){
+  let res=await fetch(liProxy(url,token,liVersion(2)));
+  let data=await res.json();
+  if(/version .* not active/i.test(data.message||'')){
+    res=await fetch(liProxy(url,token,liVersion(5)));
+    data=await res.json();
+  }
+  return{res,data};
+}
+function liDatePart(d){return `(year:${d.slice(0,4)},month:${parseInt(d.slice(5,7))},day:${parseInt(d.slice(8,10))})`;}
+async function fetchLinkedInAds(opts={}){
+  if(opts.silent&&paidPermanentFail('ec-li-last-error',/401|expired|REVOKED|Unauthorized|invalid/i))return;
+  const token=getLinkedInToken();const actId=(getLinkedInAdAccount()||'').replace(/\D/g,'');
+  if(!token||!actId){if(!opts.silent){toast('Set LinkedIn Ads credentials in Settings first');openSettingsToSection('li-ads');}return;}
   const btn=document.getElementById('li-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
-    const range=getPaidDateRange();
-    const[sd,ed]=range.start&&range.end?[range.start,range.end]:[null,null];
-    const now=new Date();const s7=new Date(now);s7.setDate(s7.getDate()-7);
-    const since=sd||s7.toISOString().slice(0,10);const until=ed||now.toISOString().slice(0,10);
-    const[sy,sm,sdd]=since.split('-');const[ey,em,edd]=until.split('-');
-    const dateRange=`dateRange.start.year=${sy}&dateRange.start.month=${sm}&dateRange.start.day=${sdd}&dateRange.end.year=${ey}&dateRange.end.month=${em}&dateRange.end.day=${edd}`;
-    const fields='totalEngagements,clicks,impressions,costInLocalCurrency,oneClickLeads,externalWebsiteConversions';
-    const acct=account.replace('urn:li:sponsoredAccount:','');
-    const url=`https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot=ACCOUNT&accounts=List(urn%3Ali%3AsponsoredAccount%3A${acct})&${dateRange}&fields=${fields}&timeGranularity=ALL`;
-    const headers=JSON.stringify({'Authorization':`Bearer ${token}`,'LinkedIn-Version':'202502'});
-    const res=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(headers)}`);
-    const data=await res.json();
-    if(!res.ok||data.error||data.status===401)throw new Error(data.message||data.error||'LinkedIn Ads API '+res.status);
+    const end=new Date().toISOString().slice(0,10);
+    const start=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+    const acct=encodeURIComponent(`urn:li:sponsoredAccount:${actId}`);
+    const url=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(start)},end:${liDatePart(end)})&timeGranularity=ALL&accounts=List(${acct})&pivot=ACCOUNT&fields=costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
+    const{res,data}=await liFetch(url,token);
+    if(!res.ok||data.message||data.serviceErrorCode!==undefined&&data.serviceErrorCode!==0){
+      throw new Error(data.message||('LinkedIn API '+res.status));
+    }
     const el=data.elements?.[0]||{};
-    const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
     liAdsData={
       spend:parseFloat(el.costInLocalCurrency)||0,
       impressions:el.impressions||0,
       clicks:el.clicks||0,
       leads:(el.oneClickLeads||0)+(el.externalWebsiteConversions||0),
-      preset:curPreset,fetched:Date.now()
+      preset:(document.getElementById('paid-date-range')?.value||'last_7_days'),fetched:Date.now()
     };
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
-    // Cross-platform cache invalidation removed — platforms cache independently
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
-    toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
+    localStorage.removeItem('ec-li-last-error');updatePaidConnectBtns();
+    if(!opts.silent)toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${(liAdsData.clicks||0).toLocaleString()} clicks`);
   }catch(e){
     if(btn)btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span>Connect LinkedIn</span>';
-    toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
+    localStorage.setItem('ec-li-last-error',JSON.stringify({msg:e.message,ts:Date.now()}));updatePaidConnectBtns();renderPaidOverview();
+    if(!opts.silent)toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
   }
 }
 
-async function fetchMsAds(){
-  // Replaced by XLSX upload — show the Microsoft tab
-  const tab=document.getElementById('mptab-microsoft')||document.querySelector('[onclick*="microsoft"]');
-  renderPaidMicrosoftTab();
-  toast('Upload Paid Marketing Progress.xlsx in the Microsoft tab');
+// ── MICROSOFT ADS — OAuth + live API ─────────────────────────────────────
+function loadMsAdsSettings(){
+  const creds=getMsAdsCreds();if(!creds)return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  set('ms-dev-token-input',creds.devToken);
+  set('ms-customer-id-input',creds.customerId);
+  set('ms-client-id-input',creds.clientId);
+  set('ms-client-secret-input',creds.clientSecret);
+  set('ms-refresh-token-input',creds.refreshToken);
+  const badge=document.getElementById('msads-status-badge');
+  if(badge&&creds.refreshToken){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+}
+
+function saveMsAdsCreds(){
+  const devToken=(document.getElementById('ms-dev-token-input')?.value||'').trim();
+  const customerId=(document.getElementById('ms-customer-id-input')?.value||'').trim();
+  const clientId=(document.getElementById('ms-client-id-input')?.value||'').trim();
+  const clientSecret=(document.getElementById('ms-client-secret-input')?.value||'').trim();
+  const refreshToken=(document.getElementById('ms-refresh-token-input')?.value||'').trim();
+  if(!devToken||!customerId||!clientId||!clientSecret){toast('Fill in Developer Token, Customer ID, Client ID and Client Secret');return;}
+  localStorage.setItem('ec-msads-creds',JSON.stringify({devToken,customerId,clientId,clientSecret,refreshToken}));
+  const badge=document.getElementById('msads-status-badge');
+  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  toast('Microsoft Ads credentials saved');
+  if(refreshToken)fetchMsAds();
+}
+
+function startMsAdsOAuth(){
+  const clientId=(document.getElementById('ms-client-id-input')?.value||getMsClientId()).trim();
+  if(!clientId){toast('Enter Azure Client ID first');return;}
+  const redirect=encodeURIComponent('http://localhost');
+  const scope=encodeURIComponent('https://ads.microsoft.com/msads.manage offline_access');
+  const url=`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirect}&scope=${scope}&response_mode=query`;
+  window.open(url,'_blank');
+  const statusEl=document.getElementById('ms-oauth-status');
+  if(statusEl)statusEl.innerHTML=`
+    <div style="background:var(--surface2);border-radius:var(--r);padding:.75rem;font-size:12px;line-height:1.6;margin-top:4px">
+      <b>Steps:</b><br>
+      1. Sign in with your Microsoft Advertising account<br>
+      2. Approve the permissions<br>
+      3. Browser redirects to <code>http://localhost/?code=...</code> (page won't load — that's OK)<br>
+      4. Copy the full URL from the address bar and paste below, then click Extract:
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input type="text" id="ms-auth-code-input" placeholder="Paste full redirect URL: http://localhost/?code=..." style="flex:1;height:34px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text);outline:none">
+      <button class="btn btn-primary btn-sm" onclick="exchangeMsAdsCode()">Extract token</button>
+    </div>`;
+}
+
+async function exchangeMsAdsCode(){
+  let raw=(document.getElementById('ms-auth-code-input')?.value||'').trim();
+  if(!raw){toast('Paste the redirect URL first');return;}
+  let code=raw;
+  try{const u=new URL(raw);const extracted=u.searchParams.get('code');if(extracted)code=extracted;}catch(e){}
+  if(!code){toast('Could not find auth code in URL');return;}
+  const clientId=(document.getElementById('ms-client-id-input')?.value||getMsClientId()).trim();
+  const clientSecret=(document.getElementById('ms-client-secret-input')?.value||getMsClientSecret()).trim();
+  const statusEl=document.getElementById('ms-oauth-status');
+  if(statusEl){statusEl.textContent='Exchanging code for token…';}
+  try{
+    // Use proxy to avoid CORS on token endpoint
+    const body=`client_id=${encodeURIComponent(clientId)}&client_secret=${encodeURIComponent(clientSecret)}&code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent('http://localhost')}&grant_type=authorization_code`;
+    const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:'https://login.microsoftonline.com/common/oauth2/v2.0/token',body,contentType:'application/x-www-form-urlencoded'})
+    });
+    const data=await res.json();
+    if(data.refresh_token){
+      const rtEl=document.getElementById('ms-refresh-token-input');
+      if(rtEl)rtEl.value=data.refresh_token;
+      if(statusEl){statusEl.textContent='✓ Refresh token generated — click Save & connect';statusEl.style.color='var(--green)';}
+      toast('Microsoft Ads token ready — save credentials');
+    } else {
+      throw new Error(data.error_description||data.error||'No refresh token returned');
+    }
+  }catch(e){
+    if(statusEl){statusEl.textContent='Error: '+e.message;statusEl.style.color='var(--red)';}
+    toast('MS Ads token error: '+e.message);
+  }
+}
+
+async function getMsAdsAccessToken(){
+  const creds=getMsAdsCreds();
+  if(!creds?.refreshToken)throw new Error('No Microsoft Ads refresh token — generate one in Settings');
+  const body=`client_id=${encodeURIComponent(creds.clientId)}&client_secret=${encodeURIComponent(creds.clientSecret)}&refresh_token=${encodeURIComponent(creds.refreshToken)}&grant_type=refresh_token`;
+  const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:'https://login.microsoftonline.com/common/oauth2/v2.0/token',body,contentType:'application/x-www-form-urlencoded'})
+  });
+  const data=await res.json();
+  if(!data.access_token)throw new Error(data.error_description||'Failed to refresh MS Ads token');
+  return data.access_token;
+}
+
+async function fetchMsAds(opts={}){
+  const creds=getMsAdsCreds();
+  if(!creds?.devToken||!creds?.customerId||!creds?.refreshToken){
+    if(!opts.silent)toast('Set Microsoft Ads credentials in Settings first');return;
+  }
+  const btn=document.getElementById('ms-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const accessToken=await getMsAdsAccessToken();
+    // Use Microsoft Advertising REST API — Campaign Management reporting
+    const now=new Date();
+    const end=now.toISOString().slice(0,10);
+    const start=new Date(now-7*86400000).toISOString().slice(0,10);
+    // Use Reporting API via proxy
+    const reportBody=JSON.stringify({
+      ReportRequest:{
+        __type:'CampaignPerformanceReportRequest',
+        Aggregation:'Summary',
+        Columns:['CampaignName','Spend','Clicks','Impressions','Conversions'],
+        Scope:{AccountIds:[parseInt(creds.customerId)]},
+        Time:{CustomDateRangeStart:{Day:parseInt(start.slice(8,10)),Month:parseInt(start.slice(5,7)),Year:parseInt(start.slice(0,4))},CustomDateRangeEnd:{Day:parseInt(end.slice(8,10)),Month:parseInt(end.slice(5,7)),Year:parseInt(end.slice(0,4))},PredefinedTime:null},
+        Format:'Csv',
+        ReportName:'EracoreOS7d',
+        ReturnOnlyCompleteData:false
+      }
+    });
+    // Use simpler Campaign Management API to get campaigns
+    const campRes=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        url:'https://reporting.api.bingads.microsoft.com/Api/Advertiser/Reporting/v13/ReportingService.svc/json/SubmitGenerateReport',
+        body:reportBody,
+        contentType:'application/json',
+        headers:{
+          'AuthenticationToken':accessToken,
+          'DeveloperToken':creds.devToken,
+          'CustomerId':creds.customerId
+        }
+      })
+    });
+    const campData=await campRes.json();
+    console.log('[MS Ads] Report submit:', JSON.stringify(campData).slice(0,300));
+    // For now use InsightsService for quick stats
+    throw new Error('USE_INSIGHTS');
+  }catch(e){
+    if(e.message==='USE_INSIGHTS'){
+      // Fallback: use the simpler Ad Insight API for account-level stats
+      await fetchMsAdsSimple();return;
+    }
+    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
+    if(!opts.silent)toast('Microsoft Ads error: '+e.message);console.error('[MS Ads]',e);
+  }
+}
+
+async function fetchMsAdsSimple(){
+  const creds=getMsAdsCreds();
+  const btn=document.getElementById('ms-btn');
+  try{
+    const accessToken=await getMsAdsAccessToken();
+    // Use Campaign Management API to get campaigns and their stats
+    const soapBody=`<s:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+      <s:Header xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
+        <Action mustUnderstand="1">GetCampaignsByAccountId</Action>
+        <AuthenticationToken>${accessToken}</AuthenticationToken>
+        <DeveloperToken>${creds.devToken}</DeveloperToken>
+        <CustomerId>${creds.customerId}</CustomerId>
+        <AccountId>${creds.customerId}</AccountId>
+      </s:Header>
+      <s:Body><GetCampaignsByAccountIdRequest xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
+        <AccountId>${creds.customerId}</AccountId>
+        <CampaignType>Search Shopping DynamicSearchAds</CampaignType>
+        <ReturnAdditionalFields>None</ReturnAdditionalFields>
+      </GetCampaignsByAccountIdRequest></s:Body>
+    </s:Envelope>`;
+    const res=await fetch('http://127.0.0.1:8742/proxy-post',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        url:'https://campaign.api.bingads.microsoft.com/Api/Advertiser/CampaignManagement/v13/CampaignManagementService.svc',
+        body:soapBody,
+        contentType:'text/xml; charset=utf-8',
+        soapAction:'GetCampaignsByAccountId'
+      })
+    });
+    const text=await res.text();
+    console.log('[MS Ads Simple] Response:', text.slice(0,500));
+    // Parse basic campaign names from SOAP response
+    const names=[...text.matchAll(/<Name>(.*?)<\/Name>/g)].map(m=>m[1]);
+    console.log('[MS Ads] Campaigns found:', names);
+    // For now set placeholder data showing connection works
+    msAdsData={spend:0,clicks:0,impressions:0,conversions:0,campaigns:names.map(n=>({name:n,spend:0,clicks:0,impressions:0,conversions:0})),fetched:Date.now(),note:'Live data requires Reporting API — campaigns connected'};
+    localStorage.setItem('ec-msads-data',JSON.stringify(msAdsData));
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMicrosoftTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Microsoft ✓</span>';
+    toast('Microsoft Ads connected — '+names.length+' campaigns found');
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
+    toast('Microsoft Ads error: '+e.message);console.error('[MS Ads Simple]',e);
+  }
 }
 
 
@@ -11839,21 +12113,24 @@ async function fetchHubSpotAdsLive(){
 
 // Auto-fetch live data when integrations are already connected
 function autoFetchConnectedSources(){
-  // GSC + GA4: auto-fetch if tokens exist
-  const gscTok=localStorage.getItem('ec-gsc-token');
-  if(gscTok){
-    try{gscToken=gscTok;fetchLiveData();fetchConversionData();}catch(e){}
-  }
-  // Bing WMT: auto-fetch if key exists
-  const bingKey=localStorage.getItem('ec-bing-wmt-key');
-  if(bingKey){try{fetchBingWmt();}catch(e){}}
-  // Meta Ads: auto-fetch if credentials exist
-  const metaTok=localStorage.getItem('ec-meta-token');
-  const metaAcc=localStorage.getItem('ec-meta-ad-account');
-  if(metaTok&&metaAcc){try{fetchMetaAds();}catch(e){}}
-  // HubSpot CRM connection check
-  const hsTok=getHubSpotCRMToken();
-  if(hsTok){try{syncFromHubSpot();}catch(e){}}
+  // Runs once after boot: refresh every connected source silently in the background.
+  // Screens render instantly from cache; tiles update in place as each source returns.
+  if(window._autoFetched)return;window._autoFetched=true;
+  const q=[];const add=(ok,fn)=>{if(ok)q.push(fn);};
+  const gsc=localStorage.getItem('ec-gsc-token')||localStorage.getItem('ec-gsc-refresh-token');
+  add(gsc,()=>{try{if(localStorage.getItem('ec-gsc-token'))gscToken=localStorage.getItem('ec-gsc-token');}catch(e){}return Promise.resolve().then(()=>fetchLiveData()).then(()=>fetchConversionData()).catch(()=>{});});
+  add(localStorage.getItem('ec-bing-wmt-key'),()=>Promise.resolve().then(()=>fetchBingWmt()).catch(()=>{}));
+  add(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'),()=>fetchGoogleAdsLive({silent:true}));
+  add(getMetaToken()&&getMetaAdAccount(),()=>fetchMetaAds({silent:true}));
+  add(getLinkedInToken()&&getLinkedInAdAccount(),()=>fetchLinkedInAds({silent:true}));
+  add(getMsRefreshToken(),()=>fetchMsAds({silent:true}));
+  add(getLinkedInToken(),()=>fetchLinkedInOrganic({silent:true}));
+  add(getMetaToken()&&(getSocFbPageId()||getSocIgAccountId()),()=>fetchMetaSocialOrganic({silent:true}));
+  add(getSocYtChannelId&&getSocYtChannelId()&&(localStorage.getItem('ec-yt-refresh-token')||localStorage.getItem('ec-gsc-refresh-token')),()=>fetchYouTubeOrganic({silent:true}));
+  add(getHubSpotCRMToken(),()=>Promise.resolve().then(()=>syncFromHubSpot()).catch(()=>{}));
+  // stagger so the local proxy is not hit with everything at once
+  q.forEach((fn,i)=>setTimeout(()=>{try{const p=fn();if(p&&p.catch)p.catch(()=>{});}catch(e){console.warn('[auto-fetch]',e);}},i*400));
+  setTimeout(()=>{try{updatePaidConnectBtns();updateSocConnectBtns();updateSocKpiBar();const mv=document.getElementById('mpv-master');if(mv&&mv.children.length)renderMasterView();}catch(e){}},q.length*400+4000);
 }
 
 // ── helper: navigate to settings section ──────────────────────────────────
@@ -12376,7 +12653,7 @@ function updateSocConnectBtns(){
 // Endpoints: /rest/organizationalEntityFollowerStatistics
 //            /rest/organizationalEntityShareStatistics
 // ════════════════════════════════════════════════════════════════
-async function fetchLinkedInOrganic(){
+async function fetchLinkedInOrganic(opts={}){
   const token=getLiToken();
   const orgId=getSocLiOrgId();
   if(!token||!orgId){
@@ -12419,7 +12696,7 @@ async function fetchLinkedInOrganic(){
     }
   }catch(e){
     socLiveData.linkedin.error=e.message||String(e);
-    toast('LinkedIn organic: '+socLiveData.linkedin.error,'error');
+    if(!opts.silent)toast('LinkedIn organic: '+socLiveData.linkedin.error,'error');
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span id="soc-li-btn-lbl">'+( socLiveData.linkedin.loaded?'↻ Refresh LinkedIn':'Connect LinkedIn')+'</span>';}
     updateSocConnectBtns();
@@ -12460,19 +12737,19 @@ function processLinkedInOrgData(fData, sData){
     days:sEls.map((e,i)=>({d:`p${i+1}`,impr:e.totalShareStatistics?.impressionCount||0,clicks:e.totalShareStatistics?.clickCount||0})),
   };
   localStorage.setItem('ec-soc-li-live',JSON.stringify(socLiveData.linkedin));
-  toast('LinkedIn organic loaded');
+  if(!opts.silent)toast('LinkedIn organic loaded');
 }
 
 // ════════════════════════════════════════════════════════════════
 // META ORGANIC FETCH (Facebook Page Insights + Instagram Business)
 // Reuses ec-meta-token (system user token)
 // ════════════════════════════════════════════════════════════════
-async function fetchMetaSocialOrganic(){
+async function fetchMetaSocialOrganic(opts={}){
   const token=getMetaToken();
   const fbPageId=getSocFbPageId();
   const igAccountId=getSocIgAccountId();
-  if(!token){toast('No Meta token saved. Add it in Settings → Meta Ads first.','warn');navTo('settings');return;}
-  if(!fbPageId&&!igAccountId){toast('Add Facebook Page ID and/or Instagram Account ID in Settings → Social Media.','warn');navTo('settings');return;}
+  if(!token){if(!opts.silent){toast('No Meta token saved. Add it in Settings → Meta Ads first.','warn');navTo('settings');}return;}
+  if(!fbPageId&&!igAccountId){if(!opts.silent){toast('Add Facebook Page ID and/or Instagram Account ID in Settings → Social Media.','warn');navTo('settings');}return;}
   const btn=document.getElementById('soc-meta-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   const range=socDateRange();
@@ -12485,9 +12762,9 @@ async function fetchMetaSocialOrganic(){
     else if(results[0].status==='rejected') socLiveData.facebook.error=results[0].reason?.message||'Facebook error';
     if(results[1].status==='fulfilled'&&results[1].value)processIgData(results[1].value);
     else if(results[1].status==='rejected') socLiveData.instagram.error=results[1].reason?.message||'Instagram error';
-    toast('Meta organic loaded');
+    if(!opts.silent)toast('Meta organic loaded');
   }catch(e){
-    toast('Meta organic error: '+(e.message||e),'error');
+    if(!opts.silent)toast('Meta organic error: '+(e.message||e),'error');
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-facebook"></i> <span id="soc-meta-btn-lbl">↻ Refresh Meta</span>';}
     updateSocConnectBtns();
@@ -12499,56 +12776,55 @@ async function fetchMetaSocialOrganic(){
 }
 
 async function fetchFbPageInsights(token,pageId,range){
-  // ── Day-period insights (requires pages_read_engagement) ──
-  const dayMetrics='page_impressions,page_reach,page_engaged_users';
-  const insightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
-  const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insightsUrl)}`);
-  const insightsData=await ir.json();
-  console.log('[FB insights day]',JSON.stringify(insightsData).slice(0,300));
-
-  // ── Fan count via lifetime insights ──
-  const fanInsightsUrl=`https://graph.facebook.com/v21.0/${pageId}/insights?metric=page_fans&period=lifetime&access_token=${token}`;
-  const fir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(fanInsightsUrl)}`);
-  const fanInsightsData=await fir.json();
-  console.log('[FB insights lifetime]',JSON.stringify(fanInsightsData).slice(0,200));
-
-  // ── Page fields — try with engagement fields, fall back to name only ──
-  // fan_count/followers_count require pages_read_engagement; name is always public
-  const pageUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name,about&access_token=${token}`;
-  const pr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pageUrl)}`);
-  const pageData=await pr.json();
-  console.log('[FB page]',JSON.stringify(pageData).slice(0,200));
-
-  // If page fields errored (missing permission), try public fields only
-  let finalPage=pageData;
-  if(pageData.error){
-    const pubUrl=`https://graph.facebook.com/v21.0/${pageId}?fields=name,fan_count&access_token=${token}`;
-    const pubR=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(pubUrl)}`);
-    finalPage=await pubR.json();
-    console.log('[FB page fallback]',JSON.stringify(finalPage).slice(0,200));
+  const px=u=>fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}`).then(r=>r.json());
+  const errors=[];
+  // Graph API v21 Page metrics still served with period=day. page_reach never existed;
+  // page_engaged_users / page_fans were removed — so we never request them.
+  const WANT=['page_impressions','page_impressions_unique','page_post_engagements','page_follows'];
+  let insights=[];
+  const batch=await px(`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${WANT.join(',')}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`);
+  console.log('[FB insights day]',JSON.stringify(batch).slice(0,300));
+  if(!batch.error)insights=batch.data||[];
+  else if(batch.error.code===100){
+    // one metric was rejected — keep the rest by asking for each on its own
+    for(const m of WANT){
+      const one=await px(`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${m}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`);
+      if(!one.error)insights.push(...(one.data||[]));else errors.push({call:'insights:'+m,code:one.error.code,msg:one.error.message});
+    }
+  }else errors.push({call:'insights',code:batch.error.code,msg:batch.error.message});
+  // Page fields — followers_count/fan_count need pages_read_engagement; name is public
+  let page=await px(`https://graph.facebook.com/v21.0/${pageId}?fields=name,followers_count,fan_count&access_token=${token}`);
+  console.log('[FB page]',JSON.stringify(page).slice(0,200));
+  if(page.error){
+    errors.push({call:'page',code:page.error.code,msg:page.error.message});
+    const pub=await px(`https://graph.facebook.com/v21.0/${pageId}?fields=name&access_token=${token}`);
+    page=pub.error?{}:pub;
   }
-
-  const insightsArr=insightsData.error?[]:insightsData.data||[];
-  return{insights:insightsArr,fanInsights:fanInsightsData.data||[],page:finalPage};
+  return{insights,page,errors};
 }
 
-function processFbData({insights,fanInsights,page}){
-  const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
-  // Fan count: prefer direct page field, fallback to lifetime insights, then existing
-  const fanFromInsights=fanInsights?.find(m=>m.name==='page_fans')?.values?.[0]?.value||null;
-  const followers=page?.fan_count||page?.followers_count||fanFromInsights||socLiveData.facebook.followers||null;
-  const reach=sumMetric('page_reach')||null;
-  const impressions=sumMetric('page_impressions')||null;
-  const engagedUsers=sumMetric('page_engaged_users')||null;
-  const engRate=(reach&&engagedUsers)?(engagedUsers/reach*100):null;
-  // Days with reach data
-  const reachDays=(insights.find(m=>m.name==='page_reach')?.values||[]).filter(v=>v.value>0);
+function processFbData({insights,page,errors}){
+  const series=name=>insights.find(m=>m.name===name)?.values||[];
+  const sum=name=>series(name).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
+  const last=name=>{const v=series(name);return v.length?v[v.length-1].value:null;};
+  const followers=page?.followers_count||page?.fan_count||last('page_follows')||socLiveData.facebook.followers||null;
+  const reach=sum('page_impressions_unique')||null;
+  const impressions=sum('page_impressions')||null;
+  const engagements=sum('page_post_engagements')||null;
+  const engRate=(reach&&engagements)?(engagements/reach*100):null;
+  const reachDays=series('page_impressions_unique').filter(v=>v.value>0);
+  const errs=errors||[];
+  // Surface the most actionable failure so the tab can explain itself
+  const primary=errs.find(e=>e.code===10)||errs.find(e=>e.code===200)||errs.find(e=>e.code===190)||errs[0];
   socLiveData.facebook={
-    loaded:true,error:'',
-    followers,reach,impressions,engRate,
+    loaded:true,
+    error:primary?`(#${primary.code}) ${primary.msg}`:'',
+    errors:errs,
+    followers,reach,impressions,engRate,engagements,
     posts:reachDays.length||null,
     days:reachDays.map((v,i)=>({d:v.end_time?.slice(5,10)||`d${i+1}`,reach:v.value||0})),
     pageName:page?.name||socLiveData.facebook.pageName||'',
+    fetched:Date.now(),
   };
   localStorage.setItem('ec-soc-fb-live',JSON.stringify(socLiveData.facebook));
 }
@@ -12602,19 +12878,21 @@ async function fetchIgInsights(token,igAccountId,range){
   const md=await mr.json();
 
   const insightsArr=[...(insData.error?[]:insData.data||[]),...(engData.error?[]:engData.data||[])];
-  return{insights:insightsArr,user:ud,media:md.data||[],resolvedId};
+  const errors=[];if(insData.error)errors.push({call:'insights:reach',code:insData.error.code,msg:insData.error.message});if(engData.error)errors.push({call:'insights:accounts_engaged',code:engData.error.code,msg:engData.error.message});
+  return{insights:insightsArr,user:ud,media:md.data||[],resolvedId,errors};
 }
 
-function processIgData({insights,user,media}){
-  const sumMetric=(name)=>(insights.find(m=>m.name===name)?.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);
+function processIgData({insights,user,media,errors}){
+  const sumMetric=(name)=>{const m=insights.find(x=>x.name===name);if(!m)return 0;if(m.total_value&&typeof m.total_value.value==='number')return m.total_value.value;return(m.values||[]).reduce((s,v)=>s+(typeof v.value==='number'?v.value:0),0);};
   const totalReach=sumMetric('reach');
   const totalEngaged=sumMetric('accounts_engaged');
   const totalProfileViews=sumMetric('profile_views');
   const totalLikes=media.reduce((s,p)=>s+(p.like_count||0),0);
   const totalComments=media.reduce((s,p)=>s+(p.comments_count||0),0);
   const engRate=totalReach?(((totalLikes+totalComments)/totalReach)*100):null;
+  const igErrs=errors||[];const igPrimary=igErrs.find(e=>e.code===10)||igErrs.find(e=>e.code===200)||igErrs[0];
   socLiveData.instagram={
-    loaded:true,error:'',
+    loaded:true,error:igPrimary?`(#${igPrimary.code}) ${igPrimary.msg}`:'',errors:igErrs,fetched:Date.now(),
     followers:user?.followers_count||null,
     reach:totalReach||null,
     impressions:totalEngaged||null,
@@ -12633,9 +12911,9 @@ function processIgData({insights,user,media}){
 // Uses existing Google OAuth (gscToken / ga4Token chain)
 // YouTube Analytics API: /v2/reports
 // ════════════════════════════════════════════════════════════════
-async function fetchYouTubeOrganic(){
+async function fetchYouTubeOrganic(opts={}){
   const channelId=getSocYtChannelId();
-  if(!channelId){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');return;}
+  if(!channelId){if(!opts.silent){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');}return;}
   const btn=document.getElementById('soc-yt-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   try{
@@ -12852,6 +13130,18 @@ function renderSocLinkedInTab(){
 }
 
 // ── Meta tab (Facebook + Instagram side by side) ──────────────
+// Plain-English diagnostics for organic sources — the tab explains what is wrong and exactly where to fix it
+function socDiagnostics(list){
+  const cards=list.filter(([,,d])=>d&&d.error).map(([name,color,d])=>{
+    const hnt=apiErrorHint(name,d.error);
+    return`<div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${color};border-radius:var(--rl);padding:.75rem 1rem;font-size:12px;line-height:1.5;margin-bottom:8px">
+      <div style="font-weight:700;color:${color}">${name}: ${esc(hnt.title)}</div>
+      <div style="color:var(--text2);margin-top:2px">${esc(hnt.fix)}</div>
+      <details style="margin-top:4px"><summary style="cursor:pointer;color:var(--text3);font-size:11px">Meta said</summary><code style="font-size:11px;color:var(--text3);word-break:break-all">${esc(String(d.error))}</code></details>
+    </div>`;
+  }).join('');
+  return cards?`<div style="margin-bottom:1rem">${cards}</div>`:'';
+}
 function renderSocMetaTab(){
   const el=document.getElementById('soc-tab-meta');if(!el)return;
   const fb=socLiveData.facebook, ig=socLiveData.instagram;
@@ -12862,8 +13152,7 @@ function renderSocMetaTab(){
   const igPosts=ig.posts||[];
 
   el.innerHTML=`
-    ${fb.error?socErrorCard('Facebook: '+fb.error):''}
-    ${ig.error?socErrorCard('Instagram: '+ig.error):''}
+    ${socDiagnostics([['Facebook','#1877F2',fb],['Instagram','#E1306C',ig]])}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:1.25rem">
       <!-- Facebook -->
       <div>
@@ -13562,7 +13851,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.5';
+const APP_HTML_VERSION='11.6';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
