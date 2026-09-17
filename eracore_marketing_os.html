@@ -11719,6 +11719,88 @@ async function fetchMetaAds(){
   }
 }
 
+
+// ── GOOGLE ADS LIVE FETCH ──────────────────────────────────────────────────
+async function fetchGoogleAdsLive(){
+  const creds=getGAdsCreds();
+  if(!creds?.refreshToken){toast('Set Google Ads credentials in Settings first');return;}
+  const btn=document.getElementById('gads-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const range=getPaidDateRange();
+    const token=await getGAdsAccessToken(creds.refreshToken);
+    const query=`SELECT campaign.name,campaign.status,metrics.impressions,metrics.clicks,metrics.cost_micros,metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC LIMIT 100`;
+    const rows=await gadsQuery(creds,token,query);
+    const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
+    gadsData={
+      spend:rows.reduce((s,r)=>s+((r.metrics?.costMicros||0)/1e6),0),
+      clicks:rows.reduce((s,r)=>s+(parseInt(r.metrics?.clicks)||0),0),
+      impressions:rows.reduce((s,r)=>s+(parseInt(r.metrics?.impressions)||0),0),
+      conversions:rows.reduce((s,r)=>s+(parseFloat(r.metrics?.conversions)||0),0),
+      campaigns:rows.map(r=>({
+        name:r.campaign?.name||'',
+        spend:(r.metrics?.costMicros||0)/1e6,
+        clicks:parseInt(r.metrics?.clicks)||0,
+        impressions:parseInt(r.metrics?.impressions)||0,
+        conversions:parseFloat(r.metrics?.conversions)||0
+      })),
+      dateRange:range.gads,preset:curPreset,fetched:Date.now()
+    };
+    localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
+    ['ec-meta-live','ec-li-live','ec-msads-data'].forEach(k=>{
+      try{const d=JSON.parse(localStorage.getItem(k)||'null');if(d&&d.preset&&d.preset!==curPreset){localStorage.removeItem(k);if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
+    toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-google"></i> <span>Connect Google Ads</span>';
+    toast('Google Ads error: '+e.message);console.error('[Google Ads]',e);
+  }
+}
+
+// ── LINKEDIN ADS LIVE FETCH ────────────────────────────────────────────────
+async function fetchLinkedInAds(){
+  const token=getLinkedInToken();const account=getLinkedInAdAccount();
+  if(!token||!account){toast('Set LinkedIn Ads credentials in Settings first');return;}
+  const btn=document.getElementById('li-btn');
+  if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{
+    const range=getPaidDateRange();
+    const[sd,ed]=range.start&&range.end?[range.start,range.end]:[null,null];
+    const now=new Date();const s7=new Date(now);s7.setDate(s7.getDate()-7);
+    const since=sd||s7.toISOString().slice(0,10);const until=ed||now.toISOString().slice(0,10);
+    const[sy,sm,sdd]=since.split('-');const[ey,em,edd]=until.split('-');
+    const dateRange=`dateRange.start.year=${sy}&dateRange.start.month=${sm}&dateRange.start.day=${sdd}&dateRange.end.year=${ey}&dateRange.end.month=${em}&dateRange.end.day=${edd}`;
+    const fields='totalEngagements,clicks,impressions,costInLocalCurrency,oneClickLeads,externalWebsiteConversions';
+    const acct=account.replace('urn:li:sponsoredAccount:','');
+    const url=`https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot=ACCOUNT&accounts=List(urn%3Ali%3AsponsoredAccount%3A${acct})&${dateRange}&fields=${fields}&timeGranularity=ALL`;
+    const headers=JSON.stringify({'Authorization':`Bearer ${token}`,'LinkedIn-Version':'202502'});
+    const res=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&headers=${encodeURIComponent(headers)}`);
+    const data=await res.json();
+    if(!res.ok||data.error||data.status===401)throw new Error(data.message||data.error||'LinkedIn Ads API '+res.status);
+    const el=data.elements?.[0]||{};
+    const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
+    liAdsData={
+      spend:parseFloat(el.costInLocalCurrency)||0,
+      impressions:el.impressions||0,
+      clicks:el.clicks||0,
+      leads:(el.oneClickLeads||0)+(el.externalWebsiteConversions||0),
+      preset:curPreset,fetched:Date.now()
+    };
+    localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
+    ['ec-gads-data','ec-meta-live','ec-msads-data'].forEach(k=>{
+      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==curPreset){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
+    });
+    updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
+    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
+    toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
+  }catch(e){
+    if(btn)btn.innerHTML='<i class="ti ti-brand-linkedin"></i> <span>Connect LinkedIn</span>';
+    toast('LinkedIn Ads error: '+e.message);console.error('[LinkedIn Ads]',e);
+  }
+}
+
 async function fetchMsAds(){
   // Replaced by XLSX upload — show the Microsoft tab
   const tab=document.getElementById('mptab-microsoft')||document.querySelector('[onclick*="microsoft"]');
@@ -12508,21 +12590,22 @@ async function fetchIgInsights(token,igAccountId,range){
     throw new Error(ud.error.message||'Instagram account not accessible — check your Account ID in Settings.');
   }
 
-  // ── Step 2: Insights — use valid metrics for Instagram Graph API v21 ──
-  // 'impressions' is no longer valid; use reach, profile_views, accounts_engaged
-  const dayMetrics='reach,profile_views,accounts_engaged';
-  const insUrl=`https://graph.facebook.com/v21.0/${resolvedId}/insights?metric=${encodeURIComponent(dayMetrics)}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
-  const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(insUrl)}`);
+  // ── Step 2: Insights — reach (period=day) + accounts_engaged (total_value) ──
+  const reachUrl=`https://graph.facebook.com/v21.0/${resolvedId}/insights?metric=reach&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const ir=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(reachUrl)}`);
   const insData=await ir.json();
-  console.log('[IG insights]',JSON.stringify(insData).slice(0,300));
-  // Don't throw on insights error — we may still have user data
+  console.log('[IG insights reach]',JSON.stringify(insData).slice(0,300));
+  const engUrl=`https://graph.facebook.com/v21.0/${resolvedId}/insights?metric=accounts_engaged&metric_type=total_value&period=day&since=${range.since}&until=${range.until}&access_token=${token}`;
+  const er=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(engUrl)}`);
+  const engData=await er.json();
+  console.log('[IG insights engaged]',JSON.stringify(engData).slice(0,300));
 
-  // ── Step 3: Recent media (basic fields only — no reach/impressions at list level) ──
+  // ── Step 3: Recent media ──
   const mUrl=`https://graph.facebook.com/v21.0/${resolvedId}/media?fields=id,caption,timestamp,like_count,comments_count,media_type&limit=20&access_token=${token}`;
   const mr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(mUrl)}`);
   const md=await mr.json();
 
-  const insightsArr=insData.error?[]:insData.data||[];
+  const insightsArr=[...(insData.error?[]:insData.data||[]),...(engData.error?[]:engData.data||[])];
   return{insights:insightsArr,user:ud,media:md.data||[],resolvedId};
 }
 
@@ -13483,7 +13566,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.1';
+const APP_HTML_VERSION='11.4';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
