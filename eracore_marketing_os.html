@@ -10508,8 +10508,7 @@ function getPaidDateLabel(){
 }
 
 function onPaidDateRangeChange(){
-  // Clear in-memory so loadIfFresh re-evaluates from localStorage for new range
-  gadsData=null;metaAdsData=null;liAdsData=null;
+  // Reload cache (may be stale range) then trigger fresh API fetches
   loadPaidAdsData();
   updatePaidBlendedKPIs();
   renderPaidOverview();
@@ -10556,19 +10555,20 @@ function switchPaidTab(tab,el){
 }
 
 function loadPaidAdsData(){
+  // Always load cached data — never reject based on preset mismatch
+  // A stale-range badge is shown in the UI if presets differ
   const curPreset=document.getElementById('paid-date-range')?.value||'last_7_days';
-  function loadIfFresh(key){
-    try{
-      const d=localStorage.getItem(key);if(!d)return null;
-      const parsed=JSON.parse(d);
-      if(parsed&&parsed.preset&&parsed.preset!==curPreset)return null;
-      return parsed;
-    }catch(e){return null;}
+  function loadCache(key){
+    try{const d=localStorage.getItem(key);return d?JSON.parse(d):null;}catch(e){return null;}
   }
-  gadsData=loadIfFresh('ec-gads-data');
-  metaAdsData=loadIfFresh('ec-meta-live');
-  liAdsData=loadIfFresh('ec-li-live');
-  msAdsData=loadIfFresh('ec-msads-data');
+  gadsData=loadCache('ec-gads-data');
+  metaAdsData=loadCache('ec-meta-live');
+  liAdsData=loadCache('ec-li-live');
+  msAdsData=loadCache('ec-msads-data');
+  // Flag if any platform data is from a different range
+  [gadsData,metaAdsData,liAdsData,msAdsData].forEach(d=>{
+    if(d&&d.preset&&d.preset!==curPreset)d._staleRange=true;
+  });
 }
 
 function updatePaidBlendedKPIs(){
@@ -11707,9 +11707,8 @@ async function fetchMetaAds(){
     const metaPresetNow=document.getElementById('paid-date-range')?.value||'last_7_days';
     metaAdsData={spend:parseFloat(d.spend||0),impressions:parseInt(d.impressions||0),clicks:parseInt(d.clicks||0),leads:parseInt(leads),cpm:parseFloat(d.cpm||0),cpc:parseFloat(d.cpc||0),ctr:parseFloat(d.ctr||0),campaigns,preset:metaPresetNow,fetched:Date.now()};
     localStorage.setItem('ec-meta-live',JSON.stringify(metaAdsData));
-    ['ec-gads-data','ec-li-live','ec-msads-data'].forEach(k=>{
-      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==metaPresetNow){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
-    });
+    // Cross-platform cache invalidation removed — platforms cache independently
+
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidMetaTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Meta ✓</span>';
     toast(`Meta Ads: $${Math.round(metaAdsData.spend)} spend · ${metaAdsData.clicks.toLocaleString()} clicks`);
@@ -11747,9 +11746,8 @@ async function fetchGoogleAdsLive(){
       dateRange:range.gads,preset:curPreset,fetched:Date.now()
     };
     localStorage.setItem('ec-gads-data',JSON.stringify(gadsData));
-    ['ec-meta-live','ec-li-live','ec-msads-data'].forEach(k=>{
-      try{const d=JSON.parse(localStorage.getItem(k)||'null');if(d&&d.preset&&d.preset!==curPreset){localStorage.removeItem(k);if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-li-live')liAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
-    });
+    // Cross-platform cache invalidation removed — platforms cache independently
+
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidGoogleTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Google Ads ✓</span>';
     toast(`Google Ads: $${Math.round(gadsData.spend)} spend · ${gadsData.clicks.toLocaleString()} clicks`);
@@ -11789,9 +11787,7 @@ async function fetchLinkedInAds(){
       preset:curPreset,fetched:Date.now()
     };
     localStorage.setItem('ec-li-live',JSON.stringify(liAdsData));
-    ['ec-gads-data','ec-meta-live','ec-msads-data'].forEach(k=>{
-      try{const dd=JSON.parse(localStorage.getItem(k)||'null');if(dd&&dd.preset&&dd.preset!==curPreset){localStorage.removeItem(k);if(k==='ec-gads-data')gadsData=null;if(k==='ec-meta-live')metaAdsData=null;if(k==='ec-msads-data')msAdsData=null;}}catch(e){}
-    });
+    // Cross-platform cache invalidation removed — platforms cache independently
     updatePaidBlendedKPIs();renderPaidOverview();renderPaidLinkedInTab();
     if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
     toast(`LinkedIn Ads: $${Math.round(liAdsData.spend)} spend · ${liAdsData.clicks.toLocaleString()} clicks`);
@@ -13566,7 +13562,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.4';
+const APP_HTML_VERSION='11.5';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
