@@ -323,6 +323,92 @@ select.sm:focus{border-color:var(--blue)}
 .ps-tl-item:last-child{border-bottom:none}
 .ps-tl-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
 .ps-tl-icon.meeting{background:var(--blue-l);color:var(--blue)}.ps-tl-icon.call{background:var(--green-l);color:var(--green)}.ps-tl-icon.email{background:var(--purple-l);color:var(--purple)}.ps-tl-icon.note{background:var(--surface2);color:var(--text2)}.ps-tl-icon.proposal{background:var(--amber-l);color:var(--amber)}
+/* ── EVENTS MODULE (NECA 2026) ──────────────────────────── */
+.ev-evtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem}
+.ev-evtab{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:100px;background:var(--surface);font-size:12px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .12s}
+.ev-evtab.active{background:var(--text);color:white;border-color:var(--text)}
+.ev-hero{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.ev-hero .counter{cursor:default}
+.ev-countdown{background:var(--text);color:white;border-color:var(--text)}
+.ev-countdown .counter-val{color:white;font-size:32px;line-height:1}
+.ev-countdown .counter-lbl{color:rgba(255,255,255,.7)}
+.ev-group{margin-bottom:1.5rem}
+.ev-group-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ev-group-hd h4{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--text2)}
+.ev-group-hd .ev-major{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:var(--amber-l);color:var(--amber);text-transform:uppercase;letter-spacing:.04em}
+.ev-prog{flex:1;height:5px;background:var(--surface2);border-radius:4px;overflow:hidden;max-width:220px}
+.ev-prog>div{height:100%;background:var(--green);transition:width .3s}
+.ev-prog-lbl{font-size:11px;color:var(--text3);white-space:nowrap}
+.ev-ws-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.ev-ws{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem;cursor:pointer;transition:border-color .12s,transform .12s;border-left:3px solid var(--border2);display:flex;flex-direction:column;gap:8px}
+.ev-ws:hover{border-color:var(--border2);transform:translateY(-1px)}
+.ev-ws.st-notstarted{border-left-color:var(--border2)}
+.ev-ws.st-inprogress{border-left-color:var(--blue)}
+.ev-ws.st-review{border-left-color:var(--purple)}
+.ev-ws.st-blocked{border-left-color:var(--red)}
+.ev-ws.st-done{border-left-color:var(--green);opacity:.8}
+.ev-ws-title{font-size:14px;font-weight:600;line-height:1.35}
+.ev-ws-desc{font-size:12px;color:var(--text2);line-height:1.5}
+.ev-ws-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:auto}
+.ev-st{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}
+.ev-st.notstarted{background:var(--surface2);color:var(--text2)}
+.ev-st.inprogress{background:var(--blue-l);color:var(--blue)}
+.ev-st.review{background:var(--purple-l);color:var(--purple)}
+.ev-st.blocked{background:var(--red-l);color:var(--red)}
+.ev-st.done{background:var(--green-l);color:var(--green)}
+.ev-ent{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;border:1px solid var(--border);color:var(--text2);background:var(--surface)}
+.ev-ent.eracore{border-color:var(--blue);color:var(--blue)}
+.ev-ent.genusys{border-color:var(--teal);color:var(--teal)}
+.ev-ent.both{border-color:var(--purple);color:var(--purple)}
+.ev-mz{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;background:var(--amber-l);color:var(--amber)}
+.ev-due{font-size:11px;color:var(--text3);margin-left:auto;white-space:nowrap}
+.ev-due.over{color:var(--red);font-weight:600}
+.ev-due.soon{color:var(--amber);font-weight:600}
+/* outreach tracker */
+.ev-or{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start}
+.ev-or-side{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;position:sticky;top:0;max-height:calc(100vh - 140px);display:flex;flex-direction:column}
+.ev-or-side .ev-or-search{padding:10px;border-bottom:1px solid var(--border)}
+.ev-or-side .ev-or-search input{width:100%;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface2);color:var(--text);outline:none}
+.ev-or-side .ev-or-search input:focus{border-color:var(--blue);background:var(--surface)}
+.ev-or-filters{display:flex;gap:4px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--border)}
+.ev-or-f{font-size:11px;padding:2px 9px;border-radius:20px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)}
+.ev-or-f.active{background:var(--text);color:white;border-color:var(--text)}
+.ev-or-list{overflow-y:auto;flex:1}
+.ev-or-sect{padding:8px 12px 5px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);font-weight:700;background:var(--surface2);position:sticky;top:0}
+.ev-or-item{display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s}
+.ev-or-item:hover{background:var(--surface2)}
+.ev-or-item.active{background:var(--blue-l);box-shadow:inset 3px 0 0 var(--blue)}
+.ev-or-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.ev-or-dot.pending{background:var(--border2)}.ev-or-dot.sent{background:var(--amber)}.ev-or-dot.responded{background:var(--blue)}.ev-or-dot.covered{background:var(--green)}
+.ev-or-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-or-sub{font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-or-main{min-width:0}
+.ev-or-head{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem;margin-bottom:12px}
+.ev-or-head h3{font-size:18px;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
+.ev-or-head .ev-or-email{font-size:12px;color:var(--text2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.ev-or-statusrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.ev-or-sbtn{height:30px;padding:0 12px;font-size:12px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2);font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.ev-or-sbtn.on-pending{background:var(--surface2);border-color:var(--border2);color:var(--text)}
+.ev-or-sbtn.on-sent{background:var(--amber-l);border-color:var(--amber);color:var(--amber)}
+.ev-or-sbtn.on-responded{background:var(--blue-l);border-color:var(--blue);color:var(--blue)}
+.ev-or-sbtn.on-covered{background:var(--green-l);border-color:var(--green);color:var(--green)}
+.ev-or-entsel{margin-left:auto;display:flex;gap:4px;align-items:center;font-size:11px;color:var(--text3)}
+.ev-tpl{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:12px;overflow:hidden}
+.ev-tpl-hd{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2)}
+.ev-tpl-row{display:grid;grid-template-columns:70px 1fr;gap:8px;padding:6px 14px;font-size:12px;border-bottom:1px solid var(--border)}
+.ev-tpl-row .k{color:var(--text3);text-transform:uppercase;font-size:10px;letter-spacing:.05em;font-weight:700;padding-top:2px}
+.ev-tpl-row .v.subj{font-weight:600}
+.ev-tpl-body{padding:12px 14px;font-size:12.5px;line-height:1.65;white-space:pre-wrap;color:var(--text);background:var(--surface)}
+.ev-note{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:12px;margin-bottom:6px}
+.ev-note .d{font-size:10px;color:var(--text3);margin-bottom:2px}
+.ev-tip{background:var(--blue-l);border-left:3px solid var(--blue);padding:10px 14px;border-radius:0 var(--r) var(--r) 0;font-size:12px;color:var(--blue-d);margin-bottom:12px;line-height:1.55}
+.ev-det-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ev-det-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.25rem}
+.ev-det-card h4{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.ev-det-card select,.ev-modal select{width:100%;height:36px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);padding:0 8px}
+.ev-pw{display:flex;gap:6px}
+.ev-pw input{flex:1}
+@media(max-width:1100px){.ev-or{grid-template-columns:1fr}.ev-or-side{position:static;max-height:360px}.ev-hero{grid-template-columns:repeat(2,1fr)}.ev-det-grid{grid-template-columns:1fr}}
 /* ── CLICKABLE STAT CARDS ───────────────────────────────── */
 .lt-cnt{cursor:pointer;transition:border-color .12s,transform .12s}
 .lt-cnt:hover{border-color:var(--blue);transform:translateY(-1px)}
@@ -414,6 +500,12 @@ select.sm:focus{border-color:var(--blue)}
   <div class="nav-item" id="nav-strategy" onclick="navTo('strategy',this)"><i class="ti ti-chess"></i> Strategy <span class="nav-badge" id="nb-strategy">0</span></div>
   <div class="nav-item" id="nav-principles" onclick="navTo('principles',this)"><i class="ti ti-bookmark"></i> Principles <span class="nav-badge" id="nb-principles">0</span></div>
   <div class="nav-item" id="nav-inventory" onclick="navTo('inventory',this)"><i class="ti ti-archive"></i> Inventory <span class="nav-badge" id="nb-inventory">0</span></div>
+
+  <div class="nav-lbl" style="margin-top:.5rem">Events</div>
+  <div class="nav-item" id="nav-events" onclick="navTo('events',this)"><i class="ti ti-calendar-event"></i> Events <span class="nav-badge" id="nb-events">0</span></div>
+  <div class="nav-sub" id="nsub-events">
+    <div class="nav-sub-item" onclick="navToSub('events','neca2026',this)"><i class="ti ti-building-skyscraper"></i> NECA 2026</div>
+  </div>
 
   <div class="nav-lbl" style="margin-top:.5rem">Sales</div>
   <div class="nav-item" id="nav-sales" onclick="navTo('outreach',this)"><i class="ti ti-briefcase"></i> Sales</div>
@@ -1818,6 +1910,133 @@ select.sm:focus{border-color:var(--blue)}
 <!-- PRE-SALES PAGE -->
 </div><!-- /page-outreach (restored closing tag) -->
 
+<!-- EVENTS PAGE -->
+<div id="page-events" class="page">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1rem;flex-wrap:wrap">
+    <div><div class="pt">Events</div><div class="ps" style="margin-bottom:0">Trade shows &amp; conventions — strategy board, media outreach, event details</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="evOrOpenAddContact()"><i class="ti ti-user-plus"></i> Add media contact</button>
+      <button class="btn btn-primary" onclick="evWsOpenAdd()"><i class="ti ti-plus"></i> Add workstream</button>
+    </div>
+  </div>
+
+  <div class="ev-evtabs" id="ev-evtabs">
+    <button class="ev-evtab active" id="ev-evtab-neca2026" onclick="evSwitchEvent('neca2026',this)"><i class="ti ti-building-skyscraper"></i> NECA 2026 <span id="ev-evtab-neca2026-cd" style="opacity:.75;font-weight:400"></span></button>
+  </div>
+
+  <div id="ev-event-neca2026">
+    <div class="ev-hero">
+      <div class="counter ev-countdown"><div class="counter-val" id="ev-h-days">—</div><div class="counter-lbl" id="ev-h-days-lbl">days to show open</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--green)" id="ev-h-ws">0/0</div><div class="counter-lbl">Workstreams done</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--red)" id="ev-h-blocked">0</div><div class="counter-lbl">Blocked / MZ pending</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--amber)" id="ev-h-sent">0</div><div class="counter-lbl">Media outreached</div></div>
+      <div class="counter"><div class="counter-val" style="color:var(--blue)" id="ev-h-covered">0</div><div class="counter-lbl">Coverage secured</div></div>
+    </div>
+
+    <div class="itabs">
+      <button class="itab active" id="ev-itab-board" onclick="evSwitchTab('board',this)"><i class="ti ti-layout-kanban"></i> Strategy board <span class="itab-badge" id="ev-itab-board-n">0</span></button>
+      <button class="itab" id="ev-itab-outreach" onclick="evSwitchTab('outreach',this)"><i class="ti ti-news"></i> Media outreach <span class="itab-badge" id="ev-itab-outreach-n">0</span></button>
+      <button class="itab" id="ev-itab-details" onclick="evSwitchTab('details',this)"><i class="ti ti-id-badge"></i> Event details &amp; accounts</button>
+    </div>
+
+    <!-- STRATEGY BOARD -->
+    <div id="ev-view-board" class="itab-pane active">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center">
+        <span style="font-size:12px;color:var(--text2);font-weight:600">Status:</span>
+        <button class="btn btn-sm" id="ev-wsf-all" onclick="evWsFilter('',this)" style="background:var(--text);color:white;border-color:var(--text)">All</button>
+        <button class="btn btn-sm" id="ev-wsf-notstarted" onclick="evWsFilter('notstarted',this)">Not started</button>
+        <button class="btn btn-sm" id="ev-wsf-inprogress" onclick="evWsFilter('inprogress',this)">In progress</button>
+        <button class="btn btn-sm" id="ev-wsf-review" onclick="evWsFilter('review',this)">MZ review</button>
+        <button class="btn btn-sm" id="ev-wsf-blocked" onclick="evWsFilter('blocked',this)">Blocked</button>
+        <button class="btn btn-sm" id="ev-wsf-done" onclick="evWsFilter('done',this)">Done</button>
+        <span style="width:1px;height:20px;background:var(--border);margin:0 4px"></span>
+        <select class="sm" id="ev-wsf-owner" onchange="evWsRender()" style="height:28px;font-size:12px"><option value="">All owners</option></select>
+        <select class="sm" id="ev-wsf-entity" onchange="evWsRender()" style="height:28px;font-size:12px"><option value="">Eracore + Genusys</option><option value="eracore">Eracore only</option><option value="genusys">Genusys only</option></select>
+        <span style="font-size:11px;color:var(--text3);margin-left:auto">Click a status pill to cycle it · click a card to edit</span>
+      </div>
+      <div id="ev-ws-list"></div>
+    </div>
+
+    <!-- MEDIA OUTREACH -->
+    <div id="ev-view-outreach" class="itab-pane">
+      <div class="ev-tip"><i class="ti ti-bulb"></i> Every template pulls booth number, sender block and company boilerplate from <b>Event details &amp; accounts</b>. Fill those in once and every email is ready to copy. Toggle the entity per contact to pitch as Eracore, Genusys AI or both.</div>
+      <div class="ev-or">
+        <div class="ev-or-side">
+          <div class="ev-or-search"><input type="text" id="ev-or-q" placeholder="Search outlets or contacts…" oninput="evOrSearch(this.value)"></div>
+          <div class="ev-or-filters">
+            <button class="ev-or-f active" id="ev-orf-all" onclick="evOrFilter('all',this)">All</button>
+            <button class="ev-or-f" id="ev-orf-pending" onclick="evOrFilter('pending',this)">Pending</button>
+            <button class="ev-or-f" id="ev-orf-sent" onclick="evOrFilter('sent',this)">Sent</button>
+            <button class="ev-or-f" id="ev-orf-responded" onclick="evOrFilter('responded',this)">Responded</button>
+            <button class="ev-or-f" id="ev-orf-covered" onclick="evOrFilter('covered',this)">Covered</button>
+          </div>
+          <div class="ev-or-list" id="ev-or-list"></div>
+        </div>
+        <div class="ev-or-main" id="ev-or-main"><div class="empty">Select a media outlet or podcast on the left to see templates and track outreach.</div></div>
+      </div>
+    </div>
+
+    <!-- EVENT DETAILS -->
+    <div id="ev-view-details" class="itab-pane">
+      <div class="ev-det-grid">
+        <div class="ev-det-card">
+          <h4><i class="ti ti-map-pin"></i> Show details</h4>
+          <div class="g2">
+            <div class="field"><label>Event name</label><input id="ev-d-name" onchange="evDetSave()"></div>
+            <div class="field"><label>Booth number</label><input id="ev-d-booth" placeholder="e.g. 1725" onchange="evDetSave()"></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label>Venue</label><input id="ev-d-venue" onchange="evDetSave()"></div>
+            <div class="field"><label>City</label><input id="ev-d-city" onchange="evDetSave()"></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label>Convention start</label><input id="ev-d-start" type="date" onchange="evDetSave()"></div>
+            <div class="field"><label>Convention end</label><input id="ev-d-end" type="date" onchange="evDetSave()"></div>
+          </div>
+          <div class="field"><label>Show floor hours <span>— shown in pitches</span></label><textarea id="ev-d-hours" rows="3" onchange="evDetSave()"></textarea></div>
+          <div class="field"><label>Website / exhibitor portal</label><input id="ev-d-url" onchange="evDetSave()"></div>
+        </div>
+
+        <div class="ev-det-card">
+          <h4><i class="ti ti-signature"></i> Sender block &amp; boilerplates <span style="font-size:11px;font-weight:400;color:var(--text3)">— used in every template</span></h4>
+          <div class="g2">
+            <div class="field"><label>Sender name</label><input id="ev-d-sname" onchange="evDetSave()"></div>
+            <div class="field"><label>Sender title</label><input id="ev-d-stitle" onchange="evDetSave()"></div>
+          </div>
+          <div class="g2">
+            <div class="field"><label>Sender email</label><input id="ev-d-semail" onchange="evDetSave()"></div>
+            <div class="field"><label>Sender phone</label><input id="ev-d-sphone" onchange="evDetSave()"></div>
+          </div>
+          <div class="field"><label>Eracore boilerplate <span>— one or two sentences</span></label><textarea id="ev-d-bp-eracore" rows="3" onchange="evDetSave()"></textarea></div>
+          <div class="field"><label>Genusys AI boilerplate <span>— one or two sentences</span></label><textarea id="ev-d-bp-genusys" rows="3" onchange="evDetSave()"></textarea></div>
+          <div class="field"><label>Press kit link <span>— optional</span></label><input id="ev-d-presskit" placeholder="https://…" onchange="evDetSave()"></div>
+        </div>
+
+        <div class="ev-det-card">
+          <h4><i class="ti ti-key"></i> NECA exhibitor account — Eracore</h4>
+          <div class="field"><label>Portal URL</label><input id="ev-a-eracore-url" placeholder="https://" onchange="evAccSave('eracore')"></div>
+          <div class="g2">
+            <div class="field"><label>Username / email</label><input id="ev-a-eracore-user" onchange="evAccSave('eracore')"></div>
+            <div class="field"><label>Password</label><div class="ev-pw"><input id="ev-a-eracore-pass" type="password" onchange="evAccSave('eracore')"><button class="btn" style="height:36px;padding:0 10px" onclick="evTogglePw('ev-a-eracore-pass',this)"><i class="ti ti-eye"></i></button></div></div>
+          </div>
+          <div class="field"><label>Notes <span>— badge codes, exhibitor ID, who has access</span></label><textarea id="ev-a-eracore-notes" rows="2" onchange="evAccSave('eracore')"></textarea></div>
+        </div>
+
+        <div class="ev-det-card">
+          <h4><i class="ti ti-key"></i> NECA exhibitor account — Genusys AI</h4>
+          <div class="field"><label>Portal URL</label><input id="ev-a-genusys-url" placeholder="https://" onchange="evAccSave('genusys')"></div>
+          <div class="g2">
+            <div class="field"><label>Username / email</label><input id="ev-a-genusys-user" onchange="evAccSave('genusys')"></div>
+            <div class="field"><label>Password</label><div class="ev-pw"><input id="ev-a-genusys-pass" type="password" onchange="evAccSave('genusys')"><button class="btn" style="height:36px;padding:0 10px" onclick="evTogglePw('ev-a-genusys-pass',this)"><i class="ti ti-eye"></i></button></div></div>
+          </div>
+          <div class="field"><label>Notes <span>— badge codes, exhibitor ID, who has access</span></label><textarea id="ev-a-genusys-notes" rows="2" onchange="evAccSave('genusys')"></textarea></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px"><i class="ti ti-lock"></i> Credentials are stored locally on this machine only (same store as your API tokens). They never leave the app.</div>
+    </div>
+  </div>
+</div>
+
 <div id="page-presales" class="page">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.5rem;flex-wrap:wrap">
     <div><div class="pt">Pre-Sales</div><div class="ps">SDR qualification — MQL → Attempted → Contacted → Connected → Demo → RFP → Contract</div></div>
@@ -2150,6 +2369,89 @@ select.sm:focus{border-color:var(--blue)}
     <div class="modal-actions">
       <button class="btn" onclick="document.getElementById('lt-modal-import').classList.remove('open')">Cancel</button>
       <button class="btn btn-primary" onclick="ltDoImport()"><i class="ti ti-check"></i> Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     EVENTS MODALS
+     ═══════════════════════════════════════════════════════════ -->
+
+<!-- Add / edit workstream -->
+<div class="overlay" id="ev-modal-ws" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal ev-modal" onclick="event.stopPropagation()" style="max-width:620px">
+    <div class="modal-title"><span id="ev-ws-modal-title">Add workstream</span> <button class="btn-icon btn" onclick="document.getElementById('ev-modal-ws').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <input type="hidden" id="ev-ws-f-id">
+    <div class="field"><label>Workstream</label><input id="ev-ws-f-title" placeholder="e.g. Brochures — tri-fold, 500 copies"></div>
+    <div class="g2">
+      <div class="field"><label>Group</label>
+        <select id="ev-ws-f-group">
+          <option value="setup">Setup &amp; accounts</option>
+          <option value="digital">Digital &amp; CRM</option>
+          <option value="booth">Booth experience</option>
+          <option value="pr">PR &amp; media</option>
+          <option value="print">Print — major takeaway</option>
+        </select>
+      </div>
+      <div class="field"><label>Owner</label><input id="ev-ws-f-owner" list="ev-owner-list" placeholder="Bilal, Kasun…"><datalist id="ev-owner-list"></datalist></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Status</label>
+        <select id="ev-ws-f-status">
+          <option value="notstarted">Not started</option>
+          <option value="inprogress">In progress</option>
+          <option value="review">MZ review</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="field"><label>Due date</label><input id="ev-ws-f-due" type="date"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Entity</label>
+        <select id="ev-ws-f-entity">
+          <option value="both">Eracore + Genusys AI</option>
+          <option value="eracore">Eracore</option>
+          <option value="genusys">Genusys AI</option>
+        </select>
+      </div>
+      <div class="field"><label>MZ approval gate</label>
+        <select id="ev-ws-f-mz"><option value="0">No</option><option value="1">Yes — needs MZ sign-off</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Scope / description</label><textarea id="ev-ws-f-desc" rows="3"></textarea></div>
+    <div class="field" id="ev-ws-notes-wrap" style="display:none"><label>Progress log</label>
+      <div id="ev-ws-notes"></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input id="ev-ws-f-note" placeholder="Add a progress note…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)"><button class="btn" onclick="evWsAddNote()"><i class="ti ti-plus"></i> Log</button></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="ev-ws-del-btn" style="margin-right:auto;color:var(--red);display:none" onclick="evWsDelete()"><i class="ti ti-trash"></i> Delete</button>
+      <button class="btn" onclick="document.getElementById('ev-modal-ws').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="evWsSave()"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add media contact -->
+<div class="overlay" id="ev-modal-contact" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal ev-modal" onclick="event.stopPropagation()" style="max-width:520px">
+    <div class="modal-title">Add media contact <button class="btn-icon btn" onclick="document.getElementById('ev-modal-contact').classList.remove('open')"><i class="ti ti-x"></i></button></div>
+    <div class="g2">
+      <div class="field"><label>Outlet / show</label><input id="ev-c-f-outlet" placeholder="e.g. Data Center Dynamics"></div>
+      <div class="field"><label>Contact name</label><input id="ev-c-f-name" placeholder="Editor, Newsroom, or a person"></div>
+    </div>
+    <div class="field"><label>Email</label><input id="ev-c-f-email" placeholder="editor@outlet.com"></div>
+    <div class="g2">
+      <div class="field"><label>Type</label>
+        <select id="ev-c-f-type"><option value="media">Print &amp; online media</option><option value="podcast">Podcast / YouTube</option></select>
+      </div>
+      <div class="field"><label>Pitch angle</label>
+        <select id="ev-c-f-focus"><option value="trade">Trade press</option><option value="local">Local press</option><option value="local-tv">Local TV</option><option value="podcast">Podcast guest</option></select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('ev-modal-contact').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="evOrSaveContact()"><i class="ti ti-check"></i> Add contact</button>
     </div>
   </div>
 </div>
@@ -4828,6 +5130,7 @@ const PAGE_MAP={
   socialdash:'page-socialdash',mktdash:'page-mktdash',
   standup:'page-standup',mzreport:'page-mzreport',asanaview:'page-asanaview',
   outreach:'page-outreach', presales:'page-presales',
+  events:'page-events',
   inventory:'page-inventory',
   agents:'page-agents'
 };
@@ -4864,6 +5167,7 @@ function navToSub(parent, sub, el){
   if(parent==='mktmgmt'){const btn=document.getElementById('mmt-'+sub);switchMmTab(sub,btn);}
   if(parent==='marketingperf'){const btn=document.getElementById('mptab-'+sub);switchPerfTab(sub,btn);}
   if(parent==='reporting'){const btn=document.getElementById('rpt-tab-'+sub);switchReportTab(sub,btn);}
+  if(parent==='events'){evSwitchEvent(sub,document.getElementById('ev-evtab-'+sub));}
 }
 function showPage(id,el){navTo(id,el);}
 
@@ -4927,6 +5231,7 @@ function onNavTo(id){
   if(id==='asanaview')loadAsanaOverview();
   if(id==='outreach'){ltLoad();ltRender();}
   if(id==='presales'){psLoad();psRender();}
+  if(id==='events'){evLoad();evRender();}
 }
 
 // ── DASHBOARD SUBVIEWS ────────────────────────────────────────────────────
@@ -8686,6 +8991,7 @@ function _updateNavBadges(){
   safeRun('inv badge',()=>{invLoad();invPaintBadge();});
   safeRun('agents badge',()=>agentLoad());
   safeRun('mm badge',()=>{const b=document.getElementById('nb-mktmgmt');if(b)b.textContent=getMmTasks('overview',MM_CHANNELS.overview).length;});
+  safeRun('events badge',()=>{if(!evWs.length)evLoad();evPaintBadge();});
 }
 
 // ── NOTIFICATION BELL ────────────────────────────────────────────────────
@@ -13851,7 +14157,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.6';
+const APP_HTML_VERSION='11.7';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -13906,6 +14212,7 @@ const PERMISSION_PAGES=[
   {id:'inventory',label:'Inventory (reference library)'},
   {id:'outreach',label:'Lead Outreach'},
   {id:'presales',label:'Pre-Sales'},
+  {id:'events',label:'Events (NECA 2026)'},
   {id:'marketingperf',label:'Marketing Performance'},
   {id:'seodash',label:'SEO / AIEO — organic'},
   {id:'paiddash',label:'Paid Marketing'},
@@ -13969,6 +14276,10 @@ const EDIT_GUARDS={
   // Pre-Sales — prospects, touchpoints, stages
   psOpenAdd:'presales',psSaveProspect:'presales',psOpenLogFor:'presales',psOpenLog:'presales',
   psSaveActivity:'presales',psUpdateStage:'presales',
+  // Events — workstreams, outreach status/notes, details & accounts
+  evWsOpenAdd:'events',evWsOpenEdit:'events',evWsSave:'events',evWsDelete:'events',evWsCycleStatus:'events',evWsAddNote:'events',
+  evOrSetStatus:'events',evOrSetEntity:'events',evOrAddNote:'events',evOrOpenAddContact:'events',evOrSaveContact:'events',evOrDeleteContact:'events',
+  evDetSave:'events',evAccSave:'events',
   // Inventory reference library
   invOpenAdd:'inventory',invSave:'inventory',invOpenEdit:'inventory',invDelete:'inventory',
   // Paid historical review
@@ -15439,6 +15750,648 @@ function ltCopyFallback(text){
   document.body.appendChild(ta);ta.select();
   try{document.execCommand('copy');}catch(e){}
   document.body.removeChild(ta);
+}
+
+// ══════════════════════════════════════════════════════════════
+// EVENTS MODULE — trade shows & conventions
+// Currently one event (NECA 2026, Las Vegas). Built so a second
+// event is a new entry in EV_EVENTS + a new page block; the data
+// layer is keyed per event id.
+// Three panels per event:
+//   1. Strategy board  — workstreams grouped by function, status-cycled
+//   2. Media outreach  — press/podcast tracker ported from the standalone
+//                        NECA tracker; templates pull from event details
+//   3. Event details   — show facts, sender block, boilerplates and the
+//                        NECA exhibitor account credentials for both entities
+// ══════════════════════════════════════════════════════════════
+const EV_EVENTS={neca2026:{id:'neca2026',label:'NECA 2026'}};
+let evCurrent='neca2026';
+const evKey=(suffix)=>'ec-ev-'+evCurrent+'-'+suffix+'-v1';
+let evMeta={},evWs=[],evOr={state:{},custom:[]};
+let evWsStatusFilter='';
+let evOrFilterVal='all',evOrSearchVal='',evOrActive=null;
+
+const EV_DEFAULT_META={
+  name:'NECA 2026 Convention & Trade Show',
+  venue:'Mandalay Bay Convention Center',
+  city:'Las Vegas, NV',
+  start:'2026-10-04',
+  end:'2026-10-07',
+  hours:'Mon Oct 5: 11:30am – 5:00pm\nTue Oct 6: 11:30am – 4:00pm\nWed Oct 7: 9:00am – 1:00pm',
+  url:'https://www.necashow.org',
+  booth:'',
+  sname:'',stitle:'Marketing Director',semail:'',sphone:'',
+  bpEracore:'Eracore is an electrical BIM/VDC preconstruction engineering firm. We produce coordinated electrical BIM models and shop drawings for electrical subcontractors on US data center and mission-critical projects, so their crews build from drawings that are already clash-free and prefab-ready.',
+  bpGenusys:'Genusys AI is [one-line description — set in Event details].',
+  presskit:'',
+  accounts:{eracore:{url:'https://www.necashow.org',user:'',pass:'',notes:''},genusys:{url:'https://www.necashow.org',user:'',pass:'',notes:''}}
+};
+
+const EV_WS_GROUPS={
+  setup:{label:'Setup & accounts',major:false},
+  digital:{label:'Digital & CRM',major:false},
+  booth:{label:'Booth experience',major:false},
+  pr:{label:'PR & media',major:false},
+  print:{label:'Print',major:true}
+};
+const EV_WS_GROUP_ORDER=['setup','digital','booth','pr','print'];
+const EV_WS_STATUS={
+  notstarted:{label:'Not started'},
+  inprogress:{label:'In progress'},
+  review:{label:'MZ review'},
+  blocked:{label:'Blocked'},
+  done:{label:'Done'}
+};
+const EV_WS_STATUS_CYCLE=['notstarted','inprogress','review','done'];
+const EV_TEAM=['Daniyal','Javeria','Sauleh','Kasun','Haider','Praneeth','Anas','Bilal','Hamna','Sheeza','Muskan','MZ'];
+
+// Seeded from Daniyal's NECA 2026 plan — saved data always wins.
+const EV_WS_SEED=[
+  {id:'ws-acct-eracore',group:'setup',title:'NECA exhibitor account — Eracore',owner:'Daniyal',entity:'eracore',mz:0,desc:'Exhibitor portal login, badge allocation, booth services orders. Store credentials in Event details & accounts.'},
+  {id:'ws-acct-genusys',group:'setup',title:'NECA exhibitor account — Genusys AI',owner:'Daniyal',entity:'genusys',mz:0,desc:'Separate exhibitor login for Genusys AI. Store credentials in Event details & accounts.'},
+  {id:'ws-landing',group:'digital',title:'NECA landing page',owner:'Anas',entity:'both',mz:1,desc:'Booth number, meeting booker (Calendly), what we are showing, giveaway mechanics. Printed QR on all collateral points here — UTM-tagged so GA4 attributes booth traffic.'},
+  {id:'ws-abm',group:'digital',title:'ABM & CRM follow-up setup',owner:'Sauleh',entity:'both',mz:0,desc:'HubSpot: NECA 2026 list, lead-capture form/QR, 3-touch follow-up sequence (Day 1 thank-you, Day 4 asset, Day 10 meeting ask). Badge scan → HubSpot flow tested before travel.'},
+  {id:'ws-newsletter',group:'digital',title:'Newsletter — pre-show & post-show',owner:'Hamna',entity:'both',mz:1,desc:'Pre-show: "Meet us at Booth #" with booking CTA. Post-show: recap, photos, offer. Both drafted before departure.'},
+  {id:'ws-mascot',group:'booth',title:'Mascot concepts (tiny robot etc.)',owner:'Bilal',entity:'both',mz:1,desc:'3 concept directions for a booth mascot — tiny robot / electrician character. Used on merch, standee and screen loop. MZ picks one.'},
+  {id:'ws-videos',group:'booth',title:'Booth screen videos',owner:'Kasun',entity:'both',mz:1,desc:'Silent, captioned loop for the booth screen: project fly-throughs, before/after coordination, prefab sequences. 16:9, 60–90s segments, no audio dependency. Muskan on post.'},
+  {id:'ws-merch',group:'booth',title:'Merch — keychains, USB drives, etc.',owner:'Bilal',entity:'both',mz:1,desc:'Giveaways with the mascot/logo: keychains, USB drives (preloaded with company profile + case studies), stickers. Quantities and vendor need MZ cost approval.'},
+  {id:'ws-pr',group:'pr',title:'Press releases (2–3) to trade & local media',owner:'Sheeza',entity:'both',mz:1,desc:'PR 1: "Eracore exhibits at NECA 2026" (booth, what we show). PR 2: data center electrical preconstruction angle. PR 3: Genusys AI. Distributed via the Media outreach tab.'},
+  {id:'ws-outreach',group:'pr',title:'Media & podcast outreach',owner:'Daniyal',entity:'both',mz:0,desc:'Run from the Media outreach tab — 27 seeded outlets + podcasts, per-contact status and notes.'},
+  {id:'ws-brochures',group:'print',title:'Brochures',owner:'Bilal',entity:'both',mz:1,desc:'Service brochure (Eracore) + product brochure (Genusys AI). Print-ready PDFs, bleed and CMYK checked, vendor lead time confirmed.'},
+  {id:'ws-profile',group:'print',title:'Company profile',owner:'Bilal',entity:'both',mz:1,desc:'Company profile booklet — projects, capabilities, team, contact. Writers: Hamna/Sheeza. Also loaded on USB merch.'},
+  {id:'ws-cards',group:'print',title:'Business cards',owner:'Bilal',entity:'both',mz:0,desc:'Cards for every booth staffer, both entities. QR to landing page on the back.'},
+  {id:'ws-standees',group:'print',title:'Standees',owner:'Bilal',entity:'both',mz:1,desc:'Roll-up standees for the booth — one per entity plus mascot standee. Confirm booth dimensions from exhibitor kit first.'},
+  {id:'ws-backdrops',group:'print',title:'Backdrops',owner:'Bilal',entity:'both',mz:1,desc:'Booth backdrop — designs already shared in the team channel. Final sizes from exhibitor kit; confirm print vendor and delivery to Mandalay Bay or hand-carry.'}
+];
+
+// Standalone tracker contacts, ported as-is (ids preserved so old status carries over)
+const EV_OR_SEED=[
+  {id:1,type:'media',outlet:'Las Vegas Review-Journal',name:'Newsroom',email:'news@reviewjournal.com',focus:'local'},
+  {id:2,type:'media',outlet:'Vegas Inc.',name:'Newsroom',email:'newsroom@vegasinc.com',focus:'local'},
+  {id:3,type:'media',outlet:'Nevada Business Magazine',name:'Newsroom',email:'info@nevadabusiness.com',focus:'local'},
+  {id:4,type:'media',outlet:'KTNV Channel 13 Las Vegas',name:'Desk',email:'desk@ktnv.com',focus:'local-tv'},
+  {id:5,type:'media',outlet:'KLAS 8 News Now',name:'News Desk',email:'newsdesk@8newsnow.com',focus:'local-tv'},
+  {id:6,type:'media',outlet:'FOX5 Las Vegas',name:'Newsroom',email:'newsroom@fox5vegas.com',focus:'local-tv'},
+  {id:7,type:'media',outlet:'News 3 Las Vegas (KSNV)',name:'Newsroom',email:'newsroom@news3lv.com',focus:'local-tv'},
+  {id:8,type:'media',outlet:'Las Vegas Sun',name:'Newsroom',email:'newsroom@lasvegassun.com',focus:'local'},
+  {id:9,type:'media',outlet:'Las Vegas Weekly',name:'Newsroom',email:'news@lasvegasweekly.com',focus:'local'},
+  {id:10,type:'media',outlet:'EC&M Magazine',name:'Editorial',email:'ecm@endeavorb2b.com',focus:'trade'},
+  {id:11,type:'media',outlet:'Engineering News-Record (ENR)',name:'Editorial',email:'enr@enr.com',focus:'trade'},
+  {id:12,type:'media',outlet:'Electrical Wholesaling',name:'Julie Lucy',email:'jlucy@endeavorb2b.com',focus:'trade'},
+  {id:13,type:'media',outlet:'Utility Dive',name:'Editor',email:'editor@utilitydive.com',focus:'trade'},
+  {id:14,type:'media',outlet:'Construction Dive',name:'Press',email:'press@industrydive.com',focus:'trade'},
+  {id:15,type:'media',outlet:'Electrical Business Magazine',name:'Editorial',email:'acapkun@ebmag.com',focus:'trade'},
+  {id:16,type:'media',outlet:'Building Design + Construction',name:'Editorial',email:'bdceditor@sgcmail.com',focus:'trade'},
+  {id:17,type:'media',outlet:'tED Magazine',name:'Sara Costa',email:'scosta@naed.org',focus:'trade'},
+  {id:18,type:'media',outlet:'Electric Energy Online',name:'Editorial',email:'info@electricenergyonline.com',focus:'trade'},
+  {id:19,type:'media',outlet:'Charged EVs Magazine',name:'Editorial',email:'content@chargedevs.com',focus:'trade'},
+  {id:20,type:'media',outlet:'Builder Magazine',name:'Editorial',email:'editorial@builderonline.com',focus:'trade'},
+  {id:21,type:'media',outlet:'EE Times Magazine',name:'Brett Brune',email:'brett.brune@aspencore.com',focus:'trade'},
+  {id:22,type:'media',outlet:'BuiltWorlds Magazine',name:'Editorial',email:'info@builtworlds.com',focus:'trade'},
+  {id:23,type:'media',outlet:'EC&M Magazine',name:'Ellen Parson',email:'eparson@endeavorb2b.com',focus:'trade'},
+  {id:24,type:'podcast',outlet:'The Tool Show',name:'Rob & Sarah',email:'rob@coptool.com / sarah@toolshow.com',focus:'podcast'},
+  {id:25,type:'podcast',outlet:'Electrician U',name:'Dustin',email:'Dustin@ElectricianU.com',focus:'podcast'},
+  {id:26,type:'podcast',outlet:'Electrician 360',name:'Jeff',email:'Jeff@the360electrician.com',focus:'podcast'},
+  {id:27,type:'podcast',outlet:'The Powerline Podcast',name:'Team',email:'powerlinepodcast@quantaservices.com',focus:'podcast'}
+];
+const EV_OR_STATUS={pending:'Pending',sent:'Sent',responded:'Responded',covered:'Covered'};
+// Inline-handler argument: numbers raw, strings single-quoted (safe inside double-quoted onclick attrs)
+const evArg=v=>typeof v==='number'?v:"'"+String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'";
+
+// ── load / save ───────────────────────────────────────────────
+function evLoad(){
+  const savedMeta=Store.get(evKey('meta'),null);
+  evMeta=Object.assign({},EV_DEFAULT_META,savedMeta||{});
+  evMeta.accounts=Object.assign({},EV_DEFAULT_META.accounts,(savedMeta&&savedMeta.accounts)||{});
+  ['eracore','genusys'].forEach(e=>{evMeta.accounts[e]=Object.assign({},EV_DEFAULT_META.accounts[e],evMeta.accounts[e]||{});});
+
+  evWs=Store.get(evKey('workstreams'),[]);
+  if(!Array.isArray(evWs))evWs=[];
+  const have=new Set(evWs.map(w=>w.id));
+  let seeded=false;
+  EV_WS_SEED.forEach(s=>{if(!have.has(s.id)){evWs.push({...s,status:'notstarted',due:'',notes:[],created:Date.now(),updatedAt:Date.now()});seeded=true;}});
+  evWs.forEach(w=>{if(!EV_WS_STATUS[w.status])w.status='notstarted';if(!EV_WS_GROUPS[w.group])w.group='booth';if(!Array.isArray(w.notes))w.notes=[];});
+
+  const or=Store.get(evKey('outreach'),null);
+  evOr=(or&&typeof or==='object')?or:{state:{},custom:[]};
+  if(!evOr.state||typeof evOr.state!=='object')evOr.state={};
+  if(!Array.isArray(evOr.custom))evOr.custom=[];
+  // One-time import from the standalone tracker file, if it was ever opened in this browser
+  if(!Object.keys(evOr.state).length){
+    const legacy=Store.get('neca_outreach',null);
+    if(legacy&&typeof legacy==='object'&&Object.keys(legacy).length){evOr.state=legacy;seeded=true;}
+  }
+  if(seeded)evSave();
+}
+function evSave(){
+  Store.set(evKey('meta'),evMeta);
+  Store.set(evKey('workstreams'),evWs);
+  Store.set(evKey('outreach'),evOr);
+}
+
+// ── page & tabs ───────────────────────────────────────────────
+function evSwitchEvent(id,el){
+  if(!EV_EVENTS[id])return;
+  evCurrent=id;
+  document.querySelectorAll('#ev-evtabs .ev-evtab').forEach(b=>b.classList.remove('active'));
+  if(el)el.classList.add('active');else document.getElementById('ev-evtab-'+id)?.classList.add('active');
+  Object.keys(EV_EVENTS).forEach(k=>{const blk=document.getElementById('ev-event-'+k);if(blk)blk.style.display=k===id?'block':'none';});
+  evLoad();evRender();
+}
+function evSwitchTab(t,el){
+  document.querySelectorAll('#page-events .itab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-events .itab-pane').forEach(v=>v.classList.remove('active'));
+  if(el)el.classList.add('active');else document.getElementById('ev-itab-'+t)?.classList.add('active');
+  const view=document.getElementById('ev-view-'+t);if(view)view.classList.add('active');
+  if(t==='board')evWsRender();
+  if(t==='outreach')evOrRender();
+  if(t==='details')evDetRender();
+}
+function evRender(){
+  safeRun('ev hero',evRenderHero);
+  safeRun('ev board',evWsRender);
+  safeRun('ev outreach',evOrRender);
+  safeRun('ev details',evDetRender);
+}
+function evDaysTo(dateStr){
+  if(!dateStr)return null;
+  const t=new Date();t.setHours(0,0,0,0);
+  const d=new Date(dateStr+'T00:00:00');
+  return Math.round((d-t)/86400000);
+}
+function evRenderHero(){
+  const days=evDaysTo(evMeta.start);
+  const endDays=evDaysTo(evMeta.end);
+  const dEl=document.getElementById('ev-h-days'),lEl=document.getElementById('ev-h-days-lbl'),tEl=document.getElementById('ev-evtab-neca2026-cd');
+  if(dEl&&lEl){
+    if(days===null){dEl.textContent='—';lEl.textContent='set dates in Event details';}
+    else if(days>0){dEl.textContent=days;lEl.textContent='days to show open · '+evMeta.city;}
+    else if(endDays!==null&&endDays>=0){dEl.textContent='LIVE';lEl.textContent='show is on · '+evMeta.venue;}
+    else{dEl.textContent='DONE';lEl.textContent='show ended '+Math.abs(endDays)+' days ago';}
+  }
+  if(tEl)tEl.textContent=days!==null&&days>0?'· '+days+'d':'';
+  const done=evWs.filter(w=>w.status==='done').length;
+  const blocked=evWs.filter(w=>w.status==='blocked'||(w.status==='review'&&w.mz)).length;
+  const all=evOrAllContacts();
+  const sent=all.filter(c=>['sent','responded','covered'].includes(evOrStatus(c.id))).length;
+  const covered=all.filter(c=>evOrStatus(c.id)==='covered').length;
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('ev-h-ws',done+'/'+evWs.length);
+  set('ev-h-blocked',blocked);
+  set('ev-h-sent',sent);
+  set('ev-h-covered',covered);
+  set('ev-itab-board-n',evWs.length-done);
+  evPaintBadge();
+  set('ev-itab-outreach-n',all.length-sent);
+}
+
+function evPaintBadge(){const b=document.getElementById('nb-events');if(b)b.textContent=evWs.filter(w=>w.status!=='done').length;}
+
+// ── strategy board ────────────────────────────────────────────
+function evWsFilter(status,btn){
+  evWsStatusFilter=status;
+  document.querySelectorAll('#page-events button[id^="ev-wsf-"]').forEach(b=>{b.style.background='';b.style.color='';b.style.borderColor='';});
+  if(btn){btn.style.background='var(--text)';btn.style.color='white';btn.style.borderColor='var(--text)';}
+  evWsRender();
+}
+function evWsOwners(){
+  const s=new Set(EV_TEAM);evWs.forEach(w=>{if(w.owner)w.owner.split(/[,/&]/).map(x=>x.trim()).filter(Boolean).forEach(x=>s.add(x));});
+  return [...s].sort((a,b)=>a.localeCompare(b));
+}
+function evWsRender(){
+  const list=document.getElementById('ev-ws-list');if(!list)return;
+  // owner filter options (preserve selection)
+  const ownerSel=document.getElementById('ev-wsf-owner');
+  if(ownerSel){const cur=ownerSel.value;ownerSel.innerHTML='<option value="">All owners</option>'+evWsOwners().map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');ownerSel.value=cur;}
+  const dl=document.getElementById('ev-owner-list');if(dl)dl.innerHTML=evWsOwners().map(o=>`<option value="${esc(o)}">`).join('');
+  const ownerF=ownerSel?ownerSel.value:'';
+  const entF=document.getElementById('ev-wsf-entity')?.value||'';
+  const rows=evWs.filter(w=>{
+    if(evWsStatusFilter&&w.status!==evWsStatusFilter)return false;
+    if(ownerF&&!(w.owner||'').toLowerCase().includes(ownerF.toLowerCase()))return false;
+    if(entF&&w.entity!=='both'&&w.entity!==entF)return false;
+    return true;
+  });
+  if(!rows.length){list.innerHTML='<div class="empty">No workstreams match this filter.</div>';evRenderHero();return;}
+  const today=new Date();today.setHours(0,0,0,0);
+  list.innerHTML=EV_WS_GROUP_ORDER.map(g=>{
+    const items=rows.filter(w=>w.group===g);if(!items.length)return'';
+    const allInGroup=evWs.filter(w=>w.group===g);
+    const done=allInGroup.filter(w=>w.status==='done').length;
+    const pct=allInGroup.length?Math.round(done/allInGroup.length*100):0;
+    const grp=EV_WS_GROUPS[g];
+    return `<div class="ev-group">
+      <div class="ev-group-hd"><h4>${esc(grp.label)}</h4>${grp.major?'<span class="ev-major">Major takeaway</span>':''}<div class="ev-prog"><div style="width:${pct}%"></div></div><span class="ev-prog-lbl">${done}/${allInGroup.length} done</span></div>
+      <div class="ev-ws-grid">${items.map(w=>{
+        let dueCls='',dueTxt='';
+        if(w.due){const dd=evDaysTo(w.due);dueTxt=(dd<0?Math.abs(dd)+'d overdue':dd===0?'due today':'due in '+dd+'d');dueCls=w.status==='done'?'':(dd<0?'over':dd<=3?'soon':'');if(w.status==='done')dueTxt='done';}
+        return `<div class="ev-ws st-${esc(w.status)}" onclick="evWsOpenEdit('${esc(w.id)}')">
+          <div class="ev-ws-title">${esc(w.title)}</div>
+          ${w.desc?`<div class="ev-ws-desc">${esc(w.desc)}</div>`:''}
+          <div class="ev-ws-meta">
+            <span class="ev-st ${esc(w.status)}" title="Click to cycle status" onclick="event.stopPropagation();evWsCycleStatus('${esc(w.id)}')">${esc(EV_WS_STATUS[w.status].label)}</span>
+            <span class="ev-ent ${esc(w.entity||'both')}">${w.entity==='eracore'?'Eracore':w.entity==='genusys'?'Genusys AI':'Both'}</span>
+            ${w.mz?'<span class="ev-mz" title="Needs MZ sign-off">MZ gate</span>':''}
+            ${w.owner?`<span class="pill pill-open"><i class="ti ti-user" style="font-size:11px"></i> ${esc(w.owner)}</span>`:''}
+            ${dueTxt?`<span class="ev-due ${dueCls}">${esc(dueTxt)}</span>`:''}
+          </div>
+        </div>`;}).join('')}</div>
+    </div>`;
+  }).join('');
+  evRenderHero();
+}
+function evWsCycleStatus(id){
+  const w=evWs.find(x=>x.id===id);if(!w)return;
+  if(w.status==='blocked'){w.status='inprogress';}
+  else{const i=EV_WS_STATUS_CYCLE.indexOf(w.status);w.status=EV_WS_STATUS_CYCLE[(i+1)%EV_WS_STATUS_CYCLE.length];}
+  w.updatedAt=Date.now();
+  evSave();evWsRender();
+  toast(w.title+' → '+EV_WS_STATUS[w.status].label);
+}
+function evWsOpenAdd(){
+  document.getElementById('ev-ws-modal-title').textContent='Add workstream';
+  document.getElementById('ev-ws-f-id').value='';
+  ['title','owner','due','desc'].forEach(f=>{document.getElementById('ev-ws-f-'+f).value='';});
+  document.getElementById('ev-ws-f-group').value='booth';
+  document.getElementById('ev-ws-f-status').value='notstarted';
+  document.getElementById('ev-ws-f-entity').value='both';
+  document.getElementById('ev-ws-f-mz').value='0';
+  document.getElementById('ev-ws-notes-wrap').style.display='none';
+  document.getElementById('ev-ws-del-btn').style.display='none';
+  document.getElementById('ev-modal-ws').classList.add('open');
+}
+function evWsOpenEdit(id){
+  const w=evWs.find(x=>x.id===id);if(!w)return;
+  document.getElementById('ev-ws-modal-title').textContent='Edit workstream';
+  document.getElementById('ev-ws-f-id').value=w.id;
+  document.getElementById('ev-ws-f-title').value=w.title||'';
+  document.getElementById('ev-ws-f-owner').value=w.owner||'';
+  document.getElementById('ev-ws-f-due').value=w.due||'';
+  document.getElementById('ev-ws-f-desc').value=w.desc||'';
+  document.getElementById('ev-ws-f-group').value=w.group;
+  document.getElementById('ev-ws-f-status').value=w.status;
+  document.getElementById('ev-ws-f-entity').value=w.entity||'both';
+  document.getElementById('ev-ws-f-mz').value=w.mz?'1':'0';
+  document.getElementById('ev-ws-notes-wrap').style.display='block';
+  document.getElementById('ev-ws-del-btn').style.display='inline-flex';
+  evWsRenderNotes(w);
+  document.getElementById('ev-modal-ws').classList.add('open');
+}
+function evWsRenderNotes(w){
+  const el=document.getElementById('ev-ws-notes');if(!el)return;
+  const notes=(w.notes||[]).slice().reverse();
+  el.innerHTML=notes.length?notes.map(n=>`<div class="ev-note"><div class="d">${esc(n.date)}${n.by?' · '+esc(n.by):''}</div>${esc(n.text)}</div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">No progress notes yet.</div>';
+}
+function evWsAddNote(){
+  const id=document.getElementById('ev-ws-f-id').value;const w=evWs.find(x=>x.id===id);if(!w)return;
+  const inp=document.getElementById('ev-ws-f-note');const text=(inp.value||'').trim();if(!text){toast('Type a note first');return;}
+  const s=(typeof getSession==='function')?getSession():null;
+  w.notes.push({text,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),by:s?.username||''});
+  w.updatedAt=Date.now();inp.value='';
+  evSave();evWsRenderNotes(w);toast('Note logged');
+}
+function evWsSave(){
+  const id=document.getElementById('ev-ws-f-id').value;
+  const title=document.getElementById('ev-ws-f-title').value.trim();
+  if(!title){toast('Workstream needs a name');return;}
+  const data={
+    title,group:document.getElementById('ev-ws-f-group').value,
+    owner:document.getElementById('ev-ws-f-owner').value.trim(),
+    status:document.getElementById('ev-ws-f-status').value,
+    due:document.getElementById('ev-ws-f-due').value,
+    entity:document.getElementById('ev-ws-f-entity').value,
+    mz:document.getElementById('ev-ws-f-mz').value==='1'?1:0,
+    desc:document.getElementById('ev-ws-f-desc').value.trim(),
+    updatedAt:Date.now()
+  };
+  if(id){const w=evWs.find(x=>x.id===id);if(w)Object.assign(w,data);}
+  else evWs.push({id:'ws-'+Date.now().toString(36),notes:[],created:Date.now(),...data});
+  evSave();evWsRender();
+  document.getElementById('ev-modal-ws').classList.remove('open');
+  toast(id?'Workstream updated':'Workstream added');
+}
+function evWsDelete(){
+  const id=document.getElementById('ev-ws-f-id').value;const w=evWs.find(x=>x.id===id);if(!w)return;
+  if(!confirm('Delete "'+w.title+'"? This cannot be undone.'))return;
+  evWs=evWs.filter(x=>x.id!==id);
+  evSave();evWsRender();
+  document.getElementById('ev-modal-ws').classList.remove('open');
+  toast('Workstream deleted');
+}
+
+// ── media outreach ────────────────────────────────────────────
+function evOrAllContacts(){return EV_OR_SEED.concat(evOr.custom||[]);}
+function evOrStatus(id){return (evOr.state[id]&&evOr.state[id].status)||'pending';}
+function evOrNotes(id){return (evOr.state[id]&&evOr.state[id].notes)||[];}
+function evOrEntity(id){return (evOr.state[id]&&evOr.state[id].entity)||'eracore';}
+function evOrFilter(f,btn){
+  evOrFilterVal=f;
+  document.querySelectorAll('#page-events .ev-or-f').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  evOrRenderList();
+}
+function evOrSearch(q){evOrSearchVal=(q||'').toLowerCase();evOrRenderList();}
+function evOrMatches(c){
+  if(evOrFilterVal!=='all'&&evOrStatus(c.id)!==evOrFilterVal)return false;
+  if(evOrSearchVal&&!c.outlet.toLowerCase().includes(evOrSearchVal)&&!(c.name||'').toLowerCase().includes(evOrSearchVal))return false;
+  return true;
+}
+function evOrRender(){evOrRenderList();if(evOrActive!==null)evOrRenderMain(evOrActive);evRenderHero();}
+function evOrRenderList(){
+  const el=document.getElementById('ev-or-list');if(!el)return;
+  const all=evOrAllContacts();
+  const item=c=>`<div class="ev-or-item ${evOrActive===c.id?'active':''}" onclick="evOrSelect(${evArg(c.id)})">
+      <div class="ev-or-dot ${esc(evOrStatus(c.id))}"></div>
+      <div style="min-width:0;flex:1"><div class="ev-or-name">${esc(c.outlet)}</div><div class="ev-or-sub">${esc(c.name||'')}${c.focus?' · '+esc({trade:'Trade',local:'Local',"local-tv":'Local TV',podcast:'Podcast'}[c.focus]||c.focus):''}</div></div>
+    </div>`;
+  const media=all.filter(c=>c.type==='media'&&evOrMatches(c));
+  const pods=all.filter(c=>c.type==='podcast'&&evOrMatches(c));
+  const none='<div style="padding:10px 12px;font-size:12px;color:var(--text3)">No contacts match.</div>';
+  el.innerHTML=`<div class="ev-or-sect">Print & online media · ${media.length}</div>${media.map(item).join('')||none}
+    <div class="ev-or-sect">Podcasts · ${pods.length}</div>${pods.map(item).join('')||none}`;
+}
+function evOrSelect(id){evOrActive=id;evOrRenderList();evOrRenderMain(id);}
+function evOrSetStatus(id,status){
+  if(!EV_OR_STATUS[status])return;
+  if(!evOr.state[id])evOr.state[id]={};
+  evOr.state[id].status=status;
+  if(status==='sent'&&!evOr.state[id].sentDate)evOr.state[id].sentDate=new Date().toISOString().split('T')[0];
+  evSave();evOrRender();
+  toast('Status → '+EV_OR_STATUS[status]);
+}
+function evOrSetEntity(id,entity){
+  if(!evOr.state[id])evOr.state[id]={};
+  evOr.state[id].entity=entity;
+  evSave();evOrRenderMain(id);
+}
+function evOrAddNote(id){
+  const inp=document.getElementById('ev-or-note-inp');if(!inp)return;
+  const text=(inp.value||'').trim();if(!text){toast('Type a note first');return;}
+  if(!evOr.state[id])evOr.state[id]={};
+  if(!Array.isArray(evOr.state[id].notes))evOr.state[id].notes=[];
+  evOr.state[id].notes.push({text,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})});
+  evSave();evOrRenderMain(id);toast('Note saved');
+}
+// Template variables — everything comes from Event details
+function evOrVars(c){
+  const ent=evOrEntity(c.id);
+  const company=ent==='genusys'?'Genusys AI':ent==='both'?'Eracore and Genusys AI':'Eracore';
+  const bp=ent==='genusys'?evMeta.bpGenusys:ent==='both'?(evMeta.bpEracore+' '+evMeta.bpGenusys):evMeta.bpEracore;
+  const booth=evMeta.booth?('Booth #'+evMeta.booth):'Booth #[____]';
+  const sender=[evMeta.sname||'[Your Name]',(evMeta.stitle||'[Title]')+' | '+company,[evMeta.semail,evMeta.sphone].filter(Boolean).join(' | ')||'[Email] | [Phone]',booth].join('\n');
+  const dates=evMeta.start&&evMeta.end?evOrFmtRange(evMeta.start,evMeta.end):'[dates]';
+  return {company,bp,booth,sender,dates,venue:evMeta.venue||'[venue]',city:evMeta.city||'Las Vegas',presskit:evMeta.presskit,hours:evMeta.hours||''};
+}
+function evOrFmtRange(a,b){
+  const A=new Date(a+'T00:00:00'),B=new Date(b+'T00:00:00');
+  const m=d=>d.toLocaleDateString('en-US',{month:'long'});
+  return m(A)===m(B)?`${m(A)} ${A.getDate()}–${B.getDate()}, ${B.getFullYear()}`:`${m(A)} ${A.getDate()} – ${m(B)} ${B.getDate()}, ${B.getFullYear()}`;
+}
+function evOrTemplates(c){
+  const v=evOrVars(c);const name=c.name&&!/newsroom|desk|editorial|editor|press|team|info/i.test(c.name)?c.name:'';
+  const hi=name?`Hi ${name},`:'Hi there,';
+  const kit=v.presskit?`Press kit: ${v.presskit}`:'A full press kit and hi-res images are available on request.';
+  if(c.focus==='podcast')return[
+    {label:'Podcast guest pitch',subject:`Live from NECA 2026 — would love to join ${c.outlet}`,body:`${hi}
+
+I'm reaching out from ${v.company} — we're exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.city} (${v.dates}), ${v.booth}.
+
+${v.bp}
+
+Your audience of electrical professionals is exactly the community we work with every day, and we'd love to explore joining ${c.outlet} for an episode — recorded on the show floor or remotely after the event.
+
+A few angles that tend to land with contractors:
+• What actually goes wrong between the engineer's drawings and the crew in the field — and how electrical subs are closing that gap with BIM before mobilising
+• Prefab and offsite electrical: why coordination has to happen in the model first
+• Data center electrical work in 2026 — what it demands from ECs that other project types don't
+
+Happy to jump on a 15-minute call to see if there's a fit.
+
+Best,
+${v.sender}`},
+    {label:'Short follow-up',subject:`Quick follow-up — NECA 2026 podcast idea`,body:`${hi}
+
+Following up on my note about NECA 2026 in ${v.city}. We'd love to bring ${c.outlet} listeners behind the scenes of electrical preconstruction — either at ${v.booth} or remotely afterwards.
+
+Would a 15-minute call this week work?
+
+Thanks,
+${v.sender}`}
+  ];
+  if(c.focus==='local-tv')return[
+    {label:'TV segment pitch',subject:`Story pitch: NECA's 125th anniversary brings the electrical industry to Las Vegas`,body:`${hi}
+
+I'm reaching out from ${v.company}, exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.dates}.
+
+NECA is celebrating its 125th anniversary this year, and the show brings thousands of electrical contractors, engineers and 400+ exhibitors to ${v.city}. The floor is very visual — live demonstrations, prefab assemblies, technology on display.
+
+${v.bp}
+
+We'd be glad to host your crew at ${v.booth} for:
+• A live look at a data center electrical model — coordination happening in 3D before anything is built
+• An interview with ${evMeta.sname||'our leadership'} on the electrical workforce and the data center construction boom
+• An introduction to NECA leadership for the broader industry angle
+
+Show hours:
+${v.hours}
+
+Happy to coordinate access and timing so it's easy for your team.
+
+Thank you,
+${v.sender}`}
+  ];
+  if(c.focus==='local')return[
+    {label:'Local press pitch',subject:`NECA 2026 brings the $255B electrical industry to Las Vegas — local story opportunity`,body:`${hi}
+
+I'm writing on behalf of ${v.company}, an exhibitor at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.dates}.
+
+This year's show marks NECA's 125th anniversary and brings thousands of electrical contractors and industry leaders to ${v.city}. It's the largest electrical construction trade show in North America.
+
+${v.bp}
+
+We'll be at ${v.booth} and are happy to give ${c.outlet} a briefing ahead of the floor opening.
+
+Angles that may interest your readers:
+• Las Vegas as the host city for a 125-year-old national industry milestone
+• The electrical workforce behind Nevada's data center and hospitality construction
+• How electrical contractors are using 3D coordination to hit compressed schedules
+
+${kit}
+
+Would you like to schedule a briefing?
+
+Best regards,
+${v.sender}`}
+  ];
+  // trade
+  return[
+    {label:'Trade media pitch',subject:`NECA 2026 ${v.booth}: electrical preconstruction for data centers — briefing opportunity`,body:`${hi}
+
+I hope ${c.outlet} is covering NECA 2026 in ${v.city} this year. I'm reaching out from ${v.company} — we're exhibiting at ${v.booth} and wanted to get on your radar early.
+
+${v.bp}
+
+Why this is relevant to your readers right now: roughly half of NECA attendees already perform prefab or offsite work, and data center electrical scopes are outgrowing the traditional "figure it out in the field" model. We're showing how electrical subs are moving coordination into the model before the crew mobilises.
+
+We can offer:
+• A live walkthrough of a coordinated data center electrical model at the booth
+• An interview with ${evMeta.sname||'our leadership'} on electrical preconstruction and the EC labor gap
+• Customer references from electrical contractors we work with
+
+${kit}
+
+Are you covering NECA this year? Happy to get something on the calendar.
+
+Best,
+${v.sender}`},
+    {label:'Announcement / news email',subject:`${v.company} at NECA 2026 — what we're showing at ${v.booth}`,body:`${hi}
+
+Ahead of NECA 2026 (${v.dates}, ${v.venue}), ${v.company} is sharing what we'll be showing at ${v.booth} — and wanted ${c.outlet} to have it first.
+
+${v.bp}
+
+At the show:
+• Live data center electrical model — coordination, clash resolution and shop drawing generation
+• Prefab-ready outputs: spool drawings, hanger layouts, conduit racks
+• ${evMeta.bpGenusys&&!/set in Event details/.test(evMeta.bpGenusys)?evMeta.bpGenusys:'[Genusys AI demo — set boilerplate in Event details]'}
+
+${kit}
+
+Would ${c.outlet} be interested in a briefing or a short write-up?
+
+Thank you,
+${v.sender}`}
+  ];
+}
+function evOrSocial(c){
+  const v=evOrVars(c);
+  return[
+    {platform:'LinkedIn DM',text:`Hi [Name] — I saw you cover the electrical construction space at ${c.outlet}. We're exhibiting at NECA 2026 in ${v.city} (${v.booth}) showing how electrical subs are moving data center coordination into BIM before the crew mobilises. Happy to send a press kit or set up a quick briefing at the booth.`},
+    {platform:'X / Twitter DM',text:`Hey — we're at NECA 2026 (${v.booth}) with live data center electrical models. Think it'd fit ${c.outlet}'s audience. Happy to send details or connect on the floor. ⚡`},
+    {platform:'Instagram DM',text:`Hi! ${v.company} is exhibiting at NECA 2026 in ${v.city} (${v.booth}). We'd love to have you stop by for content — 3D electrical models on screen, live. Happy to coordinate a time.`}
+  ];
+}
+function evOrRenderMain(id){
+  const el=document.getElementById('ev-or-main');if(!el)return;
+  const c=evOrAllContacts().find(x=>x.id===id);
+  if(!c){el.innerHTML='<div class="empty">Select a media outlet or podcast on the left.</div>';return;}
+  const status=evOrStatus(id),ent=evOrEntity(id),notes=evOrNotes(id).slice().reverse();
+  const tpls=evOrTemplates(c),social=evOrSocial(c);
+  const isCustom=(evOr.custom||[]).some(x=>x.id===id);
+  const sbtn=Object.entries(EV_OR_STATUS).map(([s,l])=>`<button class="ev-or-sbtn ${status===s?'on-'+s:''}" onclick="evOrSetStatus(${evArg(id)},'${s}')">${{pending:'<i class="ti ti-circle"></i>',sent:'<i class="ti ti-send"></i>',responded:'<i class="ti ti-message"></i>',covered:'<i class="ti ti-check"></i>'}[s]} ${l}</button>`).join('');
+  const entBtn=e=>`<button class="ev-or-f ${ent===e?'active':''}" onclick="evOrSetEntity(${evArg(id)},'${e}')">${e==='eracore'?'Eracore':e==='genusys'?'Genusys AI':'Both'}</button>`;
+  const sentInfo=evOr.state[id]?.sentDate?`<span style="font-size:11px;color:var(--text3)">first sent ${esc(evOr.state[id].sentDate)}</span>`:'';
+  el.innerHTML=`
+    <div class="ev-or-head">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div><h3>${esc(c.outlet)}</h3><div style="font-size:12px;color:var(--text2)">${esc(c.name||'')} · <span class="ev-or-email">${esc(c.email)}</span></div></div>
+        <div style="display:flex;gap:6px;align-items:center">${sentInfo}${isCustom?`<button class="btn btn-sm" style="color:var(--red)" onclick="evOrDeleteContact(${evArg(id)})"><i class="ti ti-trash"></i></button>`:''}</div>
+      </div>
+      <div class="ev-or-statusrow">${sbtn}<div class="ev-or-entsel">Pitch as: ${entBtn('eracore')}${entBtn('genusys')}${entBtn('both')}</div></div>
+    </div>
+    <div class="itabs" style="margin-bottom:12px">
+      <button class="itab active" id="ev-ortab-email" onclick="evOrTab('email',this)"><i class="ti ti-mail"></i> Email templates</button>
+      <button class="itab" id="ev-ortab-social" onclick="evOrTab('social',this)"><i class="ti ti-brand-linkedin"></i> Social DMs</button>
+      <button class="itab" id="ev-ortab-notes" onclick="evOrTab('notes',this)"><i class="ti ti-notes"></i> Notes <span class="itab-badge">${notes.length}</span></button>
+    </div>
+    <div id="ev-orpane-email" class="itab-pane active">
+      ${tpls.map((t,i)=>`<div class="ev-tpl">
+        <div class="ev-tpl-hd"><span>${esc(t.label)}</span><button class="btn btn-sm" onclick="evOrCopy(${evArg(id)},${i})"><i class="ti ti-copy"></i> Copy email</button></div>
+        <div class="ev-tpl-row"><div class="k">To</div><div class="v">${esc(c.email)}</div></div>
+        <div class="ev-tpl-row"><div class="k">Subject</div><div class="v subj">${esc(t.subject)}</div></div>
+        <div class="ev-tpl-body">${esc(t.body)}</div>
+      </div>`).join('')}
+    </div>
+    <div id="ev-orpane-social" class="itab-pane">
+      ${social.map((s,i)=>`<div class="ev-tpl"><div class="ev-tpl-hd"><span>${esc(s.platform)}</span><button class="btn btn-sm" onclick="evOrCopySocial(${evArg(id)},${i})"><i class="ti ti-copy"></i> Copy</button></div><div class="ev-tpl-body">${esc(s.text)}</div></div>`).join('')}
+    </div>
+    <div id="ev-orpane-notes" class="itab-pane">
+      <div style="display:flex;gap:6px;margin-bottom:10px"><input id="ev-or-note-inp" placeholder="e.g. Sent pitch 1, asked for booth photos…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)" onkeydown="if(event.key==='Enter')evOrAddNote(${evArg(id)})"><button class="btn btn-primary" onclick="evOrAddNote(${evArg(id)})"><i class="ti ti-plus"></i> Save note</button></div>
+      ${notes.length?notes.map(n=>`<div class="ev-note"><div class="d">${esc(n.date)}</div>${esc(n.text)}</div>`).join(''):'<div class="empty" style="padding:1.5rem">No notes yet for this contact.</div>'}
+    </div>`;
+}
+function evOrTab(t,el){
+  document.querySelectorAll('#ev-or-main .itab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#ev-or-main .itab-pane').forEach(p=>p.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('ev-orpane-'+t)?.classList.add('active');
+}
+function evCopyText(text,okMsg){
+  const done=()=>toast(okMsg||'Copied to clipboard');
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(done).catch(()=>evCopyFallback(text,done));}
+  else evCopyFallback(text,done);
+}
+function evCopyFallback(text,done){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');done();}catch(e){toast('Copy failed — select the text manually');}
+  document.body.removeChild(ta);
+}
+function evOrCopy(id,i){
+  const c=evOrAllContacts().find(x=>x.id===id);if(!c)return;
+  const t=evOrTemplates(c)[i];if(!t)return;
+  evCopyText(`To: ${c.email}\nSubject: ${t.subject}\n\n${t.body}`,'Email copied — paste into Outlook');
+}
+function evOrCopySocial(id,i){
+  const c=evOrAllContacts().find(x=>x.id===id);if(!c)return;
+  const s=evOrSocial(c)[i];if(!s)return;
+  evCopyText(s.text,s.platform+' message copied');
+}
+function evOrOpenAddContact(){
+  ['outlet','name','email'].forEach(f=>{document.getElementById('ev-c-f-'+f).value='';});
+  document.getElementById('ev-c-f-type').value='media';
+  document.getElementById('ev-c-f-focus').value='trade';
+  document.getElementById('ev-modal-contact').classList.add('open');
+}
+function evOrSaveContact(){
+  const outlet=document.getElementById('ev-c-f-outlet').value.trim();
+  const email=document.getElementById('ev-c-f-email').value.trim();
+  if(!outlet||!email){toast('Outlet and email are required');return;}
+  const type=document.getElementById('ev-c-f-type').value;
+  let focus=document.getElementById('ev-c-f-focus').value;
+  if(type==='podcast')focus='podcast';
+  const c={id:'c-'+Date.now().toString(36),type,outlet,name:document.getElementById('ev-c-f-name').value.trim()||'Editorial',email,focus,custom:true};
+  evOr.custom.push(c);
+  evSave();
+  document.getElementById('ev-modal-contact').classList.remove('open');
+  evSwitchTab('outreach',document.getElementById('ev-itab-outreach'));
+  evOrSelect(c.id);
+  toast('Contact added');
+}
+function evOrDeleteContact(id){
+  const c=(evOr.custom||[]).find(x=>x.id===id);if(!c)return;
+  if(!confirm('Remove '+c.outlet+' from the tracker?'))return;
+  evOr.custom=evOr.custom.filter(x=>x.id!==id);
+  delete evOr.state[id];
+  if(evOrActive===id)evOrActive=null;
+  evSave();
+  const el=document.getElementById('ev-or-main');if(el)el.innerHTML='<div class="empty">Select a media outlet or podcast on the left.</div>';
+  evOrRender();toast('Contact removed');
+}
+
+// ── event details & accounts ──────────────────────────────────
+const EV_DET_FIELDS={name:'name',booth:'booth',venue:'venue',city:'city',start:'start',end:'end',hours:'hours',url:'url',sname:'sname',stitle:'stitle',semail:'semail',sphone:'sphone','bp-eracore':'bpEracore','bp-genusys':'bpGenusys',presskit:'presskit'};
+function evDetRender(){
+  Object.entries(EV_DET_FIELDS).forEach(([f,k])=>{const el=document.getElementById('ev-d-'+f);if(el)el.value=evMeta[k]||'';});
+  ['eracore','genusys'].forEach(e=>{
+    const a=evMeta.accounts[e]||{};
+    ['url','user','pass','notes'].forEach(f=>{const el=document.getElementById('ev-a-'+e+'-'+f);if(el)el.value=a[f]||'';});
+  });
+}
+function evDetSave(){
+  Object.entries(EV_DET_FIELDS).forEach(([f,k])=>{const el=document.getElementById('ev-d-'+f);if(el)evMeta[k]=el.value.trim();});
+  evSave();evRenderHero();
+  if(evOrActive!==null)evOrRenderMain(evOrActive);
+  toast('Event details saved');
+}
+function evAccSave(entity){
+  if(!evMeta.accounts[entity])evMeta.accounts[entity]={};
+  ['url','user','pass','notes'].forEach(f=>{const el=document.getElementById('ev-a-'+entity+'-'+f);if(el)evMeta.accounts[entity][f]=el.value;});
+  evSave();toast((entity==='genusys'?'Genusys AI':'Eracore')+' NECA account saved');
+}
+function evTogglePw(inputId,btn){
+  const inp=document.getElementById(inputId);if(!inp)return;
+  const show=inp.type==='password';inp.type=show?'text':'password';
+  if(btn)btn.innerHTML=show?'<i class="ti ti-eye-off"></i>':'<i class="ti ti-eye"></i>';
 }
 
 // ══════════════════════════════════════════════════════════════
