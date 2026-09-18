@@ -999,6 +999,12 @@ select.sm:focus{border-color:var(--blue)}
 
 <!-- SOCIAL MEDIA -->
 <div id="page-socialdash" class="page">
+  <div class="perf-strip" style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem;width:fit-content">
+    <button class="btn" onclick="perfGo('master')" style="border-radius:0;border:none;font-size:12px"><i class="ti ti-filter"></i> Master view</button>
+    <button class="btn" onclick="perfGo('seo')" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-search"></i> SEO / AIEO</button>
+    <button class="btn" onclick="perfGo('paid')" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-chart-bar"></i> Paid</button>
+    <button class="btn" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px;background:var(--blue-l);color:var(--blue);font-weight:700"><i class="ti ti-brand-linkedin"></i> Social</button>
+  </div>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
     <div><div class="pt">Social Media</div><div class="ps">LinkedIn · Meta (Facebook + Instagram) · YouTube — live organic analytics</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1115,6 +1121,12 @@ select.sm:focus{border-color:var(--blue)}
 
 <!-- PAID PERFORMANCE -->
 <div id="page-paiddash" class="page">
+  <div class="perf-strip" style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem;width:fit-content">
+    <button class="btn" onclick="perfGo('master')" style="border-radius:0;border:none;font-size:12px"><i class="ti ti-filter"></i> Master view</button>
+    <button class="btn" onclick="perfGo('seo')" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-search"></i> SEO / AIEO</button>
+    <button class="btn" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px;background:var(--blue-l);color:var(--blue);font-weight:700"><i class="ti ti-chart-bar"></i> Paid</button>
+    <button class="btn" onclick="perfGo('social')" style="border-radius:0;border:none;border-left:1px solid var(--border);font-size:12px"><i class="ti ti-brand-linkedin"></i> Social</button>
+  </div>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
     <div><div class="pt">Paid Marketing</div><div class="ps">Google Ads · Meta · LinkedIn · Microsoft — blended KPIs + per-platform breakdown</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1137,12 +1149,14 @@ select.sm:focus{border-color:var(--blue)}
     </div>
   </div>
   <!-- Blended KPI counters -->
-  <div class="counters" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.5rem">
+  <div class="counters" style="grid-template-columns:repeat(7,1fr);margin-bottom:1.5rem">
     <div class="counter"><div class="counter-val" id="paid-total-spend">—</div><div class="counter-lbl">Total spend (<span id="paid-range-label">7d</span>)</div></div>
     <div class="counter"><div class="counter-val" id="paid-total-clicks">—</div><div class="counter-lbl">Total clicks</div></div>
     <div class="counter"><div class="counter-val" id="paid-total-impressions">—</div><div class="counter-lbl">Impressions</div></div>
     <div class="counter"><div class="counter-val" style="color:var(--green)" id="paid-total-conversions">—</div><div class="counter-lbl">Conversions</div></div>
     <div class="counter"><div class="counter-val" style="color:var(--amber)" id="paid-avg-cpl">—</div><div class="counter-lbl">Avg. CPL</div></div>
+    <div class="counter"><div class="counter-val" style="color:var(--blue)" id="paid-cpm">—</div><div class="counter-lbl">CPM</div></div>
+    <div class="counter" title="Paid spend ÷ leads marked Converted in the Outreach tracker (paid ad source, form date in range)"><div class="counter-val" style="color:var(--purple)" id="paid-cac">—</div><div class="counter-lbl">CPA / CAC <span id="paid-cac-sub" style="opacity:.7"></span></div></div>
   </div>
   <!-- Tabs -->
   <div class="itabs">
@@ -1608,6 +1622,14 @@ select.sm:focus{border-color:var(--blue)}
         <button class="btn" id="yt-oauth-disconnect" onclick="disconnectYouTubeOAuth()" style="display:none;color:var(--red)"><i class="ti ti-plug-off"></i> Disconnect</button>
       </div>
       <div id="yt-oauth-status" style="margin-top:.5rem"></div>
+      <details style="margin-top:.75rem">
+        <summary style="font-size:12px;color:var(--text2);cursor:pointer">Alternative: paste a refresh token from Google OAuth Playground</summary>
+        <div style="font-size:12px;color:var(--text2);margin:.5rem 0;line-height:1.5">Use this if the Google sign-in ends on a "400 malformed" page (a known Google issue with YouTube Brand Account channels). Mint the token at <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:var(--blue)">developers.google.com/oauthplayground</a> with your own Client ID/Secret and the two YouTube scopes, signed in as the channel owner, then paste the <strong>refresh token</strong> here.</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="yt-rt-paste" placeholder="1//0g…" style="flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text)">
+          <button class="btn btn-primary" onclick="saveYtRefreshToken()"><i class="ti ti-check"></i> Save & test</button>
+        </div>
+      </details>
       <div id="soc-yt-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
     </div>
   </div>
@@ -6001,6 +6023,8 @@ function savePlaybookRow(){
 }
 
 // ── PERFORMANCE TABS ──────────────────────────────────────────────────────
+// Cross-page Marketing Performance strip (SEO / Paid / Social dashboards live on their own pages)
+function perfGo(tab){navTo('marketingperf');setTimeout(()=>switchPerfTab(tab,document.getElementById('mptab-'+tab)),80);}
 function switchPerfTab(tab, el){
   ['master','seo','paid','social'].forEach(t=>{
     const pane=document.getElementById('mpv-'+t);if(pane)pane.style.display=t===tab?'block':'none';
@@ -10921,6 +10945,22 @@ function updatePaidConnectBtns(){
   set('li-btn','ti-brand-linkedin',liAdsData?'LinkedIn \u2713':lErr&&liCreds?'Reconnect LinkedIn':liCreds?'LinkedIn':'Connect LinkedIn',!!liAdsData,!liAdsData&&!!lErr,liAdsData?'Updated '+fmtAgo(liAdsData.fetched):lErr?apiErrorHint('linkedin',lErr.msg).title:'');
 }
 
+// CAC for the paid date range: spend ÷ Outreach-tracker leads from a paid ad source,
+// marked Converted, whose form date falls inside the range. Same customer definition
+// the Paid Performance tab uses month-by-month — this is the live, range-scoped version.
+function paidCacForRange(totalSpend){
+  try{
+    if(typeof ltLoad==='function'&&(!ltLeads||!ltLeads.length))safeRun('lt for cac',ltLoad);
+    const r=getPaidDateRange();
+    const customers=(ltLeads||[]).filter(l=>{
+      if(!PAID_HIST_SRC_MAP[(l.sourceRaw||'').toLowerCase()])return false;
+      const d=(l.formDate||'').slice(0,10);if(!d)return false;
+      if(d<r.start||d>r.end)return false;
+      return ltGetStatus(l)==='converted';
+    }).length;
+    return {customers,value:customers>0?totalSpend/customers:0};
+  }catch(e){return {customers:0,value:0};}
+}
 function updatePaidBlendedKPIs(){
   loadPaidAdsData();
   const totalSpend=(gadsData?.spend||0)+(metaAdsData?.spend||0)+(liAdsData?.spend||0)+(msAdsData?.spend||0);
@@ -10930,6 +10970,11 @@ function updatePaidBlendedKPIs(){
   const avgCPL=totalConv>0?(totalSpend/totalConv).toFixed(0):'—';
   const fmt=(n,prefix='')=>n>0?prefix+n.toLocaleString():'—';
   const el=id=>document.getElementById(id);
+  const cpm=totalImpr>0&&totalSpend>0?totalSpend/totalImpr*1000:null;
+  const cac=paidCacForRange(totalSpend);
+  if(el('paid-cpm'))el('paid-cpm').textContent=cpm!==null?'$'+cpm.toFixed(2):'—';
+  if(el('paid-cac'))el('paid-cac').textContent=cac.customers>0?'$'+Math.round(cac.value).toLocaleString():'—';
+  if(el('paid-cac-sub'))el('paid-cac-sub').textContent=cac.customers>0?'· '+cac.customers+' customer'+(cac.customers===1?'':'s'):(totalSpend>0?'· 0 customers':'');
   if(el('paid-total-spend'))el('paid-total-spend').textContent=totalSpend>0?'$'+Math.round(totalSpend).toLocaleString():'—';
   if(el('paid-total-clicks'))el('paid-total-clicks').textContent=fmt(totalClicks);
   if(el('paid-total-impressions'))el('paid-total-impressions').textContent=totalImpr>0?(totalImpr/1000).toFixed(1)+'K':'—';
@@ -10977,12 +11022,14 @@ function renderPaidOverview(){
   el.innerHTML=`
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1.25rem">
     <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.05em">Blended — All platforms · ${getPaidDateLabel()}</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px">
       ${[['Total Spend',totalSpend>0?'$'+Math.round(totalSpend).toLocaleString():'—','var(--text)'],
          ['Total Clicks',totalClicks>0?totalClicks.toLocaleString():'—','var(--text)'],
          ['Impressions',totalImpr>0?(totalImpr/1000).toFixed(1)+'K':'—','var(--text)'],
          ['Blended CTR',blendedCTR,'var(--green)'],
-         ['Avg CPL',blendedCPL,'var(--amber)']
+         ['Avg CPL',blendedCPL,'var(--amber)'],
+         ['CPM',totalImpr>0&&totalSpend>0?'$'+(totalSpend/totalImpr*1000).toFixed(2):'—','var(--blue)'],
+         ['CPA / CAC',(()=>{const c=paidCacForRange(totalSpend);return c.customers>0?'$'+Math.round(c.value).toLocaleString()+'<span style="font-size:11px;font-weight:400;color:var(--text3)"> · '+c.customers+' cust.</span>':'—';})(),'var(--purple)']
       ].map(([l,v,c])=>`<div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:.25rem">${l}</div>
         <div style="font-size:1.375rem;font-weight:700;color:${c}">${v}</div>
@@ -11010,6 +11057,7 @@ function renderPaidOverview(){
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Impressions</span><span style="font-weight:600">${p.impressions?(p.impressions/1000).toFixed(1)+'K':'—'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">Conversions</span><span style="font-weight:600;color:var(--green)">${p.conv?.toLocaleString()||'—'}</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">CPL</span><span style="font-weight:600;color:var(--amber)">${p.conv&&p.spend?'$'+Math.round(p.spend/p.conv):'—'}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--text2)">CPM</span><span style="font-weight:600;color:var(--blue)">${p.impressions&&p.spend?'$'+(p.spend/p.impressions*1000).toFixed(2):'—'}</span></div>
       </div>
       ${totalSpend>0&&p.spend?`<div style="margin-top:.75rem"><div style="background:var(--surface2);border-radius:3px;height:4px;overflow:hidden"><div style="background:${p.color};height:100%;width:${Math.round(p.spend/totalSpend*100)}%"></div></div><div style="font-size:10px;color:var(--text3);margin-top:3px">${Math.round(p.spend/totalSpend*100)}% of spend</div></div>`:''}
     </div>`).join('')}
@@ -13298,6 +13346,19 @@ async function exchangeYtRedirectUrl(){
     toast('Exchange failed: '+e.message);
   }
 }
+async function saveYtRefreshToken(){
+  const rt=(document.getElementById('yt-rt-paste')?.value||'').trim();
+  if(!rt){toast('Paste the refresh token first');return;}
+  localStorage.setItem('ec-yt-refresh-token',rt);ytToken='';localStorage.removeItem('ec-yt-token');
+  const ok=await refreshYtAccessToken();
+  const statusEl=document.getElementById('yt-oauth-status');
+  if(!ok){localStorage.removeItem('ec-yt-refresh-token');updateYtOAuthState();if(statusEl)statusEl.innerHTML='<div style="color:var(--red);font-size:13px;padding:.5rem 0">Google rejected that refresh token — make sure the Playground used the same Client ID/Secret as Settings, and copy the whole token.</div>';toast('Refresh token rejected');return;}
+  updateYtOAuthState();
+  if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ YouTube token accepted. Fetching analytics…</div>';
+  socLiveData.youtube.error=null;document.getElementById('yt-rt-paste').value='';
+  toast('YouTube connected');
+  try{await fetchYouTubeOrganic();}catch(e){}
+}
 function disconnectYouTubeOAuth(){
   if(!confirm('Disconnect the dedicated YouTube login? YouTube will fall back to the shared Google token.'))return;
   localStorage.removeItem('ec-yt-refresh-token');localStorage.removeItem('ec-yt-token');ytToken='';
@@ -14254,7 +14315,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.1';
+const APP_HTML_VERSION='12.3';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -14378,7 +14439,7 @@ const EDIT_GUARDS={
   evOrSetStatus:'events',evOrSetEntity:'events',evOrAddNote:'events',evOrOpenAddContact:'events',evOrSaveContact:'events',evOrDeleteContact:'events',
   evDetSave:'events',evAccSave:'events',
   // YouTube dedicated login
-  connectYouTubeOAuth:'settings',exchangeYtRedirectUrl:'settings',disconnectYouTubeOAuth:'settings',
+  connectYouTubeOAuth:'settings',exchangeYtRedirectUrl:'settings',disconnectYouTubeOAuth:'settings',saveYtRefreshToken:'settings',
   // Inventory reference library
   invOpenAdd:'inventory',invSave:'inventory',invOpenEdit:'inventory',invDelete:'inventory',
   // Paid historical review
