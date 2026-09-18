@@ -13255,16 +13255,18 @@ async function refreshYtAccessToken(){
 function ytBearer(){return hasYtOwnToken()?ytToken:gscToken;}
 function connectYouTubeOAuth(){
   if(!GSC_CLIENT_ID||!GSC_CLIENT_SECRET){toast('Save your Google Client ID and Secret in Settings first');return;}
-  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${encodeURIComponent('http://localhost')}&response_type=code&scope=${encodeURIComponent(YT_SCOPES)}&access_type=offline&prompt=consent%20select_account`;
+  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${encodeURIComponent('http://localhost')}&response_type=code&scope=${encodeURIComponent(YT_SCOPES)}&access_type=offline&prompt=consent`;
   const statusEl=document.getElementById('yt-oauth-status');
   if(statusEl)statusEl.innerHTML=`<div style="background:var(--blue-l);border:1px solid var(--blue)30;border-radius:var(--r);padding:.875rem 1rem;font-size:13px;color:var(--text);line-height:1.6">
-    <strong>Step 1:</strong> A Google sign-in page opens. Choose <strong>marketingeracore@gmail.com</strong> (the channel owner) — not your personal account — and approve the two YouTube permissions.<br>
+    <strong>Step 1:</strong> A Google sign-in page opens. If it's already showing your personal account, close it, open an <strong>incognito window</strong>, sign in there as <strong>marketingeracore@gmail.com</strong> only, then paste the link below into that window. Approve the two YouTube permissions.<br>
+    <div style="margin:6px 0"><input type="text" id="yt-oauth-link" readonly style="width:100%;height:30px;padding:0 8px;border:1px solid var(--border);border-radius:var(--r);font-size:11px;font-family:monospace;background:var(--surface2);color:var(--text)" onclick="this.select()"></div>
     <strong>Step 2:</strong> Your browser then shows a "localhost refused to connect" page. That's expected.<br>
     <strong>Step 3:</strong> Copy the full URL from the address bar and paste it here.<br>
     <div style="display:flex;gap:8px;margin-top:10px">
       <input type="text" id="yt-redirect-url" placeholder="http://localhost/?code=4/0AX…" style="flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text)">
       <button class="btn btn-primary" onclick="exchangeYtRedirectUrl()"><i class="ti ti-check"></i> Connect</button>
     </div></div>`;
+  const linkEl=document.getElementById('yt-oauth-link');if(linkEl)linkEl.value=url;
   window.open(url,'_blank');
 }
 async function exchangeYtRedirectUrl(){
@@ -14252,7 +14254,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.0';
+const APP_HTML_VERSION='12.1';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
