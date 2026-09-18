@@ -1595,14 +1595,19 @@ select.sm:focus{border-color:var(--blue)}
         <span id="soc-yt-settings-badge" style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--text3)">Not configured</span>
       </div>
       <div style="font-size:12px;color:var(--text2);margin-bottom:.75rem;line-height:1.5">
-        Uses your existing Google OAuth (same as Search Console + GA4). You only need the <strong>YouTube Channel ID</strong>.<br>
+        YouTube Analytics only releases channel data to the <strong>channel owner</strong>. Connect YouTube below while signed in as the account that owns the channel (<code>marketingeracore@gmail.com</code>) — this token is separate from the Search Console / GA4 login, so neither breaks the other.<br>
         Channel ID: go to <a href="https://studio.youtube.com" target="_blank" style="color:var(--blue)">studio.youtube.com</a> → Settings → Channel → Basic info → Channel ID (starts with <em>UC…</em>).<br>After saving, go to <strong>SEO/AIEO → Connect Google</strong> and re-authorise — this adds <code>youtube.readonly</code> scope to your existing Google token (one-time, doesn't break anything).
       </div>
       <div style="margin-bottom:8px">
         <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">YouTube Channel ID</label>
         <input type="text" id="soc-yt-channel-id-input" placeholder="UCxxxxxxxxxxxxxxxxxxxxxxxxx" style="width:100%;height:34px;padding:0 9px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;background:var(--surface);color:var(--text);outline:none">
       </div>
-      <button class="btn btn-primary" onclick="saveSocYtSettings()"><i class="ti ti-check"></i> Save & test</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="saveSocYtSettings()"><i class="ti ti-check"></i> Save channel ID</button>
+        <button class="btn" id="yt-oauth-btn" onclick="connectYouTubeOAuth()"><i class="ti ti-brand-youtube"></i> <span id="yt-oauth-btn-lbl">Connect YouTube as channel owner</span></button>
+        <button class="btn" id="yt-oauth-disconnect" onclick="disconnectYouTubeOAuth()" style="display:none;color:var(--red)"><i class="ti ti-plug-off"></i> Disconnect</button>
+      </div>
+      <div id="yt-oauth-status" style="margin-top:.5rem"></div>
       <div id="soc-yt-settings-msg" style="font-size:12px;color:var(--text2);margin-top:.5rem"></div>
     </div>
   </div>
@@ -2007,6 +2012,7 @@ select.sm:focus{border-color:var(--blue)}
             <div class="field"><label>Sender email</label><input id="ev-d-semail" onchange="evDetSave()"></div>
             <div class="field"><label>Sender phone</label><input id="ev-d-sphone" onchange="evDetSave()"></div>
           </div>
+          <div class="field"><label>Spokesperson for interviews <span>— named in pitches</span></label><input id="ev-d-spokes" placeholder="Muhamed Zekic, CEO" onchange="evDetSave()"></div>
           <div class="field"><label>Eracore boilerplate <span>— one or two sentences</span></label><textarea id="ev-d-bp-eracore" rows="3" onchange="evDetSave()"></textarea></div>
           <div class="field"><label>Genusys AI boilerplate <span>— one or two sentences</span></label><textarea id="ev-d-bp-genusys" rows="3" onchange="evDetSave()"></textarea></div>
           <div class="field"><label>Press kit link <span>— optional</span></label><input id="ev-d-presskit" placeholder="https://…" onchange="evDetSave()"></div>
@@ -5190,12 +5196,12 @@ function onNavTo(id){
   if(id==='agents'){agentLoad();agentRender();}
   if(id==='marketingperf')switchPerfTab('master',document.getElementById('mptab-master'));
   if(id==='reporting')switchReportTab('mzreport',document.getElementById('rpt-tab-mzreport'));
-  if(id==='settings'){initSettings();initSocSettings();const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
+  if(id==='settings'){initSettings();initSocSettings();try{updateYtOAuthState();}catch(e){}const vs=document.getElementById('html-version-stamp');if(vs)vs.textContent=APP_HTML_VERSION;}
   if(id==='tasks')renderTasks();
   if(id==='seodash'){loadSEO();loadBingData();loadCalls();updateSEOTopCounters();renderSEODash();
     // Auto-fetch if credentials already saved
     if(localStorage.getItem('ec-gsc-token')){try{fetchLiveData();fetchConversionData();}catch(e){}}
-    if(localStorage.getItem('ec-bing-wmt-key')){try{fetchBingWmt();}catch(e){}}
+    if(localStorage.getItem('ec-bing-wmt-key')){try{fetchBingWmt({silent:true});}catch(e){}}
     try{autoRefreshBing();}catch(e){}
     seoSourcesLoad();
     try{fetchPageSpeed();}catch(e){}
@@ -10581,7 +10587,10 @@ function renderSEODash(){
 
 
 // ── BING WEBMASTER TOOLS — live API ───────────────────────────────────────
-async function fetchBingWmt(){
+async function fetchBingWmt(opts){
+  // opts.silent = background refresh (boot / page open). A silent refresh must NEVER
+  // launch the OAuth popup — only the explicit "Connect Bing" button may do that.
+  const silent=!!(opts&&opts.silent);
   // Check if we have a stored OAuth access token
   const storedToken=localStorage.getItem('ec-bing-oauth-token');
   const tokenExpiry=parseInt(localStorage.getItem('ec-bing-oauth-expiry')||'0');
@@ -10597,7 +10606,13 @@ async function fetchBingWmt(){
     const newToken=await refreshBingToken(refreshToken);
     if(newToken){await fetchBingDataWithToken(newToken);return;}
   }
-  // No valid token — start OAuth flow
+  // No valid token
+  if(silent){
+    const lbl=document.getElementById('bing-btn-label');if(lbl)lbl.textContent='Connect Bing';
+    console.log('[Bing] no OAuth token — skipping background refresh, waiting for Connect Bing click');
+    return;
+  }
+  // Explicit user action — start OAuth flow
   startBingOAuth();
 }
 
@@ -12425,7 +12440,7 @@ function autoFetchConnectedSources(){
   const q=[];const add=(ok,fn)=>{if(ok)q.push(fn);};
   const gsc=localStorage.getItem('ec-gsc-token')||localStorage.getItem('ec-gsc-refresh-token');
   add(gsc,()=>{try{if(localStorage.getItem('ec-gsc-token'))gscToken=localStorage.getItem('ec-gsc-token');}catch(e){}return Promise.resolve().then(()=>fetchLiveData()).then(()=>fetchConversionData()).catch(()=>{});});
-  add(localStorage.getItem('ec-bing-wmt-key'),()=>Promise.resolve().then(()=>fetchBingWmt()).catch(()=>{}));
+  add(localStorage.getItem('ec-bing-wmt-key'),()=>Promise.resolve().then(()=>fetchBingWmt({silent:true})).catch(()=>{}));
   add(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'),()=>fetchGoogleAdsLive({silent:true}));
   add(getMetaToken()&&getMetaAdAccount(),()=>fetchMetaAds({silent:true}));
   add(getLinkedInToken()&&getLinkedInAdAccount(),()=>fetchLinkedInAds({silent:true}));
@@ -13217,6 +13232,84 @@ function processIgData({insights,user,media,errors}){
 // Uses existing Google OAuth (gscToken / ga4Token chain)
 // YouTube Analytics API: /v2/reports
 // ════════════════════════════════════════════════════════════════
+// ── YouTube dedicated OAuth ─────────────────────────────────────
+// YouTube Analytics only serves the channel OWNER. The shared Google token
+// (GSC/GA4) belongs to a channel manager, so YouTube gets its own refresh
+// token, minted with only the two YouTube scopes. Falls back to the shared
+// token when no dedicated one exists (legacy behaviour).
+const YT_SCOPES='https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly';
+let ytToken=localStorage.getItem('ec-yt-token')||'';
+function hasYtOwnToken(){return !!localStorage.getItem('ec-yt-refresh-token');}
+async function refreshYtAccessToken(){
+  const rt=localStorage.getItem('ec-yt-refresh-token');
+  if(!rt)return refreshAccessToken(); // legacy: shared Google token
+  try{
+    const res=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&refresh_token=${rt}&grant_type=refresh_token`});
+    const data=await res.json();
+    if(data.access_token){ytToken=data.access_token;localStorage.setItem('ec-yt-token',ytToken);return true;}
+    console.log('[YouTube] token refresh failed',data);
+  }catch(e){console.log('[YouTube] token refresh error',e);}
+  return false;
+}
+function ytBearer(){return hasYtOwnToken()?ytToken:gscToken;}
+function connectYouTubeOAuth(){
+  if(!GSC_CLIENT_ID||!GSC_CLIENT_SECRET){toast('Save your Google Client ID and Secret in Settings first');return;}
+  const url=`https://accounts.google.com/o/oauth2/v2/auth?client_id=${GSC_CLIENT_ID}&redirect_uri=${encodeURIComponent('http://localhost')}&response_type=code&scope=${encodeURIComponent(YT_SCOPES)}&access_type=offline&prompt=consent%20select_account`;
+  const statusEl=document.getElementById('yt-oauth-status');
+  if(statusEl)statusEl.innerHTML=`<div style="background:var(--blue-l);border:1px solid var(--blue)30;border-radius:var(--r);padding:.875rem 1rem;font-size:13px;color:var(--text);line-height:1.6">
+    <strong>Step 1:</strong> A Google sign-in page opens. Choose <strong>marketingeracore@gmail.com</strong> (the channel owner) — not your personal account — and approve the two YouTube permissions.<br>
+    <strong>Step 2:</strong> Your browser then shows a "localhost refused to connect" page. That's expected.<br>
+    <strong>Step 3:</strong> Copy the full URL from the address bar and paste it here.<br>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input type="text" id="yt-redirect-url" placeholder="http://localhost/?code=4/0AX…" style="flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:monospace;background:var(--surface);color:var(--text)">
+      <button class="btn btn-primary" onclick="exchangeYtRedirectUrl()"><i class="ti ti-check"></i> Connect</button>
+    </div></div>`;
+  window.open(url,'_blank');
+}
+async function exchangeYtRedirectUrl(){
+  const raw=(document.getElementById('yt-redirect-url')?.value||'').trim();
+  if(!raw){toast('Paste the full redirect URL first');return;}
+  let code='';
+  try{code=new URL(raw).searchParams.get('code')||'';}catch(e){const m=raw.match(/[?&]code=([^&]+)/);if(m)code=decodeURIComponent(m[1]);}
+  if(!code){toast('Could not find code in URL — paste the full address bar URL');return;}
+  const statusEl=document.getElementById('yt-oauth-status');
+  try{
+    const res=await fetch('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:`code=${encodeURIComponent(code)}&client_id=${GSC_CLIENT_ID}&client_secret=${GSC_CLIENT_SECRET}&redirect_uri=http://localhost&grant_type=authorization_code`});
+    const data=await res.json();
+    if(data.refresh_token){
+      localStorage.setItem('ec-yt-refresh-token',data.refresh_token);
+      if(data.access_token){ytToken=data.access_token;localStorage.setItem('ec-yt-token',ytToken);}
+      updateYtOAuthState();
+      if(statusEl)statusEl.innerHTML='<div style="color:var(--green);font-size:13px;padding:.5rem 0">✓ YouTube connected with its own channel-owner token. Fetching analytics…</div>';
+      socLiveData.youtube.error=null;
+      toast('YouTube connected');
+      try{await fetchYouTubeOrganic();}catch(e){}
+    }else{
+      const msg=data.error_description||data.error||JSON.stringify(data);
+      if(statusEl)statusEl.innerHTML=`<div style="color:var(--red);font-size:13px;padding:.5rem 0">Failed: ${esc(msg)}</div>`;
+      toast('YouTube auth failed: '+msg);
+    }
+  }catch(e){
+    if(statusEl)statusEl.innerHTML=`<div style="color:var(--red);font-size:13px;padding:.5rem 0">Error: ${esc(e.message)}</div>`;
+    toast('Exchange failed: '+e.message);
+  }
+}
+function disconnectYouTubeOAuth(){
+  if(!confirm('Disconnect the dedicated YouTube login? YouTube will fall back to the shared Google token.'))return;
+  localStorage.removeItem('ec-yt-refresh-token');localStorage.removeItem('ec-yt-token');ytToken='';
+  updateYtOAuthState();
+  const statusEl=document.getElementById('yt-oauth-status');if(statusEl)statusEl.innerHTML='';
+  toast('YouTube login removed');
+}
+function updateYtOAuthState(){
+  const own=hasYtOwnToken();
+  const lbl=document.getElementById('yt-oauth-btn-lbl');if(lbl)lbl.textContent=own?'✓ Connected as channel owner — reconnect':'Connect YouTube as channel owner';
+  const btn=document.getElementById('yt-oauth-btn');if(btn)btn.classList.toggle('btn-success',own);
+  const dc=document.getElementById('yt-oauth-disconnect');if(dc)dc.style.display=own?'inline-flex':'none';
+}
+
 async function fetchYouTubeOrganic(opts={}){
   const channelId=getSocYtChannelId();
   if(!channelId){if(!opts.silent){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');}return;}
@@ -13225,28 +13318,30 @@ async function fetchYouTubeOrganic(opts={}){
   try{
     // Ensure Google token (needs youtube.readonly scope — added in v10.4)
     // If you get scope errors, re-authorise Google in SEO/AIEO → Connect Google
-    if(!gscToken){const ok=await refreshAccessToken();if(!ok)throw new Error('Google token refresh failed — reconnect Google in SEO/AIEO');}
+    if(!ytBearer()){const ok=await refreshYtAccessToken();if(!ok)throw new Error(hasYtOwnToken()?'YouTube token refresh failed — reconnect in Settings → Social Media':'Google token refresh failed — reconnect Google in SEO/AIEO');}
     const range=socDateRange();
     // YouTube Data API v3 — uses same Google OAuth, no extra scope needed beyond youtube.readonly
     // NOTE: if you get 403 scope errors, go to SEO/AIEO and click "Connect Google" to re-authorise
     //       with the updated scope that now includes youtube.readonly
     const ytUrl=`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${range.since}&endDate=${range.until}&metrics=views,estimatedMinutesWatched,subscribersGained,subscribersLost&dimensions=day&sort=day`;
-    const r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    const ytErr=(e)=>{
+      const m=(e&&e.message)||JSON.stringify(e);
+      if(e&&(e.code===403||/forbidden/i.test(m)))return new Error('Forbidden — the Google account connected is not the channel owner. Settings → Social Media → "Connect YouTube as channel owner" and sign in as marketingeracore@gmail.com.');
+      return new Error(m);
+    };
+    let r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
     if(r.status===401){
-      const ok=await refreshAccessToken();
-      if(!ok)throw new Error('Could not refresh Google token');
-      const r2=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
-      const d2=await r2.json();
-      if(d2.error)throw new Error(d2.error.message||JSON.stringify(d2.error));
-      processYtData(d2,range);
-    } else {
-      const d=await r.json();
-      if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-      processYtData(d,range);
+      const ok=await refreshYtAccessToken();
+      if(!ok)throw new Error('Could not refresh YouTube token');
+      r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
     }
+    const d=await r.json();
+    if(d.error)throw ytErr(d.error);
+    if(r.status===403)throw ytErr({code:403});
+    processYtData(d,range);
     // Also get subscriber count via YouTube Data API
     const dataUrl=`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`;
-    const dr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(dataUrl)}&authHeader=${encodeURIComponent('Bearer '+gscToken)}`);
+    const dr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(dataUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
     const dd=await dr.json();
     if(dd.items&&dd.items[0]){
       const stats=dd.items[0].statistics;
@@ -13519,8 +13614,8 @@ function renderSocMetaTab(){
 function renderSocYouTubeTab(){
   const el=document.getElementById('soc-tab-youtube');if(!el)return;
   const yt=socLiveData.youtube;
-  if(!getSocYtChannelId()){el.innerHTML=socConnectPrompt('youtube','YouTube Analytics','#FF0000','ti-brand-youtube','Add your YouTube Channel ID in Settings → Social Media. Uses your existing Google OAuth (same as Search Console).');return;}
-  if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses your Google OAuth token — make sure YouTube Analytics API is enabled in Google Cloud</div></div>`;return;}
+  if(!getSocYtChannelId()){el.innerHTML=socConnectPrompt('youtube','YouTube Analytics','#FF0000','ti-brand-youtube','Add your YouTube Channel ID in Settings → Social Media, then click "Connect YouTube as channel owner" and sign in as marketingeracore@gmail.com.');return;}
+  if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses the dedicated YouTube login if connected in Settings → Social Media, otherwise the shared Google token</div></div>`;return;}
   if(yt.error&&!yt.loaded){
     const isScope=yt.error.toLowerCase().includes('scope')||yt.error.toLowerCase().includes('permission')||yt.error.toLowerCase().includes('insufficientpermissions');
     el.innerHTML=socErrorCard(yt.error)+(isScope?`
@@ -14157,7 +14252,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='11.7';
+const APP_HTML_VERSION='12.0';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -14280,6 +14375,8 @@ const EDIT_GUARDS={
   evWsOpenAdd:'events',evWsOpenEdit:'events',evWsSave:'events',evWsDelete:'events',evWsCycleStatus:'events',evWsAddNote:'events',
   evOrSetStatus:'events',evOrSetEntity:'events',evOrAddNote:'events',evOrOpenAddContact:'events',evOrSaveContact:'events',evOrDeleteContact:'events',
   evDetSave:'events',evAccSave:'events',
+  // YouTube dedicated login
+  connectYouTubeOAuth:'settings',exchangeYtRedirectUrl:'settings',disconnectYouTubeOAuth:'settings',
   // Inventory reference library
   invOpenAdd:'inventory',invSave:'inventory',invOpenEdit:'inventory',invDelete:'inventory',
   // Paid historical review
@@ -15780,7 +15877,8 @@ const EV_DEFAULT_META={
   hours:'Mon Oct 5: 11:30am – 5:00pm\nTue Oct 6: 11:30am – 4:00pm\nWed Oct 7: 9:00am – 1:00pm',
   url:'https://www.necashow.org',
   booth:'',
-  sname:'',stitle:'Marketing Director',semail:'',sphone:'',
+  sname:'Eracore Marketing Team',stitle:'Marketing',semail:'marketing@eracore.com',sphone:'',
+  spokesperson:'Muhamed Zekic, CEO',
   bpEracore:'Eracore is an electrical BIM/VDC preconstruction engineering firm. We produce coordinated electrical BIM models and shop drawings for electrical subcontractors on US data center and mission-critical projects, so their crews build from drawings that are already clash-free and prefab-ready.',
   bpGenusys:'Genusys AI is [one-line description — set in Event details].',
   presskit:'',
@@ -15864,6 +15962,9 @@ function evLoad(){
   evMeta=Object.assign({},EV_DEFAULT_META,savedMeta||{});
   evMeta.accounts=Object.assign({},EV_DEFAULT_META.accounts,(savedMeta&&savedMeta.accounts)||{});
   ['eracore','genusys'].forEach(e=>{evMeta.accounts[e]=Object.assign({},EV_DEFAULT_META.accounts[e],evMeta.accounts[e]||{});});
+  // Outreach is sent from the shared marketing mailbox — fill blanks with those defaults
+  if(!evMeta.semail){evMeta.semail=EV_DEFAULT_META.semail;evMeta.sname=evMeta.sname||EV_DEFAULT_META.sname;evMeta.stitle=evMeta.stitle||EV_DEFAULT_META.stitle;}
+  if(!evMeta.spokesperson)evMeta.spokesperson=EV_DEFAULT_META.spokesperson;
 
   evWs=Store.get(evKey('workstreams'),[]);
   if(!Array.isArray(evWs))evWs=[];
@@ -16138,9 +16239,11 @@ function evOrVars(c){
   const company=ent==='genusys'?'Genusys AI':ent==='both'?'Eracore and Genusys AI':'Eracore';
   const bp=ent==='genusys'?evMeta.bpGenusys:ent==='both'?(evMeta.bpEracore+' '+evMeta.bpGenusys):evMeta.bpEracore;
   const booth=evMeta.booth?('Booth #'+evMeta.booth):'Booth #[____]';
-  const sender=[evMeta.sname||'[Your Name]',(evMeta.stitle||'[Title]')+' | '+company,[evMeta.semail,evMeta.sphone].filter(Boolean).join(' | ')||'[Email] | [Phone]',booth].join('\n');
+  const sname=evMeta.sname||'Eracore Marketing Team';
+  const sender=[sname,(new RegExp(company.split(' ')[0],'i').test(sname)?'':company+(evMeta.stitle&&!/team/i.test(sname)?' | '+evMeta.stitle:'')),[evMeta.semail||'marketing@eracore.com',evMeta.sphone].filter(Boolean).join(' | '),booth].filter(Boolean).join('\n');
+  const spokes=evMeta.spokesperson||'our leadership';
   const dates=evMeta.start&&evMeta.end?evOrFmtRange(evMeta.start,evMeta.end):'[dates]';
-  return {company,bp,booth,sender,dates,venue:evMeta.venue||'[venue]',city:evMeta.city||'Las Vegas',presskit:evMeta.presskit,hours:evMeta.hours||''};
+  return {company,bp,booth,sender,spokes,dates,venue:evMeta.venue||'[venue]',city:evMeta.city||'Las Vegas',presskit:evMeta.presskit,hours:evMeta.hours||''};
 }
 function evOrFmtRange(a,b){
   const A=new Date(a+'T00:00:00'),B=new Date(b+'T00:00:00');
@@ -16149,12 +16252,12 @@ function evOrFmtRange(a,b){
 }
 function evOrTemplates(c){
   const v=evOrVars(c);const name=c.name&&!/newsroom|desk|editorial|editor|press|team|info/i.test(c.name)?c.name:'';
-  const hi=name?`Hi ${name},`:'Hi there,';
+  const hi=name?`Hi ${name.split(/\s+/)[0]},`:'Hi there,';
   const kit=v.presskit?`Press kit: ${v.presskit}`:'A full press kit and hi-res images are available on request.';
   if(c.focus==='podcast')return[
     {label:'Podcast guest pitch',subject:`Live from NECA 2026 — would love to join ${c.outlet}`,body:`${hi}
 
-I'm reaching out from ${v.company} — we're exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.city} (${v.dates}), ${v.booth}.
+I'm writing from the marketing team at ${v.company} — we're exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.city} (${v.dates}), ${v.booth}.
 
 ${v.bp}
 
@@ -16165,7 +16268,7 @@ A few angles that tend to land with contractors:
 • Prefab and offsite electrical: why coordination has to happen in the model first
 • Data center electrical work in 2026 — what it demands from ECs that other project types don't
 
-Happy to jump on a 15-minute call to see if there's a fit.
+Happy to set up a 15-minute call with ${v.spokes} to see if there's a fit.
 
 Best,
 ${v.sender}`},
@@ -16181,7 +16284,7 @@ ${v.sender}`}
   if(c.focus==='local-tv')return[
     {label:'TV segment pitch',subject:`Story pitch: NECA's 125th anniversary brings the electrical industry to Las Vegas`,body:`${hi}
 
-I'm reaching out from ${v.company}, exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.dates}.
+I'm writing from the marketing team at ${v.company}, exhibiting at the NECA 2026 Convention & Trade Show at ${v.venue}, ${v.dates}.
 
 NECA is celebrating its 125th anniversary this year, and the show brings thousands of electrical contractors, engineers and 400+ exhibitors to ${v.city}. The floor is very visual — live demonstrations, prefab assemblies, technology on display.
 
@@ -16189,7 +16292,7 @@ ${v.bp}
 
 We'd be glad to host your crew at ${v.booth} for:
 • A live look at a data center electrical model — coordination happening in 3D before anything is built
-• An interview with ${evMeta.sname||'our leadership'} on the electrical workforce and the data center construction boom
+• An interview with ${v.spokes} on the electrical workforce and the data center construction boom
 • An introduction to NECA leadership for the broader industry angle
 
 Show hours:
@@ -16227,7 +16330,7 @@ ${v.sender}`}
   return[
     {label:'Trade media pitch',subject:`NECA 2026 ${v.booth}: electrical preconstruction for data centers — briefing opportunity`,body:`${hi}
 
-I hope ${c.outlet} is covering NECA 2026 in ${v.city} this year. I'm reaching out from ${v.company} — we're exhibiting at ${v.booth} and wanted to get on your radar early.
+I hope ${c.outlet} is covering NECA 2026 in ${v.city} this year. I'm writing from the marketing team at ${v.company} — we're exhibiting at ${v.booth} and wanted to get on your radar early.
 
 ${v.bp}
 
@@ -16235,7 +16338,7 @@ Why this is relevant to your readers right now: roughly half of NECA attendees a
 
 We can offer:
 • A live walkthrough of a coordinated data center electrical model at the booth
-• An interview with ${evMeta.sname||'our leadership'} on electrical preconstruction and the EC labor gap
+• An interview with ${v.spokes} on electrical preconstruction and the EC labor gap
 • Customer references from electrical contractors we work with
 
 ${kit}
@@ -16369,7 +16472,7 @@ function evOrDeleteContact(id){
 }
 
 // ── event details & accounts ──────────────────────────────────
-const EV_DET_FIELDS={name:'name',booth:'booth',venue:'venue',city:'city',start:'start',end:'end',hours:'hours',url:'url',sname:'sname',stitle:'stitle',semail:'semail',sphone:'sphone','bp-eracore':'bpEracore','bp-genusys':'bpGenusys',presskit:'presskit'};
+const EV_DET_FIELDS={name:'name',booth:'booth',venue:'venue',city:'city',start:'start',end:'end',hours:'hours',url:'url',sname:'sname',stitle:'stitle',semail:'semail',sphone:'sphone','bp-eracore':'bpEracore','bp-genusys':'bpGenusys',presskit:'presskit',spokes:'spokesperson'};
 function evDetRender(){
   Object.entries(EV_DET_FIELDS).forEach(([f,k])=>{const el=document.getElementById('ev-d-'+f);if(el)el.value=evMeta[k]||'';});
   ['eracore','genusys'].forEach(e=>{
