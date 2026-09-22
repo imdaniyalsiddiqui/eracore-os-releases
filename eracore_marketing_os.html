@@ -13373,49 +13373,79 @@ function updateYtOAuthState(){
   const dc=document.getElementById('yt-oauth-disconnect');if(dc)dc.style.display=own?'inline-flex':'none';
 }
 
+// ── YouTube proxy helper ──────────────────────────────────────────────────
+async function ytProxyGet(url){
+  let res=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
+  if(res.status===401){
+    const ok=await refreshYtAccessToken();
+    if(!ok)throw new Error('Could not refresh YouTube token');
+    res=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(url)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
+  }
+  const data=await res.json();
+  if(data.error){
+    const m=(data.error.message)||JSON.stringify(data.error);
+    if(data.error.code===403||/forbidden/i.test(m))throw new Error('Forbidden — token is not the channel owner. Settings → Social Media → Connect YouTube as marketingeracore@gmail.com.');
+    throw new Error(m);
+  }
+  return data;
+}
+
 async function fetchYouTubeOrganic(opts={}){
   const channelId=getSocYtChannelId();
   if(!channelId){if(!opts.silent){toast('Add your YouTube Channel ID in Settings → Social Media.','warn');navTo('settings');}return;}
   const btn=document.getElementById('soc-yt-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   try{
-    // Ensure Google token (needs youtube.readonly scope — added in v10.4)
-    // If you get scope errors, re-authorise Google in SEO/AIEO → Connect Google
     if(!ytBearer()){const ok=await refreshYtAccessToken();if(!ok)throw new Error(hasYtOwnToken()?'YouTube token refresh failed — reconnect in Settings → Social Media':'Google token refresh failed — reconnect Google in SEO/AIEO');}
     const range=socDateRange();
-    // YouTube Data API v3 — uses same Google OAuth, no extra scope needed beyond youtube.readonly
-    // NOTE: if you get 403 scope errors, go to SEO/AIEO and click "Connect Google" to re-authorise
-    //       with the updated scope that now includes youtube.readonly
-    const ytUrl=`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${channelId}&startDate=${range.since}&endDate=${range.until}&metrics=views,estimatedMinutesWatched,subscribersGained,subscribersLost&dimensions=day&sort=day`;
-    const ytErr=(e)=>{
-      const m=(e&&e.message)||JSON.stringify(e);
-      if(e&&(e.code===403||/forbidden/i.test(m)))return new Error('Forbidden — the Google account connected is not the channel owner. Settings → Social Media → "Connect YouTube as channel owner" and sign in as marketingeracore@gmail.com.');
-      return new Error(m);
-    };
-    let r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
-    if(r.status===401){
-      const ok=await refreshYtAccessToken();
-      if(!ok)throw new Error('Could not refresh YouTube token');
-      r=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(ytUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
-    }
-    const d=await r.json();
-    if(d.error)throw ytErr(d.error);
-    if(r.status===403)throw ytErr({code:403});
-    processYtData(d,range);
-    // Also get subscriber count via YouTube Data API
-    const dataUrl=`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`;
-    const dr=await fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(dataUrl)}&authHeader=${encodeURIComponent('Bearer '+ytBearer())}`);
-    const dd=await dr.json();
-    if(dd.items&&dd.items[0]){
-      const stats=dd.items[0].statistics;
-      socLiveData.youtube.subs=parseInt(stats.subscriberCount)||null;
-      socLiveData.youtube.totalViews=parseInt(stats.viewCount)||null;
-    }
+    const s=range.since,u=range.until,ch=channelId;
+
+    // ── 1. Channel-level stats (subscribers, total views, video count) ──
+    const chanData=await ytProxyGet(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${ch}`);
+    const stats=chanData.items?.[0]?.statistics||{};
+
+    // ── 2. Per-day analytics: views, watch time, subs, likes, comments, shares, avg view duration/pct ──
+    const dayUrl=`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${ch}&startDate=${s}&endDate=${u}&metrics=views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,comments,shares,subscribersGained,subscribersLost&dimensions=day&sort=day`;
+    const dayData=await ytProxyGet(dayUrl);
+    processYtData(dayData,range,stats);
+
+    // ── 3. Traffic sources ──
+    try{
+      const trafficData=await ytProxyGet(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${ch}&startDate=${s}&endDate=${u}&metrics=views&dimensions=insightTrafficSourceType&sort=-views`);
+      const tRows=trafficData.rows||[];
+      const tCols=(trafficData.columnHeaders||[]).map(h=>h.name);
+      const tIdx=n=>tCols.indexOf(n);
+      socLiveData.youtube.trafficSources=tRows.map(r=>({source:r[tIdx('insightTrafficSourceType')]||r[0],views:r[tIdx('views')]??r[1]??0}));
+    }catch(e){socLiveData.youtube.trafficSources=[];console.log('[YT traffic]',e.message);}
+
+    // ── 4. Top 10 videos by views ──
+    try{
+      const topData=await ytProxyGet(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==${ch}&startDate=${s}&endDate=${u}&metrics=views,estimatedMinutesWatched,averageViewPercentage,likes,comments&dimensions=video&sort=-views&maxResults=10`);
+      const tvRows=topData.rows||[];
+      const tvCols=(topData.columnHeaders||[]).map(h=>h.name);
+      const tvi=n=>tvCols.indexOf(n);
+      if(tvRows.length){
+        const ids=tvRows.map(r=>r[0]).join(',');
+        const titlesData=await ytProxyGet(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${ids}`);
+        const titlesMap={};
+        (titlesData.items||[]).forEach(v=>{titlesMap[v.id]=v.snippet?.title||v.id;});
+        socLiveData.youtube.topVideos=tvRows.map(r=>({
+          id:r[0],title:titlesMap[r[0]]||r[0],
+          views:r[tvi('views')]??0,
+          watchHours:Math.round(((r[tvi('estimatedMinutesWatched')]??0)/60)*10)/10,
+          avgViewPct:Math.round((r[tvi('averageViewPercentage')]??0)*10)/10,
+          likes:r[tvi('likes')]??0,
+          comments:r[tvi('comments')]??0,
+        }));
+      }else{socLiveData.youtube.topVideos=[];}
+    }catch(e){socLiveData.youtube.topVideos=[];console.log('[YT top videos]',e.message);}
+
     localStorage.setItem('ec-soc-yt-live',JSON.stringify(socLiveData.youtube));
     toast('YouTube analytics loaded');
   }catch(e){
     socLiveData.youtube.error=e.message||String(e);
     toast('YouTube: '+socLiveData.youtube.error,'error');
+    console.error('[YouTube]',e);
   }finally{
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-brand-youtube"></i> <span id="soc-yt-btn-lbl">↻ Refresh YouTube</span>';}
     updateSocConnectBtns();
@@ -13426,11 +13456,12 @@ async function fetchYouTubeOrganic(opts={}){
   }
 }
 
-function processYtData(d,range){
+function processYtData(d,range,stats){
   const rows=d.rows||[];
   const cols=(d.columnHeaders||[]).map(h=>h.name);
   const idx=name=>cols.indexOf(name);
   const sum=name=>rows.reduce((s,r)=>s+(r[idx(name)]||0),0);
+  const avg=name=>{const vals=rows.map(r=>r[idx(name)]||0);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;};
   const totalViews=sum('views');
   const watchMins=sum('estimatedMinutesWatched');
   const subsGained=sum('subscribersGained');
@@ -13438,12 +13469,34 @@ function processYtData(d,range){
   socLiveData.youtube={
     ...socLiveData.youtube,
     loaded:true,error:'',
+    subs:stats?parseInt(stats.subscriberCount)||null:socLiveData.youtube.subs,
+    totalViews:stats?parseInt(stats.viewCount)||null:socLiveData.youtube.totalViews,
+    videoCount:stats?parseInt(stats.videoCount)||null:socLiveData.youtube.videoCount,
     views:totalViews||null,
     watchHours:watchMins?(watchMins/60).toFixed(1):null,
     subsGained,subsLost,
     netSubs:subsGained-subsLost,
+    likes:sum('likes')||null,
+    comments:sum('comments')||null,
+    shares:sum('shares')||null,
+    avgViewDurSecs:Math.round(avg('averageViewDuration'))||null,
+    avgViewPct:Math.round(avg('averageViewPercentage')*10)/10||null,
     days:rows.map(r=>({d:r[idx('day')]?.slice(5)||'',views:r[idx('views')]||0,watchMins:r[idx('estimatedMinutesWatched')]||0})),
   };
+}
+
+const YT_TRAFFIC_LABELS={
+  'YT_SEARCH':'YT Search','RELATED_VIDEO':'Related video','BROWSE_FEATURES':'Browse / Home',
+  'EXT_URL':'External','SUBSCRIBER':'Subscribers','CHANNEL':'Channel page',
+  'PLAYLIST':'Playlist','NOTIFICATION':'Notification','END_SCREEN':'End screen',
+  'CAMPAIGN_CARD':'Cards','NO_LINK_OTHER':'Other','NO_LINK_EMBEDDED':'Embedded',
+  'DIRECT_OR_UNKNOWN':'Direct / Unknown','ADVERTISING':'Advertising',
+};
+
+function ytFmtDur(secs){
+  if(!secs)return'—';
+  const m=Math.floor(secs/60),s=secs%60;
+  return m>0?`${m}m ${s}s`:`${s}s`;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -13678,41 +13731,146 @@ function renderSocYouTubeTab(){
   const el=document.getElementById('soc-tab-youtube');if(!el)return;
   const yt=socLiveData.youtube;
   if(!getSocYtChannelId()){el.innerHTML=socConnectPrompt('youtube','YouTube Analytics','#FF0000','ti-brand-youtube','Add your YouTube Channel ID in Settings → Social Media, then click "Connect YouTube as channel owner" and sign in as marketingeracore@gmail.com.');return;}
-  if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses the dedicated YouTube login if connected in Settings → Social Media, otherwise the shared Google token</div></div>`;return;}
+  if(!yt.loaded&&!yt.error){el.innerHTML=`<div style="text-align:center;padding:3rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-brand-youtube"></i> Fetch YouTube analytics</button><div style="font-size:12px;color:var(--text3);margin-top:.75rem">Uses the dedicated YouTube login if connected in Settings → Social Media</div></div>`;return;}
   if(yt.error&&!yt.loaded){
     const isScope=yt.error.toLowerCase().includes('scope')||yt.error.toLowerCase().includes('permission')||yt.error.toLowerCase().includes('insufficientpermissions');
     el.innerHTML=socErrorCard(yt.error)+(isScope?`
       <div style="background:var(--amber-l,#fffbeb);border:1px solid var(--amber);border-radius:var(--rl);padding:1rem;margin-bottom:1rem;font-size:13px">
-        <strong>⚠ Re-authorise Google</strong> to add YouTube access. Go to <strong>SEO/AIEO → Connect Google</strong> and sign in again — this will add <code>youtube.readonly</code> to your token without affecting any existing connections.
+        <strong>⚠ Re-authorise Google</strong> — Go to <strong>SEO/AIEO → Connect Google</strong> and sign in again to add <code>youtube.readonly</code> to your token.
         <div style="margin-top:.75rem"><button class="btn btn-primary" onclick="navTo('seodash');setTimeout(()=>connectGSC(true),150)"><i class="ti ti-brand-google"></i> Re-authorise Google</button></div>
       </div>`:'')+
     `<div style="text-align:center;margin-top:1rem"><button class="btn btn-primary" onclick="fetchYouTubeOrganic()"><i class="ti ti-refresh"></i> Retry</button></div>`;
     return;
   }
 
-  // Weekly log fallback data
+  // ── helper: donut SVG for traffic sources ──────────────────────────────
+  function ytTrafficDonut(sources){
+    if(!sources||!sources.length)return'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">No traffic source data</div>';
+    const top=sources.slice(0,6);
+    const total=top.reduce((s,r)=>s+r.views,0)||1;
+    const COLORS=['#FF0000','#FF4444','#FF7777','#FFaaaa','#cc0000','#880000'];
+    const CX=70,CY=70,R=55,RI=30;
+    let angle=-Math.PI/2,arcs='';
+    top.forEach((src,i)=>{
+      const sweep=(src.views/total)*Math.PI*2;
+      const x1=CX+R*Math.cos(angle),y1=CY+R*Math.sin(angle);
+      const x2=CX+R*Math.cos(angle+sweep),y2=CY+R*Math.sin(angle+sweep);
+      const xi1=CX+RI*Math.cos(angle),yi1=CY+RI*Math.sin(angle);
+      const xi2=CX+RI*Math.cos(angle+sweep),yi2=CY+RI*Math.sin(angle+sweep);
+      const lg=sweep>Math.PI?1:0;
+      const pct=Math.round(src.views/total*100);
+      arcs+=`<path d="M${xi1},${yi1} L${x1},${y1} A${R},${R} 0 ${lg},1 ${x2},${y2} L${xi2},${yi2} A${RI},${RI} 0 ${lg},0 ${xi1},${yi1}" fill="${COLORS[i]}" opacity=".9"><title>${YT_TRAFFIC_LABELS[src.source]||src.source}: ${pct}%</title></path>`;
+      angle+=sweep;
+    });
+    const legend=top.map((src,i)=>{
+      const pct=Math.round(src.views/total*100);
+      return`<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:3px">
+        <span style="width:10px;height:10px;border-radius:2px;background:${COLORS[i]};flex-shrink:0"></span>
+        <span style="color:var(--text2);flex:1">${YT_TRAFFIC_LABELS[src.source]||src.source}</span>
+        <span style="font-weight:600;color:var(--text)">${pct}%</span>
+      </div>`;
+    }).join('');
+    return`<div style="display:flex;gap:16px;align-items:center">
+      <svg viewBox="0 0 140 140" style="width:120px;flex-shrink:0">${arcs}<circle cx="${CX}" cy="${CY}" r="${RI-2}" fill="var(--surface)"/></svg>
+      <div style="flex:1">${legend}</div>
+    </div>`;
+  }
+
+  // ── helper: bar chart for daily views ─────────────────────────────────
+  function ytDailyBars(days){
+    if(!days||days.length<2)return'<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No daily data</div>';
+    const W=460,H=110,PL=30,PB=20,PR=6,PT=6;
+    const dw=W-PL-PR,dh=H-PT-PB;
+    const maxV=Math.max(1,...days.map(d=>d.views));
+    const bw=Math.max(2,Math.floor(dw/days.length*0.7));
+    const gap=dw/days.length;
+    let svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;overflow:visible">`;
+    [0,0.5,1].forEach(f=>{
+      const y=PT+dh*(1-f);
+      svg+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+      svg+=`<text x="${PL-3}" y="${y+4}" text-anchor="end" font-size="9" fill="var(--text3)">${Math.round(maxV*f)}</text>`;
+    });
+    days.forEach((d,i)=>{
+      const bh=Math.max(1,(d.views/maxV)*dh);
+      const x=PL+i*gap+(gap-bw)/2;
+      svg+=`<rect x="${x}" y="${PT+dh-bh}" width="${bw}" height="${bh}" fill="#FF0000" rx="1" opacity=".8"><title>${d.d}: ${d.views} views</title></rect>`;
+    });
+    const step=Math.max(1,Math.ceil(days.length/7));
+    days.forEach((d,i)=>{if(i%step===0){const x=PL+i*gap+gap/2;svg+=`<text x="${x}" y="${H-3}" text-anchor="middle" font-size="8" fill="var(--text3)">${d.d}</text>`;}});
+    return svg+'</svg>';
+  }
+
+  // ── Row 1: 8 KPI tiles ─────────────────────────────────────────────────
+  const kpis=[
+    {val:yt.subs!=null?socFmt(yt.subs):'—',label:'Subscribers',sub:yt.netSubs!=null?((yt.netSubs>=0?'+':'')+yt.netSubs+' this period'):'',color:'#FF0000'},
+    {val:yt.views!=null?socFmt(yt.views):'—',label:'Views (period)',color:'#FF0000'},
+    {val:yt.watchHours!=null?yt.watchHours+'h':'—',label:'Watch hours',color:'#FF0000'},
+    {val:yt.avgViewPct!=null?yt.avgViewPct+'%':'—',label:'Avg view %',sub:yt.avgViewDurSecs?ytFmtDur(yt.avgViewDurSecs)+' avg duration':'',color:'#FF0000'},
+    {val:yt.likes!=null?socFmt(yt.likes):'—',label:'Likes',color:'var(--text)'},
+    {val:yt.comments!=null?socFmt(yt.comments):'—',label:'Comments',color:'var(--text)'},
+    {val:yt.shares!=null?socFmt(yt.shares):'—',label:'Shares',color:'var(--text)'},
+    {val:yt.videoCount!=null?yt.videoCount:'—',label:'Total videos',sub:'all time',color:'var(--text)'},
+  ];
+
+  // ── Top videos table ───────────────────────────────────────────────────
+  const topVidsHtml=yt.topVideos&&yt.topVideos.length?`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-top:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Top videos by views — this period</div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--surface2)">
+          <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">#</th>
+          <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Title</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Views</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Watch hrs</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Avg view %</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Likes</th>
+          <th style="padding:.5rem;text-align:right;font-size:11px;color:var(--text2);font-weight:600">Comments</th>
+        </tr></thead>
+        <tbody>${yt.topVideos.map((v,i)=>`<tr style="border-top:1px solid var(--border);background:${i===0?'var(--red-l)':'var(--surface)'}">
+          <td style="padding:.5rem .75rem;color:var(--text3);font-size:11px">${i+1}</td>
+          <td style="padding:.5rem .75rem;max-width:260px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${i<3?600:400}">${esc(v.title)}</div></td>
+          <td style="padding:.5rem;text-align:right;font-weight:600;color:#FF0000">${v.views.toLocaleString()}</td>
+          <td style="padding:.5rem;text-align:right">${v.watchHours}h</td>
+          <td style="padding:.5rem;text-align:right">${v.avgViewPct}%</td>
+          <td style="padding:.5rem;text-align:right">${v.likes.toLocaleString()}</td>
+          <td style="padding:.5rem;text-align:right">${v.comments.toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:
+    `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;text-align:center;margin-top:1rem;font-size:12px;color:var(--text3)">No video-level data — click Refresh YouTube to load</div>`;
+
+  // ── Weekly log fallback ────────────────────────────────────────────────
   const ytLogs=socialWeeks.filter(w=>w.youtube&&(w.youtube.subs||w.youtube.views)).sort((a,b)=>a.date.localeCompare(b.date));
 
   el.innerHTML=`
     ${yt.error?socErrorCard(yt.error):''}
-    ${socKpiTiles([
-      {val:yt.subs!=null?socFmt(yt.subs):'—',label:'Subscribers',color:'#FF0000'},
-      {val:yt.views!=null?socFmt(yt.views):'—',label:'Views (period)',color:'#FF0000'},
-      {val:yt.watchHours!=null?yt.watchHours+'h':'—',label:'Watch hours',color:'#FF0000'},
-      {val:yt.netSubs!=null?(yt.netSubs>=0?'+':'')+yt.netSubs:'—',label:'Net subscribers',color:yt.netSubs>=0?'var(--green)':'var(--red)'},
-    ])}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:.75rem">
+      ${kpis.slice(0,4).map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:${t.color};line-height:1.1">${t.val}</div>
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${t.label}</div>
+        ${t.sub?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${t.sub}</div>`:''}
+      </div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem">
+      ${kpis.slice(4).map(t=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;text-align:center">
+        <div style="font-size:22px;font-weight:800;color:${t.color};line-height:1.1">${t.val}</div>
+        <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">${t.label}</div>
+        ${t.sub?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${t.sub}</div>`:''}
+      </div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:0">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
         <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Daily views</div>
-        ${yt.days&&yt.days.length>=2?socTrendSVG(yt.days.map(d=>d.views),'#FF0000','views'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:2rem">No daily data</div>'}
+        ${ytDailyBars(yt.days)}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Subscribers — weekly log</div>
-        ${ytLogs.length>=2?socTrendSVG(ytLogs.map(w=>w.youtube.subs||0),'#FF0000','subs'):'<div style="font-size:12px;color:var(--text3);text-align:center;padding:1.5rem">Log weekly data to see trend — use <em>Log this week</em></div>'}
+        <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Traffic sources</div>
+        ${ytTrafficDonut(yt.trafficSources)}
       </div>
     </div>
-    ${ytLogs.length?`<div style="margin-top:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
-      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">YouTube — weekly log history</div>
+    ${topVidsHtml}
+    ${ytLogs.length?`<div style="margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+      <div style="font-size:13px;font-weight:700;margin-bottom:.75rem">Manual weekly log</div>
       <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:var(--surface2)">
           <th style="padding:.5rem .75rem;text-align:left;font-size:11px;color:var(--text2);font-weight:600">Week</th>
@@ -14315,7 +14473,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.3';
+const APP_HTML_VERSION='12.4';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
