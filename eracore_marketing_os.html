@@ -1130,16 +1130,18 @@ select.sm:focus{border-color:var(--blue)}
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap">
     <div><div class="pt">Paid Marketing</div><div class="ps">Google Ads · Meta · LinkedIn · Microsoft — blended KPIs + per-platform breakdown</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="paid-date-range" onchange="onPaidDateRangeChange()" style="height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer">
-        <option value="last_7_days" selected>Last 7 days</option>
+      <select id="paid-date-range" onchange="paidSetPreset(this.value)" style="height:34px;padding:0 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text);cursor:pointer">
         <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
         <option value="this_week">This week</option>
         <option value="last_week">Last week</option>
+        <option value="last_7_days" selected>Last 7 days</option>
         <option value="this_month">This month</option>
         <option value="last_month">Last month</option>
-        <option value="this_quarter">This quarter</option>
         <option value="last_30_days">Last 30 days</option>
+        <option value="this_quarter">This quarter</option>
         <option value="this_year">This year</option>
+        <option value="custom">Custom…</option>
       </select>
       <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
       <button class="btn" id="meta-btn" onclick="fetchMetaAds()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
@@ -2448,6 +2450,10 @@ select.sm:focus{border-color:var(--blue)}
       </div>
     </div>
     <div class="field"><label>Scope / description</label><textarea id="ev-ws-f-desc" rows="3"></textarea></div>
+    <div class="field" id="ev-ws-items-wrap" style="display:none"><label>Deliverables <span id="ev-ws-items-count" style="font-weight:400;color:var(--text3)"></span></label>
+      <div id="ev-ws-items"></div>
+      <div style="display:flex;gap:6px;margin-top:6px"><input id="ev-ws-f-item" placeholder="Add a deliverable, e.g. a video, a print item, a page…" onkeydown="if(event.key==='Enter'){event.preventDefault();evWsAddItem();}" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)"><button class="btn" onclick="evWsAddItem()"><i class="ti ti-plus"></i> Add</button></div>
+    </div>
     <div class="field" id="ev-ws-notes-wrap" style="display:none"><label>Progress log</label>
       <div id="ev-ws-notes"></div>
       <div style="display:flex;gap:6px;margin-top:6px"><input id="ev-ws-f-note" placeholder="Add a progress note…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;background:var(--surface);color:var(--text)"><button class="btn" onclick="evWsAddNote()"><i class="ti ti-plus"></i> Log</button></div>
@@ -4573,6 +4579,74 @@ const SEED_TASKS=[
     created:1783620445634,
     updatedAt:1783620753220
   },
+  {
+    id:'neca-vid-qts',
+    raw:'NECA booth screen video: QTS panning — still in progress on Kasun\'s list (video #12 of 15). Needs to be ready for the booth loop before doors open Oct 4.',
+    translation:'NECA screen video — QTS panning',
+    type:'cosmetic',status:'open',priority:'urgent',template:'video',channel:'video',via:'NECA video list (Kasun)',
+    infoNeeded:'',infoFrom:'',contingency:'If not ready by Oct 3, the booth loop runs the 11 finished videos only.',contingencyOwner:'Daniyal',
+    stages:[
+      {name:'Concept',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:'Part of the NECA screen-video set'},
+      {name:'Storyboard',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:''},
+      {name:'Pre-production',owner:'Kasun + Praneeth',isMZ:false,due:'2026-10-03',status:'active',note:''},
+      {name:'Post-production',owner:'Muskan',isMZ:false,due:'2026-10-03',status:'pending',note:''},
+      {name:'MZ review',owner:'Muhamed',isMZ:true,due:'2026-10-03',status:'pending',note:''}
+    ],
+    brief:'',
+    history:[{event:'created',detail:'Logged from Kasun\'s NECA 2026 video list (15 videos, 11 ready)',dot:'h-create',ts:1790940000000},{event:'classified',detail:'Classified as Cosmetic · Urgent · Video',dot:'h-classify',ts:1790940000000}],
+    created:1790940000000,updatedAt:1790940000000
+  },
+  {
+    id:'neca-vid-genyard',
+    raw:'NECA booth screen video: Gen Yard — still in progress on Kasun\'s list (video #13 of 15). Needs to be ready for the booth loop before doors open Oct 4.',
+    translation:'NECA screen video — Gen Yard',
+    type:'cosmetic',status:'open',priority:'urgent',template:'video',channel:'video',via:'NECA video list (Kasun)',
+    infoNeeded:'',infoFrom:'',contingency:'If not ready by Oct 3, the booth loop runs the 11 finished videos only.',contingencyOwner:'Daniyal',
+    stages:[
+      {name:'Concept',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:'Part of the NECA screen-video set'},
+      {name:'Storyboard',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:''},
+      {name:'Pre-production',owner:'Kasun + Praneeth',isMZ:false,due:'2026-10-03',status:'active',note:''},
+      {name:'Post-production',owner:'Muskan',isMZ:false,due:'2026-10-03',status:'pending',note:''},
+      {name:'MZ review',owner:'Muhamed',isMZ:true,due:'2026-10-03',status:'pending',note:''}
+    ],
+    brief:'',
+    history:[{event:'created',detail:'Logged from Kasun\'s NECA 2026 video list (15 videos, 11 ready)',dot:'h-create',ts:1790940000000},{event:'classified',detail:'Classified as Cosmetic · Urgent · Video',dot:'h-classify',ts:1790940000000}],
+    created:1790940000000,updatedAt:1790940000000
+  },
+  {
+    id:'neca-vid-cyrusone',
+    raw:'NECA booth screen video: Cyrus One — feeder tracking, gen yard to data hall — still in progress on Kasun\'s list (video #14 of 15). Needs to be ready for the booth loop before doors open Oct 4.',
+    translation:'NECA screen video — Cyrus One — feeder tracking, gen yard to data hall',
+    type:'cosmetic',status:'open',priority:'urgent',template:'video',channel:'video',via:'NECA video list (Kasun)',
+    infoNeeded:'',infoFrom:'',contingency:'If not ready by Oct 3, the booth loop runs the 11 finished videos only.',contingencyOwner:'Daniyal',
+    stages:[
+      {name:'Concept',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:'Part of the NECA screen-video set'},
+      {name:'Storyboard',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:''},
+      {name:'Pre-production',owner:'Kasun + Praneeth',isMZ:false,due:'2026-10-03',status:'active',note:''},
+      {name:'Post-production',owner:'Muskan',isMZ:false,due:'2026-10-03',status:'pending',note:''},
+      {name:'MZ review',owner:'Muhamed',isMZ:true,due:'2026-10-03',status:'pending',note:''}
+    ],
+    brief:'',
+    history:[{event:'created',detail:'Logged from Kasun\'s NECA 2026 video list (15 videos, 11 ready)',dot:'h-create',ts:1790940000000},{event:'classified',detail:'Classified as Cosmetic · Urgent · Video',dot:'h-classify',ts:1790940000000}],
+    created:1790940000000,updatedAt:1790940000000
+  },
+  {
+    id:'neca-vid-silvereagle',
+    raw:'NECA booth screen video: Silver Eagle — conduit tracer — still in progress on Kasun\'s list (video #15 of 15). Needs to be ready for the booth loop before doors open Oct 4.',
+    translation:'NECA screen video — Silver Eagle — conduit tracer',
+    type:'cosmetic',status:'open',priority:'urgent',template:'video',channel:'video',via:'NECA video list (Kasun)',
+    infoNeeded:'',infoFrom:'',contingency:'If not ready by Oct 3, the booth loop runs the 11 finished videos only.',contingencyOwner:'Daniyal',
+    stages:[
+      {name:'Concept',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:'Part of the NECA screen-video set'},
+      {name:'Storyboard',owner:'Daniyal + Kasun',isMZ:false,due:'',status:'done',note:''},
+      {name:'Pre-production',owner:'Kasun + Praneeth',isMZ:false,due:'2026-10-03',status:'active',note:''},
+      {name:'Post-production',owner:'Muskan',isMZ:false,due:'2026-10-03',status:'pending',note:''},
+      {name:'MZ review',owner:'Muhamed',isMZ:true,due:'2026-10-03',status:'pending',note:''}
+    ],
+    brief:'',
+    history:[{event:'created',detail:'Logged from Kasun\'s NECA 2026 video list (15 videos, 11 ready)',dot:'h-create',ts:1790940000000},{event:'classified',detail:'Classified as Cosmetic · Urgent · Video',dot:'h-classify',ts:1790940000000}],
+    created:1790940000000,updatedAt:1790940000000
+  },
 ]
 const SEED_PRINCIPLES=[
   {id:'p1',raw:'The building sequence in construction videos doesn\'t make sense — it should be shown in real construction order, not backwards',meaning:'Construction-sequence videos must follow real build order — start from individual components or shop drawings and build up to the full assembled model. Never reverse the sequence.',applies:'Kasun, Praneeth, all 3D/video team',via:'Teams chat',created:D(0)},
@@ -5033,7 +5107,11 @@ function fmtD(s){if(!s)return'';const d=new Date(s+'T00:00:00');return d.toLocal
 function fmtTs(ts){if(!ts)return'';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
 function fmtDate(ts){if(!ts)return'';return new Date(ts).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
 function isOD(due){if(!due)return false;return new Date(due)<new Date(new Date().toDateString());}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+let _toastTimer=null,_toastActionFn=null;
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.pointerEvents='';t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
+// toastAction: same toast, plus one button. Used when the app wants to OFFER a jump
+// (e.g. to Settings) without yanking the person off the page they are on.
+function toastAction(m,label,fn){const t=document.getElementById('toast');_toastActionFn=fn;t.innerHTML=esc(m)+` <button onclick="_toastActionFn&&_toastActionFn();document.getElementById('toast').classList.remove('show')" style="margin-left:10px;background:var(--surface);color:var(--text);border:none;border-radius:var(--r);padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer">${esc(label)}</button>`;t.style.pointerEvents='auto';t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>{t.classList.remove('show');t.style.pointerEvents='';},6000);}
 
 function saveData(){
   localStorage.setItem('ec-tasks-v7',JSON.stringify(tasks));
@@ -5211,7 +5289,7 @@ function onNavTo(id){
     });
     renderDashboardMain();buildNotifications();
   }
-  if(id==='mktmgmt'){const btn=document.getElementById('mmt-overview');switchMmTab('overview',btn);_updateNavBadges();}
+  if(id==='mktmgmt'){const ch=MM_CHANNELS[_mmCh]?_mmCh:'overview';const btn=document.getElementById('mmt-'+ch)||document.getElementById('mmt-overview');switchMmTab(ch,btn);_updateNavBadges();}
   if(id==='strategy')renderStrategies();
   if(id==='principles')renderPrinciples();
   if(id==='inventory'){invLoad();invRender();}
@@ -5237,7 +5315,7 @@ function onNavTo(id){
     }
   }
   if(id==='paiddash'){
-    loadPaidAdsData();updatePaidBlendedKPIs();renderPaidDash();renderHubSpotAdsBlock();updatePaidConnectBtns();
+    paidRestorePreset();loadPaidAdsData();updatePaidBlendedKPIs();renderPaidDash();renderHubSpotAdsBlock();updatePaidConnectBtns();
     // Cache-first: only refetch silently when a source is empty or older than 30 min
     const STALE=30*60*1000;const stale=d=>!d||!d.fetched||(Date.now()-d.fetched)>STALE;
     if((getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'))&&stale(gadsData))fetchGoogleAdsLive({silent:true}).catch(()=>{});
@@ -5246,7 +5324,7 @@ function onNavTo(id){
     if(getMsRefreshToken()&&stale(msAdsData))fetchMsAds({silent:true}).catch(()=>{});
   }
   if(id==='socialdash'){
-    loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();
+    loadSocLiveCache();socRenderActiveTab();updateSocKpiBar();updateSocConnectBtns();
     // Auto-refresh in background if cache is empty but credentials exist
     const STALE=30*60*1000;const stale=d=>!d||!d.loaded||!d.fetched||(Date.now()-d.fetched)>STALE;
     if(getLinkedInToken()&&stale(socLiveData.linkedin))fetchLinkedInOrganic({silent:true}).catch(()=>{});
@@ -5524,7 +5602,7 @@ const MM_CHANNELS={
   goals:{label:'Goals & Targets',icon:'ti-target',channels:[],color:'#0891b2',isGoals:true},
   playbook:{label:'Advertising Playbook',icon:'ti-book',channels:[],color:'#7c3aed',isPlaybook:true},
 };
-let _mmCh='overview',_mmTileFilter='all',_mmDateFilter='all';
+let _mmCh=localStorage.getItem('ec-mm-tab')||'overview',_mmTileFilter='all',_mmDateFilter='all';
 
 function getMmTasks(ch,cfg){
   if(cfg&&cfg.brandingOnly)return tasks.filter(t=>getAutoStrategyLinks(t).includes('hr-branding')&&t.status!=='approved');
@@ -5546,7 +5624,7 @@ function mmDateOk(t){
 function switchMmTab(ch,el){
   document.querySelectorAll('.mm-tab').forEach(t=>t.classList.remove('active'));
   if(el)el.classList.add('active');
-  _mmCh=ch;_mmTileFilter='all';_mmDateFilter='all';
+  _mmCh=ch;_mmTileFilter='all';_mmDateFilter='all';try{localStorage.setItem('ec-mm-tab',ch);}catch(e){}
   const cfg=MM_CHANNELS[ch]||MM_CHANNELS.overview;
   const title=document.getElementById('mm-title');if(title)title.textContent=cfg.label;
   const sub=document.getElementById('mm-subtitle');if(sub)sub.textContent=cfg.isGoals?'Channel targets from Advertising Playbook 2025':cfg.isPlaybook?'Eracore Advertising Playbook 2025 — editable':cfg.brandingOnly?'HR Branding strategy tasks':cfg.channels.join(', ')+' tasks';
@@ -5627,7 +5705,7 @@ function doMoveChannel(tid,ch){
   const t=tasks.find(x=>x.id===tid);if(!t)return;
   const prev=t.channel;t.channel=ch;t.updatedAt=Date.now();
   t.history.push({event:'stage',detail:`Channel moved: ${CH_LABEL[prev]||prev} → ${CH_LABEL[ch]||ch}`,dot:'h-stage',ts:Date.now()});
-  saveData();renderMmTaskList();renderAll();
+  saveData();renderMmTaskList();rerenderData();
   document.querySelectorAll('[id^="qmc-popover-"]').forEach(p=>p.remove());
   toast(`Moved to ${CH_LABEL[ch]||ch}`);
 }
@@ -6055,7 +6133,7 @@ function switchPerfTab(tab, el){
     document.getElementById('page-socialdash')?.classList.add('active');
     document.querySelectorAll('.nav-item,.nav-sub-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('nav-marketingperf')?.classList.add('active');
-    loadSocLiveCache();renderSocOverview();updateSocKpiBar();updateSocConnectBtns();
+    loadSocLiveCache();socRenderActiveTab();updateSocKpiBar();updateSocConnectBtns();
     return;
   }
 }
@@ -6595,7 +6673,7 @@ function saveTask(){
   const stages=stageDataArr.map(s=>({...s}));
   if(stages.length)stages[0].status='active';
   tasks.unshift({id:uid(),raw,translation:document.getElementById('f-translation').value.trim()||raw,type:selTypeVal,status:'open',priority:selPrioVal,template:selTplVal,channel:document.getElementById('f-ch-new').value,via:document.getElementById('f-via').value,infoNeeded:document.getElementById('f-info-needed').value.trim(),infoFrom:document.getElementById('f-info-from').value.trim(),contingency:document.getElementById('f-contingency').value.trim(),contingencyOwner:document.getElementById('f-contingency-owner').value.trim(),stages,brief:'',history:[{event:'created',detail:'Logged from Muhamed via '+document.getElementById('f-via').value,dot:'h-create',ts:now2},{event:'classified',detail:'Classified as '+TYPE_LABEL[selTypeVal]+' · '+PRIO_LABEL[selPrioVal]+' · '+(TPL_LABEL[selTplVal]||'Custom'),dot:'h-classify',ts:now2}],created:now2,updatedAt:now2});
-  saveData();renderAll();closeTaskOverlay();toast('Task saved');
+  saveData();rerenderData();closeTaskOverlay();toast('Task saved');
 }
 
 function openStageUpdate(taskId,idx){
@@ -6635,7 +6713,7 @@ function saveStageUpdate(){
   else if(a==='move-deadline'){const newDue=document.getElementById('so-new-due').value;const reason=document.getElementById('so-deadline-reason').value.trim();if(!newDue){toast('Pick a new date first');return;}const oldDue=s.due||'no date';s.due=newDue;t.history.push({event:'stage',detail:`Deadline moved: ${s.name} from ${oldDue} → ${newDue}${reason?' — '+reason:''}`,dot:'h-stage',ts:now2});}
   else if(a==='reclassify'){const newType=document.getElementById('so-new-type').value;const reason=document.getElementById('so-reclassify-reason').value.trim();t.history.push({event:'back',detail:'Reclassified: '+TYPE_LABEL[t.type]+' → '+TYPE_LABEL[newType]+(reason?' — '+reason:''),dot:'h-back',ts:now2});t.type=newType;}
   t.updatedAt=now2;
-  saveData();renderAll();closeStageOverlay();toast('Updated');
+  saveData();rerenderData();closeStageOverlay();toast('Updated');
 }
 
 function toggleHistory(id,btn){
@@ -6647,7 +6725,7 @@ function toggleHistory(id,btn){
   }
   document.getElementById('hist-'+id)?.classList.toggle('open');
 }
-function deleteTask(id){if(confirm('Delete this task?')){tasks=tasks.filter(t=>t.id!==id);saveData();renderAll();toast('Deleted');}}
+function deleteTask(id){if(confirm('Delete this task?')){tasks=tasks.filter(t=>t.id!==id);saveData();rerenderData();toast('Deleted');}}
 
 function prioTag(p){const dots={urgent:'var(--red)',high:'var(--amber)',normal:'var(--text3)',low:'var(--green)'};return`<span class="prio-tag prio-${p}"><span class="prio-dot" style="background:${dots[p]}"></span>${PRIO_LABEL[p]}</span>`;}
 
@@ -6835,7 +6913,6 @@ function renderTasks(){
   document.getElementById('cv-pending').textContent=tasks.filter(t=>t.status==='pending').length;
   document.getElementById('cv-reviewed').textContent=tasks.filter(t=>t.status==='reviewed').length;
   document.getElementById('cv-approved').textContent=tasks.filter(t=>t.status==='approved').length;
-  document.getElementById('nb-tasks').textContent=tasks.length;
   ['all','cosmetic','moreinfo','blocker','completed'].forEach(tp=>{const cnt=tp==='all'?tasks.filter(t=>t.status!=='approved').length:tp==='completed'?tasks.filter(t=>t.status==='approved').length:tasks.filter(t=>t.type===tp&&t.status!=='approved').length;const el=document.getElementById('tbc-'+tp);if(el)el.textContent=cnt;});
   const showCompleted=activeTypeFilter==='completed';
   let list=tasks.filter(t=>{
@@ -7010,7 +7087,7 @@ function saveEditTask(){
   t.history.push({event:'stage',detail:'Task edited manually'+note,dot:'h-stage',ts:Date.now()});
   saveData();
   document.getElementById('edit-task-overlay').classList.remove('open');
-  renderAll();
+  rerenderData();
   renderMmTaskList();
   toast('Task updated'+(note?' — channel changed':''));
 }
@@ -7910,7 +7987,7 @@ async function syncAsana(){
   }
   asanaLastSync=Date.now();
   localStorage.setItem('ec-asana-last-sync',String(asanaLastSync));
-  saveData();renderAll();
+  saveData();rerenderData();
   asanaSyncing=false;
   updateAsanaStatus('Synced — pushed '+pushed+(failed?', '+failed+' failed':''));
   toast('Asana sync complete');
@@ -7923,7 +8000,7 @@ async function pullFromAsana(){
   for(const cfg of channels){
     try{pulled+=await pullAsanaTasksForChannel(cfg);}catch(e){console.log('Asana pull error',e);}
   }
-  saveData();renderAll();
+  saveData();rerenderData();
   toast(pulled?`Pulled ${pulled} new task${pulled!==1?'s':''} from Asana`:'No new tasks in Asana to pull');
 }
 function cleanOrphanedAsanaLinks(){
@@ -7937,7 +8014,7 @@ function cleanOrphanedAsanaLinks(){
     }
   });
   if(!count){toast('No orphaned links found');return;}
-  saveData();renderAll();
+  saveData();rerenderData();
   updateAsanaStatus(count+' orphaned link'+(count===1?'':'s')+' cleared and blocklisted');
   toast(count+' orphaned Asana link'+(count===1?'':'s')+' cleared — won\'t re-appear on sync');
 }
@@ -7947,7 +8024,7 @@ function removeAsanaPulledTasks(){
   if(!confirm(`Remove ${toRemove.length} task${toRemove.length!==1?'s':''} that were pulled in from Asana? They will be added to the ignore list so they won't be re-pulled.`))return;
   toRemove.forEach(t=>{if(t.asanaGid)addAsanaIgnoredGid(t.asanaGid);});
   tasks=tasks.filter(t=>!(t.via==='Asana'&&(!t.stages||t.stages.length===0)));
-  saveData();renderAll();
+  saveData();rerenderData();
   toast(`Removed ${toRemove.length} Asana-pulled task${toRemove.length!==1?'s':''} — won't re-appear on sync`);
   updateAsanaStatus();
 }
@@ -8991,6 +9068,27 @@ function exportReport(){
   toast('Report exported');
 }
 
+// rerenderData(): re-paint everything that depends on tasks/strategies/principles
+// IN PLACE. Never navigates. Preserves the active page, the active inner tab and
+// the scroll position. This is what every save/update/delete must call.
+// renderAll below is the BOOT routine — the only thing allowed to navTo('dashboard').
+function rerenderData(){
+  const activePage=document.querySelector('.page.active');
+  const pageId=activePage?activePage.id:'';
+  const scrollEl=document.querySelector('.main')||document.scrollingElement||document.documentElement;
+  const sy=scrollEl?scrollEl.scrollTop:0;
+  try{renderTasks();}catch(e){console.warn('[OS]',e);}
+  try{renderStrategies();}catch(e){console.warn('[OS]',e);}
+  try{renderPrinciples();}catch(e){console.warn('[OS]',e);}
+  try{buildNotifications();}catch(e){}
+  try{_updateNavBadges();}catch(e){}
+  if(pageId==='page-dashboard'){try{renderDashboardMain();}catch(e){console.warn('[OS]',e);}}
+  if(pageId==='page-mktmgmt'){try{switchMmTab(_mmCh||'overview',document.getElementById('mmt-'+(_mmCh||'overview')));}catch(e){console.warn('[OS]',e);}}
+  if(pageId==='page-mktdash'){try{renderDashboard();}catch(e){}}
+  if(pageId==='page-mzreport'){try{renderMZReport();}catch(e){}}
+  if(pageId==='page-standup'){try{renderStandupHistory();}catch(e){}}
+  try{if(scrollEl)scrollEl.scrollTop=sy;}catch(e){}
+}
 function renderAll(){
   try{renderTasks();}catch(e){console.warn('[OS]',e);}
   try{renderStrategies();}catch(e){console.warn('[OS]',e);}
@@ -10281,7 +10379,7 @@ function renderSEOOverview(){
     const gateMsg=gbp.gate==='scope'
       ?`Your Google login was authorised before the Business Profile permission existed, so Google rejects the token for this API. Re-authorise once — the request now covers Search Console, GA4, Business Profile and Google Ads together.<div style="margin-top:.5rem"><button class="btn btn-sm btn-primary" onclick="navTo('seodash');setTimeout(()=>connectGSC(true),150)"><i class="ti ti-brand-google"></i> Re-authorise Google</button></div>`
       :gbp.gate==='approval'
-      ?`Google gates the Business Profile APIs behind an access-approval form (quota is 0 until approved). <b>MZ needs to submit the request</b> for the OAuth project — usually approved in a few days. <a href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" style="color:var(--blue)">Request form</a>`
+      ?`Google keeps Business Profile API quota at <b>0</b> until its access team raises it for project 279661575513. Access request submitted (case 2-1734000041376). Check Cloud Console → My Business Account Management API → Quotas: once "Requests per minute" is above 0, click ↻ here. If the approval email arrived but quota is still 0 after 24h, reply on that email thread. <a href="https://developers.google.com/my-business/content/prereqs#request-access" target="_blank" style="color:var(--blue)">Request form</a>`
       :esc(gbp.error||'Unknown error');
     return`<div style="background:var(--amber-l);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--r);padding:.75rem;font-size:12px;color:var(--text);line-height:1.55"><i class="ti ti-lock" style="color:var(--amber)"></i> ${gateMsg}</div>
     <div style="font-size:10px;color:var(--text3);margin-top:.5rem">API said: ${esc((gbp.error||'').slice(0,140))}</div>`;
@@ -10831,6 +10929,8 @@ function getPaidDateRange(){
   const startOfQuarter=d=>new Date(d.getFullYear(),Math.floor(d.getMonth()/3)*3,1);
   const startOfYear=d=>new Date(d.getFullYear(),0,1);
   switch(val){
+    case 'custom':{const c=paidGetCustom();if(c.from&&c.to)return{start:c.from,end:c.to,gads:'CUSTOM',meta:'custom'};const s=new Date(now);s.setDate(s.getDate()-7);return{start:fmt(s),end:fmt(now),gads:'LAST_7_DAYS',meta:'last_7d'};}
+    case 'yesterday':{const y=new Date(now);y.setDate(y.getDate()-1);return{start:fmt(y),end:fmt(y),gads:'YESTERDAY',meta:'yesterday'};}
     case 'today': return{start:fmt(now),end:fmt(now),gads:'TODAY',meta:'today'};
     case 'this_week':{const s=startOfWeek(now);return{start:fmt(s),end:fmt(now),gads:'THIS_WEEK_SUN_TODAY',meta:'this_week'};}
     case 'last_week':{const s=startOfWeek(now);s.setDate(s.getDate()-7);const e=new Date(s);e.setDate(e.getDate()+6);return{start:fmt(s),end:fmt(e),gads:'LAST_WEEK_SUN_SAT',meta:'last_week'};}
@@ -10843,13 +10943,53 @@ function getPaidDateRange(){
   }
 }
 
+const PAID_PRESET_KEY='ec-paid-preset',PAID_CUSTOM_KEY='ec-paid-custom-range';
+function paidGetCustom(){try{const c=JSON.parse(localStorage.getItem(PAID_CUSTOM_KEY)||'null');return c&&c.from&&c.to?c:{from:'',to:''};}catch(e){return{from:'',to:''};}}
+function paidFmtShortDate(iso){if(!/^\d{4}-\d{2}-\d{2}$/.test(iso||''))return iso||'';const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
 function getPaidDateLabel(){
   const val=document.getElementById('paid-date-range')?.value||'last_7_days';
-  const labels={last_7_days:'Last 7 days',today:'Today',this_week:'This week',last_week:'Last week',this_month:'This month',last_month:'Last month',this_quarter:'This quarter',last_30_days:'Last 30 days',this_year:'This year'};
+  if(val==='custom'){const c=paidGetCustom();return c.from&&c.to?paidFmtShortDate(c.from)+' – '+paidFmtShortDate(c.to):'Custom';}
+  const labels={last_7_days:'Last 7 days',today:'Today',yesterday:'Yesterday',this_week:'This week',last_week:'Last week',this_month:'This month',last_month:'Last month',this_quarter:'This quarter',last_30_days:'Last 30 days',this_year:'This year'};
   return labels[val]||'Last 7 days';
+}
+// The Overview range drives the blended numbers AND is pushed down to the Google / Meta /
+// LinkedIn tabs so all four views describe the same window.
+const PAID_PRESET_MAP={
+  today:['TODAY','today','today'],yesterday:['YESTERDAY','yesterday','yesterday'],
+  this_week:['THIS_WEEK_MON_TODAY','this_week_mon_today','this_week'],last_7_days:['LAST_7_DAYS','last_7d','last_7'],
+  this_month:['THIS_MONTH','this_month','this_month'],last_month:['LAST_MONTH','last_month','last_month'],
+  last_30_days:['LAST_30_DAYS','last_30d','last_30']
+};
+function paidSyncPlatformRanges(){
+  const val=document.getElementById('paid-date-range')?.value||'last_7_days';
+  const r=getPaidDateRange();
+  const m=PAID_PRESET_MAP[val];
+  const set=(key,preset)=>{try{Store.set(key,m?{preset,from:'',to:''}:{preset:'CUSTOM',from:r.start,to:r.end});}catch(e){}};
+  if(typeof GADS_RANGE_KEY!=='undefined')set(GADS_RANGE_KEY,m?m[0]:'CUSTOM');
+  if(typeof META_RANGE_KEY!=='undefined')set(META_RANGE_KEY,m?m[1]:'CUSTOM');
+  if(typeof LI_RANGE_KEY!=='undefined')set(LI_RANGE_KEY,m?m[2]:'CUSTOM');
+}
+function paidSetPreset(v){
+  const sel=document.getElementById('paid-date-range');if(sel&&sel.value!==v)sel.value=v;
+  try{localStorage.setItem(PAID_PRESET_KEY,v);}catch(e){}
+  if(v==='custom'){const c=paidGetCustom();if(!(c.from&&c.to)){renderPaidOverview();return;}} // show the inputs, wait for Apply
+  onPaidDateRangeChange();
+}
+function paidApplyCustom(){
+  const from=document.getElementById('paid-from')?.value||'',to=document.getElementById('paid-to')?.value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to){toast('Pick a valid from/to range');return;}
+  try{localStorage.setItem(PAID_CUSTOM_KEY,JSON.stringify({from,to}));localStorage.setItem(PAID_PRESET_KEY,'custom');}catch(e){}
+  const sel=document.getElementById('paid-date-range');if(sel)sel.value='custom';
+  onPaidDateRangeChange();
+}
+function paidRestorePreset(){
+  const sel=document.getElementById('paid-date-range');if(!sel)return;
+  const v=localStorage.getItem(PAID_PRESET_KEY);
+  if(v&&[...sel.options].some(o=>o.value===v))sel.value=v;
 }
 
 function onPaidDateRangeChange(){
+  paidSyncPlatformRanges();
   // Reload cache (may be stale range) then trigger fresh API fetches
   loadPaidAdsData();
   updatePaidBlendedKPIs();
@@ -10919,6 +11059,7 @@ function apiErrorHint(platform,msg){
     if(/\(#10\)|does not have permission|requires the 'pages_read_engagement'/i.test(m))return{title:'Token is valid but the System User can\u2019t see this Page/Instagram asset',fix:'business.facebook.com → Users → System users → Eracoremarketingos → Assign assets → Pages → add the Eracore Page with Full control (the linked Instagram account comes with it) → Generate token again → paste in Settings → Meta Ads.'};
     if(/\(#200\)|ads_management or ads_read|missing permission/i.test(m))return{title:'App is missing a permission scope',fix:'developers.facebook.com → Use cases → add the missing use case → Business Manager → System users → Generate token again.'};
     if(/\(#100\)|valid insights metric|metric_type/i.test(m))return{title:'The app asked Meta for a metric it no longer supports',fix:'This is a code issue, not a settings issue. Copy the console line starting with [FB or [IG and send it to Claude.'};
+    if(/Page Access Token/i.test(m))return{title:'Facebook Page metrics need a Page token',fix:'The app now exchanges the System User token for a Page token automatically. If this still shows: business.facebook.com → System users → Eracoremarketingos → Assign assets → Pages → make sure the Eracore Page is assigned with Full control, then refresh.'};
     if(/\(#190\)|Session has expired|access token could not be decrypted|Error validating access token/i.test(m))return{title:'Meta token expired or invalid',fix:'business.facebook.com → System users → Eracoremarketingos → Generate token (never expires) → Settings → Meta Ads → Save & connect.'};
     if(/payment|disabled|billing/i.test(m))return{title:'Ad account is disabled for billing',fix:'Ads Manager → Billing → fix the payment method. API access resumes as soon as the account is active.'};
     if(/does not exist|act_act/i.test(m))return{title:'Wrong ad account ID',fix:'Settings → Meta Ads → enter just the number 857329476575377 (no act_ prefix).'};
@@ -10981,7 +11122,7 @@ function updatePaidBlendedKPIs(){
   if(el('paid-total-conversions'))el('paid-total-conversions').textContent=fmt(totalConv);
   if(el('paid-avg-cpl'))el('paid-avg-cpl').textContent=avgCPL!=='—'?'$'+avgCPL:'—';
   // Keep range label in sync with the date selector
-  const rangeShort={last_7_days:'7d',today:'today',this_week:'this wk',last_week:'last wk',this_month:'this mo',last_month:'last mo',this_quarter:'this qtr',last_30_days:'30d',this_year:'this yr'};
+  const rangeShort={last_7_days:'7d',today:'today',yesterday:'yday',this_week:'this wk',last_week:'last wk',this_month:'this mo',last_month:'last mo',this_quarter:'this qtr',last_30_days:'30d',this_year:'this yr',custom:getPaidDateLabel()};
   const rangeVal=document.getElementById('paid-date-range')?.value||'last_7_days';
   if(el('paid-range-label'))el('paid-range-label').textContent=rangeShort[rangeVal]||'7d';
   updatePaidConnectBtns();
@@ -10992,6 +11133,23 @@ function updatePaidBlendedKPIs(){
   if(liAdsData&&liBtn)liBtn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>LinkedIn ✓</span>';
 }
 
+// Date-range bar at the top of the Overview tab — the same control as the header select,
+// kept in sync, with Custom from/to, a Refresh, and when the data was last pulled.
+function paidOverviewRangeBar(platforms){
+  const sel=document.getElementById('paid-date-range');
+  const val=sel?sel.value:'last_7_days';
+  const opts=sel?[...sel.options].map(o=>`<option value="${o.value}"${o.value===val?' selected':''}>${esc(o.textContent)}</option>`).join(''):'';
+  const c=paidGetCustom();
+  const custom=val==='custom'?`<input type="date" id="paid-from" value="${esc(c.from)}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><span style="color:var(--text3);font-size:12px">to</span><input type="date" id="paid-to" value="${esc(c.to)}" style="height:32px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);padding:0 6px;font-size:12px"><button class="btn btn-sm" onclick="paidApplyCustom()">Apply</button>`:'';
+  const r=getPaidDateRange();
+  const fetched=Math.max(0,...(platforms||[]).map(p=>p.data?.fetched||0));
+  return `<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:600;color:var(--text2)">Date range</span>
+    <select class="sm" onchange="paidSetPreset(this.value)" style="height:32px">${opts}</select>${custom}
+    <button class="btn btn-sm" onclick="onPaidDateRangeChange()"><i class="ti ti-refresh"></i> Refresh</button>
+    <span style="font-size:11px;color:var(--text3)">${paidFmtShortDate(r.start)} – ${paidFmtShortDate(r.end)}${fetched?' · updated '+fmtAgo(fetched):''} · applies to the Google, Meta and LinkedIn tabs too</span>
+  </div>`;
+}
 function renderPaidOverview(){
   const el=document.getElementById('paid-tab-overview');if(!el)return;
   loadPaidAdsData();
@@ -11007,7 +11165,7 @@ function renderPaidOverview(){
   const connected=platforms.filter(p=>p.data);
   if(!connected.length){
     const hints=platforms.map(p=>{const e=paidLastError(errKey[p.name]);if(!e)return'';const hnt=apiErrorHint(p.name,e.msg);return`<div style="text-align:left;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:var(--rl);padding:.75rem 1rem;font-size:12px;line-height:1.5"><div style="font-weight:700"><i class="ti ${p.icon}"></i> ${p.name} — ${esc(hnt.title)}</div><div style="color:var(--text2);margin-top:2px">${esc(hnt.fix)}</div></div>`;}).filter(Boolean).join('');
-    el.innerHTML=`<div style="padding:2rem 3rem;text-align:center;color:var(--text2)">
+    el.innerHTML=paidOverviewRangeBar(platforms)+`<div style="padding:2rem 3rem;text-align:center;color:var(--text2)">
       <i class="ti ti-chart-bar" style="font-size:2.5rem;display:block;margin-bottom:1rem"></i>
       <div style="font-weight:600;font-size:15px;margin-bottom:.5rem">${hints?'Ad platforms need attention':'No ad platforms connected'}</div>
       <div style="font-size:13px;margin-bottom:1rem">${hints?'Data will load automatically once these are fixed':'Add credentials in Settings — data then loads automatically'}</div>
@@ -11019,7 +11177,7 @@ function renderPaidOverview(){
   const totalConv=platforms.reduce((s,p)=>s+(p.conv||0),0);
   const blendedCPL=totalConv>0?'$'+Math.round(totalSpend/totalConv):'—';
   const blendedCTR=totalImpr>0?(totalClicks/totalImpr*100).toFixed(2)+'%':'—';
-  el.innerHTML=`
+  el.innerHTML=paidOverviewRangeBar(platforms)+`
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1.25rem">
     <div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.05em">Blended — All platforms · ${getPaidDateLabel()}</div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:12px">
@@ -12086,15 +12244,15 @@ async function fetchGoogleAdsLive(opts={}){
   const creds=getGAdsCreds();
   const devToken=creds?.devToken||'';
   const cid=(creds?.customerId||'').replace(/-/g,'');
-  if(!devToken||!cid){if(!opts.silent){toast('Google Ads credentials not set — check Settings');openSettingsToSection('google-ads');}return;}
-  if(!creds?.refreshToken){const shared=localStorage.getItem('ec-gsc-refresh-token');if(shared){creds.refreshToken=shared;localStorage.setItem('ec-gads-creds',JSON.stringify(creds));}else{if(!opts.silent){toast('No Google Ads refresh token — connect Google in SEO/AIEO');openSettingsToSection('google-ads');}return;}}
+  if(!devToken||!cid){if(!opts.silent)toastAction('Google Ads credentials not set','Open Settings',()=>openSettingsToSection('google-ads'));return;}
+  if(!creds?.refreshToken){const shared=localStorage.getItem('ec-gsc-refresh-token');if(shared){creds.refreshToken=shared;localStorage.setItem('ec-gads-creds',JSON.stringify(creds));}else{if(!opts.silent)toastAction('No Google Ads refresh token — connect Google','Open Settings',()=>openSettingsToSection('google-ads'));return;}}
   const btn=document.getElementById('gads-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   const range=getPaidDateRange();
   try{
     // Get a fresh access token using the adwords-scoped refresh token
     const accessToken=await getGAdsAccessToken();
-    const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date DURING ${range.gads} AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
+    const query=`SELECT campaign.name, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE segments.date BETWEEN '${range.start}' AND '${range.end}' AND campaign.status != 'REMOVED' ORDER BY metrics.cost_micros DESC`;
     // Route through main.js /gads-query proxy (required to bypass CORS)
     const res=await fetch('http://127.0.0.1:8742/gads-query',{
       method:'POST',
@@ -12144,13 +12302,14 @@ async function fetchGoogleAds(){return fetchGoogleAdsLive();}
 // ── META ADS — live API ────────────────────────────────────────────────────
 async function fetchMetaAds(opts={}){
   const token=getMetaToken();const actId=getMetaAdAccount().replace(/^act[_=]/,'');
-  if(!token||!actId){if(!opts.silent){toast('Set Meta Ads credentials in Settings first');openSettingsToSection('meta-ads');}return;}
+  if(!token||!actId){if(!opts.silent)toastAction('Meta Ads credentials not set','Open Settings',()=>openSettingsToSection('meta-ads'));return;}
   const btn=document.getElementById('meta-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
     const fields='spend,impressions,clicks,actions,cpm,cpc,ctr';
     // Account-level summary
-    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&date_preset=${getPaidDateRange().meta}&level=account`;
+    const _pr=getPaidDateRange();const _tr=encodeURIComponent(JSON.stringify({since:_pr.start,until:_pr.end}));
+    const url=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=${fields}&time_range=${_tr}&level=account`;
     const res=await fetch(url);
     const text=await res.text();
     let data;
@@ -12161,7 +12320,7 @@ async function fetchMetaAds(opts={}){
     // Campaign-level breakdown
     let campaigns=[];
     try{
-      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&date_preset=${getPaidDateRange().meta}&level=campaign&sort=spend_descending`;
+      const campUrl=`https://graph.facebook.com/v21.0/act_${actId}/insights?access_token=${token}&fields=campaign_name,spend,impressions,clicks,actions,ctr,cpc&time_range=${_tr}&level=campaign&sort=spend_descending`;
       const campRes=await fetch(campUrl);
       if(campRes.ok){
         const campData=await campRes.json();
@@ -12217,12 +12376,11 @@ function liDatePart(d){return `(year:${d.slice(0,4)},month:${parseInt(d.slice(5,
 async function fetchLinkedInAds(opts={}){
   if(opts.silent&&paidPermanentFail('ec-li-last-error',/401|expired|REVOKED|Unauthorized|invalid/i))return;
   const token=getLinkedInToken();const actId=(getLinkedInAdAccount()||'').replace(/\D/g,'');
-  if(!token||!actId){if(!opts.silent){toast('Set LinkedIn Ads credentials in Settings first');openSettingsToSection('li-ads');}return;}
+  if(!token||!actId){if(!opts.silent)toastAction('LinkedIn Ads credentials not set','Open Settings',()=>openSettingsToSection('li-ads'));return;}
   const btn=document.getElementById('li-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
   try{
-    const end=new Date().toISOString().slice(0,10);
-    const start=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+    const _lr=getPaidDateRange();const start=_lr.start,end=_lr.end; // was hard-coded to 7 days — ignored the date filter
     const acct=encodeURIComponent(`urn:li:sponsoredAccount:${actId}`);
     const url=`https://api.linkedin.com/rest/adAnalytics?q=analytics&dateRange=(start:${liDatePart(start)},end:${liDatePart(end)})&timeGranularity=ALL&accounts=List(${acct})&pivot=ACCOUNT&fields=costInLocalCurrency,impressions,clicks,oneClickLeads,externalWebsiteConversions`;
     const{res,data}=await liFetch(url,token);
@@ -12959,11 +13117,24 @@ function updateSocKpiBar(){
   set('soc-kpi-total-reach',    totalReach>0?socFmt(totalReach):'—');
 }
 
-function onSocDateChange(){
+function socActiveTabName(){
   const tab=document.querySelector('#page-socialdash .itab.active');
-  let name='overview';
-  if(tab){const m=tab.getAttribute('onclick').match(/switchSocTab\('(\w+)'/);if(m)name=m[1];}
-  switchSocTab(name, tab||document.querySelector('#page-socialdash .itab'));
+  if(tab){const m=(tab.getAttribute('onclick')||'').match(/switchSocTab\('(\w+)'/);if(m)return m[1];}
+  return 'overview';
+}
+function socRenderActiveTab(){
+  const name=socActiveTabName();
+  switchSocTab(name, document.querySelector('#page-socialdash .itab.active')||document.querySelector('#page-socialdash .itab'));
+}
+// Changing the date range must REFETCH every connected platform for the new window,
+// not just re-label the old numbers. Cached values stay on screen until new ones arrive.
+function onSocDateChange(){
+  socRenderActiveTab();
+  const jobs=[];
+  if(getLinkedInToken()&&getSocLiOrgId())jobs.push(fetchLinkedInOrganic({silent:true}).catch(()=>{}));
+  if(getMetaToken()&&(getSocFbPageId()||getSocIgAccountId()))jobs.push(fetchMetaSocialOrganic({silent:true}).catch(()=>{}));
+  if(getSocYtChannelId()&&(localStorage.getItem('ec-yt-refresh-token')||localStorage.getItem('ec-gsc-refresh-token')))jobs.push(fetchYouTubeOrganic({silent:true}).catch(()=>{}));
+  if(jobs.length)Promise.allSettled(jobs).then(()=>{updateSocKpiBar();socRenderActiveTab();});
 }
 
 // ── Tab switcher (same pattern as switchPaidTab) ──────────────
@@ -13117,8 +13288,8 @@ async function fetchMetaSocialOrganic(opts={}){
   const token=getMetaToken();
   const fbPageId=getSocFbPageId();
   const igAccountId=getSocIgAccountId();
-  if(!token){if(!opts.silent){toast('No Meta token saved. Add it in Settings → Meta Ads first.','warn');navTo('settings');}return;}
-  if(!fbPageId&&!igAccountId){if(!opts.silent){toast('Add Facebook Page ID and/or Instagram Account ID in Settings → Social Media.','warn');navTo('settings');}return;}
+  if(!token){if(!opts.silent)toastAction('No Meta token saved','Open Settings',()=>openSettingsToSection('meta-ads'));return;}
+  if(!fbPageId&&!igAccountId){if(!opts.silent)toastAction('Add a Facebook Page ID or Instagram Account ID first','Open Settings',()=>navTo('settings'));return;}
   const btn=document.getElementById('soc-meta-btn');
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin 1s linear infinite"></i> Loading…';}
   const range=socDateRange();
@@ -13144,6 +13315,20 @@ async function fetchMetaSocialOrganic(opts={}){
   }
 }
 
+// Facebook Page Insights refuse a User/System-User token ("(#190) This method must be
+// called with a Page Access Token"). The Page token is obtained by asking the Page object
+// for its access_token with the System User token — the System User must have the Page
+// assigned in Business Manager. Instagram does NOT need this, which is why IG populated
+// while FB didn't. The Page token is cached per page id and refreshed on any 190.
+const FB_PAGE_TOKEN_KEY='ec-soc-fb-page-token';
+async function fbGetPageToken(userToken,pageId,force=false){
+  const px=u=>fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}`).then(r=>r.json());
+  if(!force){try{const c=JSON.parse(localStorage.getItem(FB_PAGE_TOKEN_KEY)||'null');if(c&&c.pageId===pageId&&c.token&&c.userToken===userToken.slice(-12))return c.token;}catch(e){}}
+  const r=await px(`https://graph.facebook.com/v21.0/${pageId}?fields=access_token&access_token=${userToken}`);
+  if(r.error||!r.access_token)throw Object.assign(new Error(r.error?.message||'No page token returned'),{code:r.error?.code||0});
+  try{localStorage.setItem(FB_PAGE_TOKEN_KEY,JSON.stringify({pageId,token:r.access_token,userToken:userToken.slice(-12),at:Date.now()}));}catch(e){}
+  return r.access_token;
+}
 async function fetchFbPageInsights(token,pageId,range){
   const px=u=>fetch(`http://127.0.0.1:8742/proxy?url=${encodeURIComponent(u)}`).then(r=>r.json());
   const errors=[];
@@ -13151,13 +13336,21 @@ async function fetchFbPageInsights(token,pageId,range){
   // page_engaged_users / page_fans were removed — so we never request them.
   const WANT=['page_impressions','page_impressions_unique','page_post_engagements','page_follows'];
   let insights=[];
-  const batch=await px(`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${WANT.join(',')}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`);
+  let pageToken=token;
+  try{pageToken=await fbGetPageToken(token,pageId);}
+  catch(e){errors.push({call:'page_token',code:e.code||0,msg:e.message});}
+  const insightsUrl=(metrics,tk)=>`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${metrics}&period=day&since=${range.since}&until=${range.until}&access_token=${tk}`;
+  let batch=await px(insightsUrl(WANT.join(','),pageToken));
+  if(batch.error&&batch.error.code===190&&pageToken!==token){
+    // cached page token went stale — mint a fresh one once and retry
+    try{pageToken=await fbGetPageToken(token,pageId,true);batch=await px(insightsUrl(WANT.join(','),pageToken));}catch(e){}
+  }
   console.log('[FB insights day]',JSON.stringify(batch).slice(0,300));
   if(!batch.error)insights=batch.data||[];
   else if(batch.error.code===100){
     // one metric was rejected — keep the rest by asking for each on its own
     for(const m of WANT){
-      const one=await px(`https://graph.facebook.com/v21.0/${pageId}/insights?metric=${m}&period=day&since=${range.since}&until=${range.until}&access_token=${token}`);
+      const one=await px(insightsUrl(m,pageToken));
       if(!one.error)insights.push(...(one.data||[]));else errors.push({call:'insights:'+m,code:one.error.code,msg:one.error.message});
     }
   }else errors.push({call:'insights',code:batch.error.code,msg:batch.error.message});
@@ -13472,15 +13665,15 @@ function processYtData(d,range,stats){
     subs:stats?parseInt(stats.subscriberCount)||null:socLiveData.youtube.subs,
     totalViews:stats?parseInt(stats.viewCount)||null:socLiveData.youtube.totalViews,
     videoCount:stats?parseInt(stats.videoCount)||null:socLiveData.youtube.videoCount,
-    views:totalViews||null,
-    watchHours:watchMins?(watchMins/60).toFixed(1):null,
+    views:totalViews,
+    watchHours:Math.round(watchMins/60*100)/100,
     subsGained,subsLost,
     netSubs:subsGained-subsLost,
-    likes:sum('likes')||null,
-    comments:sum('comments')||null,
-    shares:sum('shares')||null,
-    avgViewDurSecs:Math.round(avg('averageViewDuration'))||null,
-    avgViewPct:Math.round(avg('averageViewPercentage')*10)/10||null,
+    likes:sum('likes'),
+    comments:sum('comments'),
+    shares:sum('shares'),
+    avgViewDurSecs:Math.round(avg('averageViewDuration')),
+    avgViewPct:Math.round(avg('averageViewPercentage')*10)/10,
     days:rows.map(r=>({d:r[idx('day')]?.slice(5)||'',views:r[idx('views')]||0,watchMins:r[idx('estimatedMinutesWatched')]||0})),
   };
 }
@@ -13493,8 +13686,16 @@ const YT_TRAFFIC_LABELS={
   'DIRECT_OR_UNKNOWN':'Direct / Unknown','ADVERTISING':'Advertising',
 };
 
+// Watch time: minutes under an hour ("38m"), one decimal above ("2.4h"). Never "0h" for real minutes.
+function ytFmtHours(h){
+  if(h==null||h===''||isNaN(parseFloat(h)))return'—';
+  const n=parseFloat(h);
+  if(n<1)return Math.round(n*60)+'m';
+  return (Math.round(n*10)/10)+'h';
+}
 function ytFmtDur(secs){
-  if(!secs)return'—';
+  if(secs==null)return'—';
+  if(!secs)return'0s';
   const m=Math.floor(secs/60),s=secs%60;
   return m>0?`${m}m ${s}s`:`${s}s`;
 }
@@ -13574,7 +13775,7 @@ function renderSocOverview(){
   const ytMetrics=[
     {val:yt.subs!=null?socFmt(yt.subs):latestLog?.youtube?.subs!=null?socFmt(latestLog.youtube.subs):'—',label:'Subscribers'},
     {val:yt.views!=null?socFmt(yt.views):latestLog?.youtube?.views!=null?socFmt(latestLog.youtube.views):'—',label:'Views (period)'},
-    {val:yt.watchHours!=null?yt.watchHours+'h':latestLog?.youtube?.watchtime!=null?latestLog.youtube.watchtime+'h':'—',label:'Watch hours'},
+    {val:yt.watchHours!=null?ytFmtHours(yt.watchHours):latestLog?.youtube?.watchtime!=null?latestLog.youtube.watchtime+'h':'—',label:'Watch hours'},
     {val:yt.netSubs!=null?(yt.netSubs>0?'+':'')+yt.netSubs:'—',label:'Net subscribers'},
   ];
 
@@ -13804,7 +14005,7 @@ function renderSocYouTubeTab(){
   const kpis=[
     {val:yt.subs!=null?socFmt(yt.subs):'—',label:'Subscribers',sub:yt.netSubs!=null?((yt.netSubs>=0?'+':'')+yt.netSubs+' this period'):'',color:'#FF0000'},
     {val:yt.views!=null?socFmt(yt.views):'—',label:'Views (period)',color:'#FF0000'},
-    {val:yt.watchHours!=null?yt.watchHours+'h':'—',label:'Watch hours',color:'#FF0000'},
+    {val:yt.watchHours!=null?ytFmtHours(yt.watchHours):'—',label:'Watch hours',color:'#FF0000'},
     {val:yt.avgViewPct!=null?yt.avgViewPct+'%':'—',label:'Avg view %',sub:yt.avgViewDurSecs?ytFmtDur(yt.avgViewDurSecs)+' avg duration':'',color:'#FF0000'},
     {val:yt.likes!=null?socFmt(yt.likes):'—',label:'Likes',color:'var(--text)'},
     {val:yt.comments!=null?socFmt(yt.comments):'—',label:'Comments',color:'var(--text)'},
@@ -13830,7 +14031,7 @@ function renderSocYouTubeTab(){
           <td style="padding:.5rem .75rem;color:var(--text3);font-size:11px">${i+1}</td>
           <td style="padding:.5rem .75rem;max-width:260px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${i<3?600:400}">${esc(v.title)}</div></td>
           <td style="padding:.5rem;text-align:right;font-weight:600;color:#FF0000">${v.views.toLocaleString()}</td>
-          <td style="padding:.5rem;text-align:right">${v.watchHours}h</td>
+          <td style="padding:.5rem;text-align:right">${ytFmtHours(v.watchHours)}</td>
           <td style="padding:.5rem;text-align:right">${v.avgViewPct}%</td>
           <td style="padding:.5rem;text-align:right">${v.likes.toLocaleString()}</td>
           <td style="padding:.5rem;text-align:right">${v.comments.toLocaleString()}</td>
@@ -14473,7 +14674,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.4';
+const APP_HTML_VERSION='12.5';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
@@ -16192,7 +16393,21 @@ function evLoad(){
   const have=new Set(evWs.map(w=>w.id));
   let seeded=false;
   EV_WS_SEED.forEach(s=>{if(!have.has(s.id)){evWs.push({...s,status:'notstarted',due:'',notes:[],created:Date.now(),updatedAt:Date.now()});seeded=true;}});
-  evWs.forEach(w=>{if(!EV_WS_STATUS[w.status])w.status='notstarted';if(!EV_WS_GROUPS[w.group])w.group='booth';if(!Array.isArray(w.notes))w.notes=[];});
+  evWs.forEach(w=>{if(!EV_WS_STATUS[w.status])w.status='notstarted';if(!EV_WS_GROUPS[w.group])w.group='booth';if(!Array.isArray(w.notes))w.notes=[];if(!Array.isArray(w.items))w.items=[];});
+  // One-time: Kasun's NECA screen-video list (2 Oct 2026) becomes the deliverables checklist
+  // on the "Booth screen videos" workstream. Flagged so removing items later sticks.
+  if(!localStorage.getItem('ec-ev-mig-neca-videos-1')){
+    const w=evWs.find(x=>x.id==='ws-videos');
+    if(w&&!w.items.length){
+      const R='ready',P='ip';
+      w.items=[['Short messaging with flythrough',R],['Short messaging',R],['Spool prefab with Evolve schedules',R],['Spool prefab',R],['Complete electrical BIM services',R],['Mixed renders flythrough',R],['Mixed renders in slideshow',R],['Electrical room (V3)',R],['Overhead animation (V2)',R],['Skid animation (V2)',R],['Technical samples',R],['QTS panning',P],['Gen Yard',P],['Cyrus One — feeder tracking, gen yard to data hall',P],['Silver Eagle — conduit tracer',P]].map(([t,st])=>({t,s:st}));
+      if(!w.due||w.due<'2026-10-02')w.due='2026-10-03';
+      if(w.status==='notstarted')w.status='inprogress';
+      w.notes.push({text:'Video list from Kasun: 11 of 15 ready. Still in progress — QTS panning, Gen Yard, Cyrus One feeder tracking, Silver Eagle conduit tracer. Four tracked as urgent tasks in Task Command (Video).',date:'Oct 2, 2026',by:'daniyal'});
+      w.updatedAt=Date.now();seeded=true;
+    }
+    try{localStorage.setItem('ec-ev-mig-neca-videos-1','1');}catch(e){}
+  }
 
   const or=Store.get(evKey('outreach'),null);
   evOr=(or&&typeof or==='object')?or:{state:{},custom:[]};
@@ -16310,6 +16525,7 @@ function evWsRender(){
         return `<div class="ev-ws st-${esc(w.status)}" onclick="evWsOpenEdit('${esc(w.id)}')">
           <div class="ev-ws-title">${esc(w.title)}</div>
           ${w.desc?`<div class="ev-ws-desc">${esc(w.desc)}</div>`:''}
+          ${evWsItemsLine(w)}
           <div class="ev-ws-meta">
             <span class="ev-st ${esc(w.status)}" title="Click to cycle status" onclick="event.stopPropagation();evWsCycleStatus('${esc(w.id)}')">${esc(EV_WS_STATUS[w.status].label)}</span>
             <span class="ev-ent ${esc(w.entity||'both')}">${w.entity==='eracore'?'Eracore':w.entity==='genusys'?'Genusys AI':'Both'}</span>
@@ -16339,6 +16555,7 @@ function evWsOpenAdd(){
   document.getElementById('ev-ws-f-entity').value='both';
   document.getElementById('ev-ws-f-mz').value='0';
   document.getElementById('ev-ws-notes-wrap').style.display='none';
+  document.getElementById('ev-ws-items-wrap').style.display='none';
   document.getElementById('ev-ws-del-btn').style.display='none';
   document.getElementById('ev-modal-ws').classList.add('open');
 }
@@ -16355,9 +16572,46 @@ function evWsOpenEdit(id){
   document.getElementById('ev-ws-f-entity').value=w.entity||'both';
   document.getElementById('ev-ws-f-mz').value=w.mz?'1':'0';
   document.getElementById('ev-ws-notes-wrap').style.display='block';
+  document.getElementById('ev-ws-items-wrap').style.display='block';
   document.getElementById('ev-ws-del-btn').style.display='inline-flex';
-  evWsRenderNotes(w);
+  evWsRenderNotes(w);evWsRenderItems(w);
   document.getElementById('ev-modal-ws').classList.add('open');
+}
+// ── Deliverables checklist ──────────────────────────────────
+const EV_ITEM_ST={todo:{label:'To do',color:'var(--text3)',bg:'var(--surface2)'},ip:{label:'In progress',color:'var(--amber)',bg:'var(--amber-l)'},ready:{label:'Ready',color:'var(--green)',bg:'var(--green-l)'}};
+const EV_ITEM_CYCLE=['todo','ip','ready'];
+function evWsItemsLine(w){
+  const items=w.items||[];if(!items.length)return'';
+  const ready=items.filter(i=>i.s==='ready').length,ip=items.filter(i=>i.s==='ip').length;
+  const pct=Math.round(ready/items.length*100);
+  return `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 2px"><div class="ev-prog" style="max-width:none"><div style="width:${pct}%"></div></div><span class="ev-prog-lbl">${ready}/${items.length} ready${ip?' · '+ip+' in progress':''}</span></div>`;
+}
+function evWsRenderItems(w){
+  const el=document.getElementById('ev-ws-items');if(!el)return;
+  const items=w.items||[];
+  const cnt=document.getElementById('ev-ws-items-count');if(cnt)cnt.textContent=items.length?`· ${items.filter(i=>i.s==='ready').length}/${items.length} ready`:'';
+  el.innerHTML=items.length?items.map((it,i)=>{const st=EV_ITEM_ST[it.s]||EV_ITEM_ST.todo;return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">
+    <button class="btn btn-sm" title="Click to change status" onclick="evWsCycleItem(${i})" style="min-width:92px;justify-content:center;background:${st.bg};color:${st.color};border-color:transparent;font-size:11px;font-weight:700">${st.label}</button>
+    <span style="flex:1;${it.s==='ready'?'color:var(--text2)':''}">${esc(it.t)}</span>
+    <button class="btn-icon btn" title="Remove" onclick="evWsDelItem(${i})"><i class="ti ti-x"></i></button>
+  </div>`;}).join(''):'<div style="font-size:12px;color:var(--text3);padding:4px 0">No deliverables listed yet.</div>';
+}
+function evWsCurrent(){const id=document.getElementById('ev-ws-f-id').value;return evWs.find(x=>x.id===id);}
+function evWsAddItem(){
+  const w=evWsCurrent();if(!w)return;
+  const inp=document.getElementById('ev-ws-f-item');const t=(inp.value||'').trim();if(!t){toast('Type a deliverable first');return;}
+  if(!Array.isArray(w.items))w.items=[];
+  w.items.push({t,s:'todo'});w.updatedAt=Date.now();inp.value='';
+  evSave();evWsRenderItems(w);evWsRender();
+}
+function evWsCycleItem(i){
+  const w=evWsCurrent();if(!w||!w.items||!w.items[i])return;
+  const cur=EV_ITEM_CYCLE.indexOf(w.items[i].s);w.items[i].s=EV_ITEM_CYCLE[(cur+1)%EV_ITEM_CYCLE.length];
+  w.updatedAt=Date.now();evSave();evWsRenderItems(w);evWsRender();
+}
+function evWsDelItem(i){
+  const w=evWsCurrent();if(!w||!w.items||!w.items[i])return;
+  w.items.splice(i,1);w.updatedAt=Date.now();evSave();evWsRenderItems(w);evWsRender();
 }
 function evWsRenderNotes(w){
   const el=document.getElementById('ev-ws-notes');if(!el)return;
@@ -16387,7 +16641,7 @@ function evWsSave(){
     updatedAt:Date.now()
   };
   if(id){const w=evWs.find(x=>x.id===id);if(w)Object.assign(w,data);}
-  else evWs.push({id:'ws-'+Date.now().toString(36),notes:[],created:Date.now(),...data});
+  else evWs.push({id:'ws-'+Date.now().toString(36),notes:[],items:[],created:Date.now(),...data});
   evSave();evWsRender();
   document.getElementById('ev-modal-ws').classList.remove('open');
   toast(id?'Workstream updated':'Workstream added');
