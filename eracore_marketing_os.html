@@ -12071,7 +12071,7 @@ function renderPaidMicrosoftLive(el){
     const e=msTab.error;const code=(e.match(/\[([A-Z_0-9]+)\]$/)||[])[1]||'';
     const auth=/invalid_grant|AADSTS|AuthenticationToken|refresh MS Ads token|109|InvalidCredentials/i.test(e);
     const dev=/DeveloperToken|developer token|\[105\]|\[113\]|\[106\]/i.test(e);
-    const body=code==='DOWNLOAD_BLOCKED'?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Authenticated and the report was generated</b> — but the browser refused to download Microsoft's report file (it comes as a ZIP from Microsoft's storage, which doesn't allow cross-site downloads). This needs a one-line change in the desktop app's local proxy (<code>main.js</code>), which means a one-time reinstall rather than an auto-update. Tell Claude: "Microsoft needs the proxy-bin change".</div>`
+    const body=code==='DOWNLOAD_BLOCKED'?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Authenticated and the report was generated</b> — but the desktop app running underneath is the pre-October build, which can't pass Microsoft's report file through. Install the updated desktop app (main.js dated 5 Oct 2026 or later), reopen, and this tab fills in. Your saved credentials and data are not affected by the reinstall.<div style="font-family:monospace;font-size:11px;margin-top:.5rem;color:var(--text3)">${esc(e)}</div></div>`
       :auth?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Microsoft rejected the sign-in token.</b> Settings → Microsoft Ads → Generate → sign in as the Microsoft Ads login (eracoremarketing@outlook.com) → Accept → paste the redirect URL → Extract → Save &amp; connect.<div style="font-family:monospace;font-size:11px;margin-top:.5rem;color:var(--text3)">${esc(e)}</div></div>`
       :dev?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Developer token not accepted for this user.</b> ads.microsoft.com (as Super Admin) → Tools → Developer settings → select the user you sign in with → Request token → paste into Settings → Microsoft Ads → Save.<div style="font-family:monospace;font-size:11px;margin-top:.5rem;color:var(--text3)">${esc(e)}</div></div>`
       :`<div style="font-size:13px;line-height:1.6;color:var(--red)">Microsoft Ads error: ${esc(e)}</div>`;
@@ -12669,10 +12669,22 @@ function msParseReportCsv(text){
   }
   return rows;
 }
+// Microsoft's report storage sends no CORS headers, so the renderer cannot fetch the ZIP
+// itself. main.js (from 2026-10-05) exposes /proxy-bin which returns the bytes as base64.
+// Direct fetch is still tried first so a future CORS-enabled URL needs no proxy at all.
 async function msDownloadReport(url){
-  let buf;
-  try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);buf=await r.arrayBuffer();}
-  catch(e){throw new Error('Report ZIP download blocked by the browser (CORS) [DOWNLOAD_BLOCKED]');}
+  let buf=null;
+  try{const r=await fetch(url);if(r.ok)buf=await r.arrayBuffer();}catch(e){}
+  if(!buf){
+    let res;
+    try{res=await fetch(`http://127.0.0.1:8742/proxy-bin?url=${encodeURIComponent(url)}`);}
+    catch(e){throw new Error('Local proxy did not answer [DOWNLOAD_BLOCKED]');}
+    if(res.status===404)throw new Error('Desktop app is older than 2026-10-05 — needs the main.js update [DOWNLOAD_BLOCKED]');
+    let j=null;try{j=await res.json();}catch(e){}
+    if(!j||!j.base64)throw new Error((j&&j.error)||'proxy-bin returned no data [DOWNLOAD_BLOCKED]');
+    if(j.status&&j.status>=400)throw new Error('Report download failed: HTTP '+j.status+' [REPORT_ERROR]');
+    const bin=atob(j.base64);const u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);buf=u8.buffer;
+  }
   const ff=await msLoadInflater();
   const files=ff.unzipSync(new Uint8Array(buf));
   const name=Object.keys(files).find(k=>/\.csv$/i.test(k))||Object.keys(files)[0];
@@ -14806,7 +14818,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.9';
+const APP_HTML_VERSION='13.0';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
