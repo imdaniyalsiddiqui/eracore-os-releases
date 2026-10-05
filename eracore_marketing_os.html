@@ -12597,7 +12597,8 @@ async function exchangeMsAdsCode(){
 async function getMsAdsAccessToken(){
   const creds=getMsAdsCreds();
   if(!creds?.refreshToken)throw new Error('No Microsoft Ads refresh token — generate one in Settings');
-  const body=`client_id=${encodeURIComponent(creds.clientId)}&client_secret=${encodeURIComponent(creds.clientSecret)}&refresh_token=${encodeURIComponent(creds.refreshToken)}&grant_type=refresh_token`;
+  // Personal Microsoft accounts (AADSTS90023) require scope to be restated on refresh; harmless for work accounts.
+  const body=`client_id=${encodeURIComponent(creds.clientId)}&client_secret=${encodeURIComponent(creds.clientSecret)}&refresh_token=${encodeURIComponent(creds.refreshToken)}&grant_type=refresh_token&scope=${encodeURIComponent('https://ads.microsoft.com/msads.manage offline_access')}`;
   const res=await fetch('http://127.0.0.1:8742/proxy-post',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -12605,6 +12606,7 @@ async function getMsAdsAccessToken(){
   });
   const data=await res.json();
   if(!data.access_token)throw new Error(data.error_description||'Failed to refresh MS Ads token');
+  if(data.refresh_token&&data.refresh_token!==creds.refreshToken){try{localStorage.setItem('ec-msads-creds',JSON.stringify({...getMsAdsCreds(),refreshToken:data.refresh_token}));}catch(e){}}
   return data.access_token;
 }
 
@@ -12639,7 +12641,7 @@ async function msResolveAccountIds(token,creds){
   const list=(j.AccountsInfo||[]).filter(x=>x.AccountLifeCycleStatus!=='Inactive'&&x.AccountLifeCycleStatus!=='Deleted');
   const ids=list.map(x=>x.Id).filter(Boolean);
   if(!ids.length)throw new Error('No ad accounts found under customer '+creds.customerId+' for this login [NO_ACCOUNTS]');
-  const next={...creds,accountIds:ids,accountNames:Object.fromEntries(list.map(x=>[x.Id,x.Name]))};
+  const next={...(getMsAdsCreds()||creds),accountIds:ids,accountNames:Object.fromEntries(list.map(x=>[x.Id,x.Name]))}; // re-read: the token refresh may have rotated the refresh token
   try{localStorage.setItem('ec-msads-creds',JSON.stringify(next));}catch(e){}
   return ids;
 }
@@ -14804,7 +14806,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.8';
+const APP_HTML_VERSION='12.9';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
