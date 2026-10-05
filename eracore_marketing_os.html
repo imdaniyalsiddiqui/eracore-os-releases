@@ -1112,7 +1112,7 @@ select.sm:focus{border-color:var(--blue)}
       <button class="btn" id="gads-btn" onclick="fetchGoogleAdsLive()"><i class="ti ti-brand-google"></i> <span id="gads-btn-lbl">Connect Google Ads</span></button>
       <button class="btn" id="meta-btn" onclick="fetchMetaAds()"><i class="ti ti-brand-facebook"></i> <span id="meta-btn-lbl">Connect Meta</span></button>
       <button class="btn" id="li-btn" onclick="fetchLinkedInAds()"><i class="ti ti-brand-linkedin"></i> <span id="li-btn-lbl">Connect LinkedIn</span></button>
-      <label style="cursor:pointer"><input type="file" accept=".xlsx,.xls" onchange="parsePaidProgressXLSX(this)" style="display:none"><span class="btn" style="border-style:dashed;display:inline-flex;align-items:center;gap:5px"><i class="ti ti-brand-bing"></i> Microsoft xlsx</span></label>
+      <button class="btn" id="ms-btn" onclick="msHeaderClick()" style="display:inline-flex;align-items:center;gap:5px"><i class="ti ti-brand-bing"></i> Microsoft</button>
       <button class="btn btn-primary" onclick="openPaidEntry()"><i class="ti ti-plus"></i> Log this week</button>
     </div>
   </div>
@@ -1488,7 +1488,7 @@ select.sm:focus{border-color:var(--blue)}
       <button class="btn btn-primary" onclick="(function(){const t=document.getElementById('li-token-input').value.trim();const a=document.getElementById('li-account-input').value.trim();if(!t||!a)return toast('Enter both fields');localStorage.setItem('ec-li-token',t);localStorage.setItem('ec-li-ad-account',a);localStorage.removeItem('ec-li-last-error');toast('LinkedIn Ads credentials saved');fetchLinkedInAds();})()"><i class="ti ti-check"></i> Save &amp; connect</button>
     </div>
 
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
+    <div id="settings-ms-ads" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:1rem">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:.75rem">
         <i class="ti ti-brand-bing" style="color:var(--purple)"></i>
         <div style="font-size:14px;font-weight:600">Microsoft Ads</div>
@@ -11028,6 +11028,7 @@ function onPaidDateRangeChange(){
   if(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'))fetches.push(withTimeout(fetchGoogleAdsLive({silent:true})).catch(()=>{}));
   if(getMetaToken()&&getMetaAdAccount())fetches.push(withTimeout(fetchMetaAds({silent:true})).catch(()=>{}));
   if(getLinkedInToken()&&getLinkedInAdAccount())fetches.push(withTimeout(fetchLinkedInAds({silent:true})).catch(()=>{}));
+  if(getMsRefreshToken())fetches.push(withTimeout(fetchMsAds({silent:true}),60000).catch(()=>{}));
   if(!fetches.length){updatePaidBlendedKPIs();return;}
   // After all fetches settle (or timeout), update tiles and master view
   Promise.allSettled(fetches).then(()=>{
@@ -11112,6 +11113,8 @@ function updatePaidConnectBtns(){
   const liCreds=!!(getLinkedInToken()&&getLinkedInAdAccount());
   const lErr=paidLastError('ec-li-last-error');
   set('li-btn','ti-brand-linkedin',liAdsData?'LinkedIn \u2713':lErr&&liCreds?'Reconnect LinkedIn':liCreds?'LinkedIn':'Connect LinkedIn',!!liAdsData,!liAdsData&&!!lErr,liAdsData?'Updated '+fmtAgo(liAdsData.fetched):lErr?apiErrorHint('linkedin',lErr.msg).title:'');
+  const msLive=!!getMsRefreshToken(),msErr=paidLastError('ec-msads-last-error'),msOk=!!(msAdsData&&msAdsData.source==='api');
+  set('ms-btn','ti-brand-bing',msOk?'Microsoft \u2713':msErr&&msLive?'Reconnect Microsoft':msLive?'Microsoft':'Microsoft xlsx',msOk,!msOk&&!!msErr,msOk?'Updated '+fmtAgo(msAdsData.fetched):msErr?msErr.msg:'');
 }
 
 // CAC for the paid date range: spend ÷ Outreach-tracker leads from a paid ad source,
@@ -12042,9 +12045,89 @@ function renderPaidLinkedInTab(){
   </div>`:''}
   ${demoCards}`;
 }
+function msHeaderClick(){ if(getMsRefreshToken())fetchMsAds({silent:false}); else openSettingsToSection('ms-ads'); }
+function msFmt$(v){return '$'+(Math.round((v||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// Daily bar chart with real date labels (socTrendSVG labels d1..dN, which is wrong for a dated series)
+function msDailySVG(daily,key,color){
+  if(!daily||daily.length<2)return'<div style="font-size:12px;color:var(--text3);padding:1rem 0">Pick a range of two or more days to see a trend.</div>';
+  const vals=daily.map(x=>x[key]||0);const W=420,H=96,P=4,n=vals.length;const max=Math.max(...vals,0.0001);
+  const bw=Math.max(2,((W-2*P)/n)-2);const xOf=i=>P+i*((W-2*P)/n);const yOf=v=>H-20-Math.round((v/max)*(H-30));
+  const bars=vals.map((v,i)=>`<rect x="${xOf(i).toFixed(1)}" y="${yOf(v)}" width="${bw.toFixed(1)}" height="${Math.max(1,(v/max)*(H-30)).toFixed(1)}" rx="2" fill="${color}" opacity=".75"><title>${daily[i].d}: ${key==='spend'?msFmt$(v):v.toLocaleString()}</title></rect>`).join('');
+  const step=Math.max(1,Math.ceil(n/6));
+  const lbl=vals.map((_,i)=>i%step===0||i===n-1?`<text x="${(xOf(i)+bw/2).toFixed(1)}" y="${H-5}" text-anchor="middle" font-size="8" fill="var(--text3)">${daily[i].d.slice(5).replace('-','/')}</text>`:'').join('');
+  return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${bars}${lbl}</svg>`;
+}
+function renderPaidMicrosoftLive(el){
+  const creds=getMsAdsCreds();
+  const live=msAdsData&&msAdsData.source==='api'?msAdsData:null;
+  let msMonthly=[];try{const d=localStorage.getItem('ec-ms-monthly');if(d)msMonthly=JSON.parse(d);}catch(e){}
+  const header=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:600;color:var(--text2)">${esc(perfRangeLabel())}</span>
+    <button class="btn btn-sm" onclick="msRefreshTab()"${msTab.loading?' disabled':''}><i class="ti ti-refresh"></i> ${msTab.loading?'Loading…':'Refresh'}</button>
+    <span style="font-size:11px;color:var(--text3)">Live from Microsoft Advertising API${live?' · updated '+fmtAgo(live.fetched):''}${creds?.accountNames&&live?' · '+Object.values(creds.accountNames).map(esc).join(', '):''}</span>
+  </div>`;
+  if(msTab.loading&&!live){el.innerHTML=header+`<div class="empty">Generating the Microsoft Ads report… this takes 5–20 seconds.</div>`;return;}
+  if(msTab.error&&!live){
+    const e=msTab.error;const code=(e.match(/\[([A-Z_0-9]+)\]$/)||[])[1]||'';
+    const auth=/invalid_grant|AADSTS|AuthenticationToken|refresh MS Ads token|109|InvalidCredentials/i.test(e);
+    const dev=/DeveloperToken|developer token|\[105\]|\[113\]|\[106\]/i.test(e);
+    const body=code==='DOWNLOAD_BLOCKED'?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Authenticated and the report was generated</b> — but the browser refused to download Microsoft's report file (it comes as a ZIP from Microsoft's storage, which doesn't allow cross-site downloads). This needs a one-line change in the desktop app's local proxy (<code>main.js</code>), which means a one-time reinstall rather than an auto-update. Tell Claude: "Microsoft needs the proxy-bin change".</div>`
+      :auth?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Microsoft rejected the sign-in token.</b> Settings → Microsoft Ads → Generate → sign in as the Microsoft Ads login (eracoremarketing@outlook.com) → Accept → paste the redirect URL → Extract → Save &amp; connect.<div style="font-family:monospace;font-size:11px;margin-top:.5rem;color:var(--text3)">${esc(e)}</div></div>`
+      :dev?`<div style="font-size:13px;line-height:1.6;color:var(--text2)"><b style="color:var(--text)">Developer token not accepted for this user.</b> ads.microsoft.com (as Super Admin) → Tools → Developer settings → select the user you sign in with → Request token → paste into Settings → Microsoft Ads → Save.<div style="font-family:monospace;font-size:11px;margin-top:.5rem;color:var(--text3)">${esc(e)}</div></div>`
+      :`<div style="font-size:13px;line-height:1.6;color:var(--red)">Microsoft Ads error: ${esc(e)}</div>`;
+    el.innerHTML=header+`<div style="max-width:720px;margin:1rem auto;background:var(--surface);border:1px solid color-mix(in srgb,var(--amber) 40%,var(--border));border-radius:var(--rl);padding:1.25rem 1.5rem">${body}</div>`;
+    return;
+  }
+  if(!live){el.innerHTML=header+`<div class="empty">Click Refresh to pull live campaign data.</div>`;fetchMsAds({silent:true});return;}
+  const T=live;const n=v=>(v||0).toLocaleString();
+  const tiles=[
+    ['Spend',msFmt$(T.spend),'var(--purple)'],
+    ['Impressions',T.impressions>=1000?(T.impressions/1000).toFixed(1)+'K':n(T.impressions),'var(--text)'],
+    ['Clicks',n(T.clicks),'var(--text)'],
+    ['CTR',T.impressions?(T.clicks/T.impressions*100).toFixed(2)+'%':'—','var(--green)'],
+    ['Avg CPC',T.clicks?msFmt$(T.spend/T.clicks):'—','var(--text)'],
+    ['Conversions',T.conversions?(Math.round(T.conversions*10)/10).toLocaleString():'0','var(--blue)'],
+    ['Cost / Conv',T.conversions?msFmt$(T.spend/T.conversions):'—','var(--amber)']
+  ].map(([l,v,c])=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1rem">
+    <div style="font-size:11px;color:var(--text2);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.04em;font-weight:600">${l}</div>
+    <div style="font-size:1.35rem;font-weight:700;color:${c}">${v}</div></div>`).join('');
+  const card=(title,body)=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:.875rem 1rem"><div style="font-size:12px;font-weight:600;margin-bottom:.5rem">${title}</div>${body}</div>`;
+  const charts=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin:1rem 0">
+    ${card('Daily spend',msDailySVG(T.daily,'spend','var(--purple)'))}
+    ${card('Daily clicks',msDailySVG(T.daily,'clicks','var(--blue)'))}
+    ${card('Daily impressions',msDailySVG(T.daily,'impressions','var(--amber)'))}
+    ${card('Daily conversions',msDailySVG(T.daily,'conversions','var(--green)'))}
+  </div>`;
+  const th='font-size:11px;font-weight:600;color:var(--text2);text-align:right;padding:8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const td='font-size:12.5px;padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap';
+  const camps=(T.campaigns||[]);
+  const rows=camps.map(c=>`<tr>
+    <td style="${td};text-align:left;max-width:300px;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</td>
+    <td style="${td};text-align:left;color:var(--text2)">${esc(c.type||'—')}</td>
+    <td style="${td};text-align:left"><span style="font-size:10px;font-weight:700;color:${/^Active$/i.test(c.status)?'var(--green)':'var(--text3)'}">${esc((c.status||'—').toUpperCase())}</span></td>
+    <td style="${td};font-weight:600;color:var(--purple)">${msFmt$(c.spend)}</td>
+    <td style="${td}">${n(c.impressions)}</td>
+    <td style="${td}">${n(c.clicks)}</td>
+    <td style="${td}">${c.impressions?(c.clicks/c.impressions*100).toFixed(2)+'%':'—'}</td>
+    <td style="${td}">${c.clicks?msFmt$(c.spend/c.clicks):'—'}</td>
+    <td style="${td};color:var(--blue);font-weight:600">${c.conversions?Math.round(c.conversions*10)/10:'—'}</td>
+    <td style="${td}">${c.conversions?msFmt$(c.spend/c.conversions):'—'}</td>
+  </tr>`).join('');
+  const table=camps.length?`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>
+    <th style="${th};text-align:left">Campaign</th><th style="${th};text-align:left">Type</th><th style="${th};text-align:left">Status</th><th style="${th}">Spend</th><th style="${th}">Impr</th><th style="${th}">Clicks</th><th style="${th}">CTR</th><th style="${th}">CPC</th><th style="${th}">Conv</th><th style="${th}">Cost/Conv</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    :`<div style="font-size:12px;color:var(--text3);padding:1rem 0">No campaign activity in this window.</div>`;
+  // Historical monthly table from Sauleh's xlsx stays as context under the live data
+  const hist=msMonthly.length?`<details style="margin-top:1.25rem"><summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--text2)">Monthly history from Paid Marketing Progress.xlsx (${msMonthly.length} months) · <label style="cursor:pointer;color:var(--blue)"><input type="file" accept=".xlsx,.xls" onchange="parsePaidProgressXLSX(this)" style="display:none">update file</label></summary>
+    <div style="overflow-x:auto;margin-top:.5rem"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="${th};text-align:left">Month</th><th style="${th}">Bing spend</th><th style="${th}">Bing impr</th><th style="${th}">Bing leads</th><th style="${th}">Bing CPL</th></tr></thead><tbody>
+    ${msMonthly.slice().reverse().map(m=>`<tr><td style="${td};text-align:left">${esc(m.month)}</td><td style="${td}">${m.bing?.spend?msFmt$(m.bing.spend):'—'}</td><td style="${td}">${m.bing?.impressions?n(m.bing.impressions):'—'}</td><td style="${td}">${m.bing?.leads??'—'}</td><td style="${td}">${m.bing?.cpl?msFmt$(m.bing.cpl):'—'}</td></tr>`).join('')}
+    </tbody></table></div></details>`:'';
+  el.innerHTML=header+`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">${tiles}</div>${charts}
+    <div style="font-size:12px;font-weight:600;margin:.25rem 0 .5rem">Campaigns · ${camps.length} · ${esc(T.dateRange?.start||'')} – ${esc(T.dateRange?.end||'')}</div>${table}${hist}`;
+}
 function renderPaidMicrosoftTab(){
   const el=document.getElementById('paid-tab-microsoft');if(!el)return;
   loadPaidAdsData();
+  if(getMsRefreshToken()){renderPaidMicrosoftLive(el);return;}
 
   // Load historical monthly data
   let msMonthly=[];
@@ -12438,7 +12521,7 @@ function loadMsAdsSettings(){
   set('ms-client-secret-input',creds.clientSecret);
   set('ms-refresh-token-input',creds.refreshToken);
   const badge=document.getElementById('msads-status-badge');
-  if(badge&&creds.refreshToken){badge.textContent='Credentials saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  if(badge&&creds.refreshToken){badge.textContent='Connected';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
 }
 
 function saveMsAdsCreds(){
@@ -12450,9 +12533,10 @@ function saveMsAdsCreds(){
   if(!devToken||!customerId||!clientId||!clientSecret){toast('Fill in Developer Token, Customer ID, Client ID and Client Secret');return;}
   localStorage.setItem('ec-msads-creds',JSON.stringify({devToken,customerId,clientId,clientSecret,refreshToken}));
   const badge=document.getElementById('msads-status-badge');
-  if(badge){badge.textContent='Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
-  toast('Microsoft Ads credentials saved');
-  if(refreshToken)fetchMsAds();
+  if(badge){badge.textContent=refreshToken?'Connected':'Saved';badge.style.background='var(--green-l)';badge.style.color='var(--green)';}
+  toast(refreshToken?'Microsoft Ads connected — pulling the first report…':'Microsoft Ads credentials saved');
+  try{updatePaidConnectBtns();}catch(e){}
+  if(refreshToken)fetchMsAds({silent:false});
 }
 
 function startMsAdsOAuth(){
@@ -12524,107 +12608,141 @@ async function getMsAdsAccessToken(){
   return data.access_token;
 }
 
+// ══════════════════════════════════════════════════════════════
+// MICROSOFT ADS — live via the Reporting API v13 (JSON)
+//   1. Customer Management: GetAccountsInfo → the ad account id(s) under customer 254204658
+//   2. Reporting: Submit CampaignPerformanceReport (Daily, per campaign) → Poll → ZIP URL
+//   3. Download the ZIP straight from the renderer, inflate (fflate), parse the CSV
+// Per-user developer token + the personal-account refresh token from Settings.
+// ══════════════════════════════════════════════════════════════
+const MS_API_HEADERS=(token,creds,accountId)=>({AuthenticationToken:token,DeveloperToken:creds.devToken,CustomerId:String(creds.customerId),...(accountId?{CustomerAccountId:String(accountId)}:{})});
+let msTab={loading:false,error:null};
+function msSaveError(msg){try{localStorage.setItem('ec-msads-last-error',JSON.stringify({msg:String(msg).slice(0,300),at:Date.now()}));}catch(e){}}
+function msClearError(){try{localStorage.removeItem('ec-msads-last-error');}catch(e){}}
+async function msPost(url,bodyObj,headers){
+  const res=await fetch('http://127.0.0.1:8742/proxy-post',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url,body:JSON.stringify(bodyObj),contentType:'application/json',headers})});
+  const text=await res.text();
+  let j=null;try{j=JSON.parse(text);}catch(e){}
+  if(!res.ok||!j||j.error||j.Errors||j.OperationErrors||j.BatchErrors){
+    const err=j?.OperationErrors?.[0]||j?.BatchErrors?.[0]||j?.Errors?.[0]||j?.error||null;
+    const code=err?.Code||err?.ErrorCode||res.status;
+    const msg=err?.Message||err?.message||err?.ErrorCode||text.slice(0,200)||('HTTP '+res.status);
+    throw Object.assign(new Error(`${msg} [${code}]`),{code});
+  }
+  return j;
+}
+// Account ids live one level below the customer id. Cached in creds after first discovery.
+async function msResolveAccountIds(token,creds){
+  if(Array.isArray(creds.accountIds)&&creds.accountIds.length)return creds.accountIds;
+  const j=await msPost('https://clientcenter.api.bingads.microsoft.com/CustomerManagement/v13/AccountsInfo/Query',{CustomerId:parseInt(creds.customerId),OnlyParentAccounts:true},MS_API_HEADERS(token,creds));
+  const list=(j.AccountsInfo||[]).filter(x=>x.AccountLifeCycleStatus!=='Inactive'&&x.AccountLifeCycleStatus!=='Deleted');
+  const ids=list.map(x=>x.Id).filter(Boolean);
+  if(!ids.length)throw new Error('No ad accounts found under customer '+creds.customerId+' for this login [NO_ACCOUNTS]');
+  const next={...creds,accountIds:ids,accountNames:Object.fromEntries(list.map(x=>[x.Id,x.Name]))};
+  try{localStorage.setItem('ec-msads-creds',JSON.stringify(next));}catch(e){}
+  return ids;
+}
+// fflate (MIT) is loaded on demand purely to inflate the report ZIP.
+function msLoadInflater(){
+  if(window.fflate)return Promise.resolve(window.fflate);
+  return new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/fflate/0.8.2/index.min.js';sc.onload=()=>window.fflate?res(window.fflate):rej(new Error('fflate did not load'));sc.onerror=()=>rej(new Error('Could not load the ZIP reader (cdnjs blocked?) [INFLATE]'));document.head.appendChild(sc);});
+}
+function msParseCsvLine(line){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(q){if(ch==='"'){if(line[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else{if(ch==='"')q=true;else if(ch===','){out.push(cur);cur='';}else cur+=ch;}}out.push(cur);return out;}
+function msNum(v){if(v==null)return 0;const n=parseFloat(String(v).replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;}
+function msIsoDay(v){const t=String(v||'').trim();let m=t.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return `${m[1]}-${m[2]}-${m[3]}`;m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;return t;}
+function msParseReportCsv(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim().length);
+  const hi=lines.findIndex(l=>/TimePeriod/i.test(l)&&/Spend/i.test(l));
+  if(hi<0)throw new Error('Report CSV had no column header row [CSV]');
+  const cols=msParseCsvLine(lines[hi]).map(c=>c.replace(/^"|"$/g,'').trim());
+  const ix=n=>cols.findIndex(c=>c.toLowerCase()===n.toLowerCase());
+  const I={t:ix('TimePeriod'),n:ix('CampaignName'),id:ix('CampaignId'),st:ix('CampaignStatus'),sp:ix('Spend'),cl:ix('Clicks'),im:ix('Impressions'),cv:ix('Conversions'),ty:ix('CampaignType')};
+  const rows=[];
+  for(let i=hi+1;i<lines.length;i++){
+    const c=msParseCsvLine(lines[i]);if(c.length<cols.length-1)continue;
+    if(/^\s*©|Microsoft Corporation|Report Time|Totals?/i.test(c[0]||''))continue;
+    const d=msIsoDay(c[I.t]);if(!/^\d{4}-\d{2}-\d{2}$/.test(d))continue;
+    rows.push({d,name:c[I.n]||'',id:c[I.id]||'',status:c[I.st]||'',type:I.ty>=0?c[I.ty]:'',spend:msNum(c[I.sp]),clicks:msNum(c[I.cl]),impressions:msNum(c[I.im]),conversions:msNum(c[I.cv])});
+  }
+  return rows;
+}
+async function msDownloadReport(url){
+  let buf;
+  try{const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);buf=await r.arrayBuffer();}
+  catch(e){throw new Error('Report ZIP download blocked by the browser (CORS) [DOWNLOAD_BLOCKED]');}
+  const ff=await msLoadInflater();
+  const files=ff.unzipSync(new Uint8Array(buf));
+  const name=Object.keys(files).find(k=>/\.csv$/i.test(k))||Object.keys(files)[0];
+  if(!name)throw new Error('Report ZIP was empty [CSV]');
+  return ff.strFromU8(files[name]).replace(/^\uFEFF/,'');
+}
 async function fetchMsAds(opts={}){
   const creds=getMsAdsCreds();
   if(!creds?.devToken||!creds?.customerId||!creds?.refreshToken){
-    if(!opts.silent)toast('Set Microsoft Ads credentials in Settings first');return;
+    if(!opts.silent)toastAction('Microsoft Ads credentials not set','Open Settings',()=>openSettingsToSection('ms-ads'));return;
   }
+  if(msTab.loading)return;
+  msTab.loading=true;msTab.error=null;
   const btn=document.getElementById('ms-btn');
   if(btn)btn.innerHTML='<i class="ti ti-loader-2 ti-spin"></i> <span>Fetching…</span>';
+  try{renderPaidMicrosoftTab();}catch(e){}
   try{
-    const accessToken=await getMsAdsAccessToken();
-    // Use Microsoft Advertising REST API — Campaign Management reporting
-    const now=new Date();
-    const end=now.toISOString().slice(0,10);
-    const start=new Date(now-7*86400000).toISOString().slice(0,10);
-    // Use Reporting API via proxy
-    const reportBody=JSON.stringify({
-      ReportRequest:{
-        __type:'CampaignPerformanceReportRequest',
-        Aggregation:'Summary',
-        Columns:['CampaignName','Spend','Clicks','Impressions','Conversions'],
-        Scope:{AccountIds:[parseInt(creds.customerId)]},
-        Time:{CustomDateRangeStart:{Day:parseInt(start.slice(8,10)),Month:parseInt(start.slice(5,7)),Year:parseInt(start.slice(0,4))},CustomDateRangeEnd:{Day:parseInt(end.slice(8,10)),Month:parseInt(end.slice(5,7)),Year:parseInt(end.slice(0,4))},PredefinedTime:null},
-        Format:'Csv',
-        ReportName:'EracoreOS7d',
-        ReturnOnlyCompleteData:false
-      }
-    });
-    // Use simpler Campaign Management API to get campaigns
-    const campRes=await fetch('http://127.0.0.1:8742/proxy-post',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        url:'https://reporting.api.bingads.microsoft.com/Api/Advertiser/Reporting/v13/ReportingService.svc/json/SubmitGenerateReport',
-        body:reportBody,
-        contentType:'application/json',
-        headers:{
-          'AuthenticationToken':accessToken,
-          'DeveloperToken':creds.devToken,
-          'CustomerId':creds.customerId
-        }
-      })
-    });
-    const campData=await campRes.json();
-    console.log('[MS Ads] Report submit:', JSON.stringify(campData).slice(0,300));
-    // For now use InsightsService for quick stats
-    throw new Error('USE_INSIGHTS');
-  }catch(e){
-    if(e.message==='USE_INSIGHTS'){
-      // Fallback: use the simpler Ad Insight API for account-level stats
-      await fetchMsAdsSimple();return;
+    const token=await getMsAdsAccessToken();
+    const accountIds=await msResolveAccountIds(token,creds);
+    const r=getPaidDateRange();
+    const D=iso=>({Day:parseInt(iso.slice(8,10)),Month:parseInt(iso.slice(5,7)),Year:parseInt(iso.slice(0,4))});
+    const H=MS_API_HEADERS(token,creds,accountIds[0]);
+    const submit=await msPost('https://reporting.api.bingads.microsoft.com/Reporting/v13/GenerateReport/Submit',{ReportRequest:{
+      Type:'CampaignPerformanceReportRequest',Aggregation:'Daily',Format:'Csv',FormatVersion:'2.0',ReportName:'EracoreMOS',
+      ReturnOnlyCompleteData:false,ExcludeColumnHeaders:false,ExcludeReportHeader:true,ExcludeReportFooter:true,
+      Columns:['TimePeriod','CampaignName','CampaignId','CampaignStatus','CampaignType','Spend','Clicks','Impressions','Conversions'],
+      Scope:{AccountIds:accountIds},
+      Time:{CustomDateRangeStart:D(r.start),CustomDateRangeEnd:D(r.end),ReportTimeZone:'EasternTimeUSCanada'}
+    }},H);
+    const reqId=submit.ReportRequestId;if(!reqId)throw new Error('No ReportRequestId returned [SUBMIT]');
+    let status=null,url=null;
+    for(let i=0;i<20;i++){
+      await new Promise(res=>setTimeout(res,i<3?1200:2500));
+      const poll=await msPost('https://reporting.api.bingads.microsoft.com/Reporting/v13/GenerateReport/Poll',{ReportRequestId:reqId},H);
+      status=poll.ReportRequestStatus?.Status;url=poll.ReportRequestStatus?.ReportDownloadUrl;
+      if(status==='Success'||status==='Error')break;
     }
-    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
-    if(!opts.silent)toast('Microsoft Ads error: '+e.message);console.error('[MS Ads]',e);
-  }
-}
-
-async function fetchMsAdsSimple(){
-  const creds=getMsAdsCreds();
-  const btn=document.getElementById('ms-btn');
-  try{
-    const accessToken=await getMsAdsAccessToken();
-    // Use Campaign Management API to get campaigns and their stats
-    const soapBody=`<s:Envelope xmlns:i="http://www.w3.org/2001/XMLSchema-instance" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-      <s:Header xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
-        <Action mustUnderstand="1">GetCampaignsByAccountId</Action>
-        <AuthenticationToken>${accessToken}</AuthenticationToken>
-        <DeveloperToken>${creds.devToken}</DeveloperToken>
-        <CustomerId>${creds.customerId}</CustomerId>
-        <AccountId>${creds.customerId}</AccountId>
-      </s:Header>
-      <s:Body><GetCampaignsByAccountIdRequest xmlns="https://bingads.microsoft.com/CampaignManagement/v13">
-        <AccountId>${creds.customerId}</AccountId>
-        <CampaignType>Search Shopping DynamicSearchAds</CampaignType>
-        <ReturnAdditionalFields>None</ReturnAdditionalFields>
-      </GetCampaignsByAccountIdRequest></s:Body>
-    </s:Envelope>`;
-    const res=await fetch('http://127.0.0.1:8742/proxy-post',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        url:'https://campaign.api.bingads.microsoft.com/Api/Advertiser/CampaignManagement/v13/CampaignManagementService.svc',
-        body:soapBody,
-        contentType:'text/xml; charset=utf-8',
-        soapAction:'GetCampaignsByAccountId'
-      })
+    if(status==='Error')throw new Error('Microsoft returned an error generating the report [REPORT_ERROR]');
+    if(status!=='Success'){
+      if(!url){ // no rows for the window: Microsoft returns Success with no URL; a Pending timeout is a different thing
+        throw new Error('Report still generating after 50s — try Refresh again [TIMEOUT]');
+      }
+    }
+    let rows=[];
+    if(url){const csv=await msDownloadReport(url);rows=msParseReportCsv(csv);}
+    // Aggregate: totals, daily series over the whole window (zero-filled), per-campaign
+    const days=[];{let d=new Date(r.start+'T00:00:00Z');const end=new Date(r.end+'T00:00:00Z');while(d<=end){days.push(d.toISOString().slice(0,10));d=new Date(d.getTime()+86400000);}}
+    const byDay=Object.fromEntries(days.map(d=>[d,{d,spend:0,clicks:0,impressions:0,conversions:0}]));
+    const byCamp={};
+    rows.forEach(x=>{
+      const dd=byDay[x.d];if(dd){dd.spend+=x.spend;dd.clicks+=x.clicks;dd.impressions+=x.impressions;dd.conversions+=x.conversions;}
+      const k=x.id||x.name;const c=byCamp[k]=byCamp[k]||{id:x.id,name:x.name,status:x.status,type:x.type,spend:0,clicks:0,impressions:0,conversions:0};
+      c.spend+=x.spend;c.clicks+=x.clicks;c.impressions+=x.impressions;c.conversions+=x.conversions;if(x.status)c.status=x.status;
     });
-    const text=await res.text();
-    console.log('[MS Ads Simple] Response:', text.slice(0,500));
-    // Parse basic campaign names from SOAP response
-    const names=[...text.matchAll(/<Name>(.*?)<\/Name>/g)].map(m=>m[1]);
-    console.log('[MS Ads] Campaigns found:', names);
-    // For now set placeholder data showing connection works
-    msAdsData={spend:0,clicks:0,impressions:0,conversions:0,campaigns:names.map(n=>({name:n,spend:0,clicks:0,impressions:0,conversions:0})),fetched:Date.now(),note:'Live data requires Reporting API — campaigns connected'};
-    localStorage.setItem('ec-msads-data',JSON.stringify(msAdsData));
-    updatePaidBlendedKPIs();renderPaidOverview();renderPaidMicrosoftTab();
-    if(btn)btn.innerHTML='<i class="ti ti-check" style="color:var(--green)"></i> <span>Microsoft ✓</span>';
-    toast('Microsoft Ads connected — '+names.length+' campaigns found');
+    const daily=days.map(d=>byDay[d]);
+    const campaigns=Object.values(byCamp).sort((a,b)=>b.spend-a.spend);
+    const T=campaigns.reduce((a,c)=>({spend:a.spend+c.spend,clicks:a.clicks+c.clicks,impressions:a.impressions+c.impressions,conversions:a.conversions+c.conversions}),{spend:0,clicks:0,impressions:0,conversions:0});
+    msAdsData={...T,spend:Math.round(T.spend*100)/100,daily,campaigns,accountIds,fetched:Date.now(),preset:perfGetPreset(),dateRange:{start:r.start,end:r.end},source:'api'};
+    try{localStorage.setItem('ec-msads-data',JSON.stringify(msAdsData));}catch(e){}
+    msClearError();
+    if(!opts.silent)toast(`Microsoft Ads: ${campaigns.length} campaign${campaigns.length===1?'':'s'} · ${perfRangeLabel()}`);
   }catch(e){
-    if(btn)btn.innerHTML='<i class="ti ti-brand-bing"></i> <span>Connect Microsoft</span>';
-    toast('Microsoft Ads error: '+e.message);console.error('[MS Ads Simple]',e);
+    msTab.error=e.message||String(e);msSaveError(msTab.error);
+    console.error('[MS Ads]',e);
+    if(!opts.silent)toast('Microsoft Ads: '+msTab.error.replace(/\s*\[[A-Z_0-9]+\]$/,''));
+  }finally{
+    msTab.loading=false;
+    try{updatePaidConnectBtns();updatePaidBlendedKPIs();renderPaidMicrosoftTab();}catch(e){}
+    try{if(document.getElementById('paid-tab-overview')?.closest('.active'))renderPaidOverview();}catch(e){}
   }
 }
+function msRefreshTab(){fetchMsAds({silent:false});}
 
 
 
@@ -14686,7 +14804,7 @@ function safeRun(label,fn){
 //    from the (user-editable) session blob
 //  - every privileged action re-verifies, not just the UI
 // ══════════════════════════════════════════════════════════════
-const APP_HTML_VERSION='12.7';
+const APP_HTML_VERSION='12.8';
 console.log('[Eracore OS] HTML build v'+APP_HTML_VERSION);
 document.title='Eracore — Marketing OS '+APP_HTML_VERSION; // window title always reflects the RUNNING build
 const SUPER_ADMINS=['daniyal','mz'];
