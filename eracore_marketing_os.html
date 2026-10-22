@@ -17864,6 +17864,250 @@ function blConnStatus(){const b=document.getElementById('bl-conn-badge');if(!b)r
 function blSaveKeys(){const sp=(document.getElementById('bl-serpapi-key')?.value||'').trim(),o=(document.getElementById('bl-opr-key')?.value||'').trim(),b=(document.getElementById('bl-brave-key')?.value||'').trim();if(sp)localStorage.setItem('ec-serpapi-key',sp);if(o)localStorage.setItem('ec-opr-key',o);if(b)localStorage.setItem('ec-brave-key',b);toast('Keys saved');blRenderScanPills();}
 async function blTestConnection(){const m=document.getElementById('bl-conn-msg');if(!getApiKey()){if(m)m.innerHTML='<span style="color:var(--text2)">No Anthropic key — drafts will use templates. Discovery works regardless.</span>';return;}if(m)m.textContent='Testing…';try{const r=await blCallClaude('Reply with raw JSON only: {"ok":true,"model":"<your model name>"}',60);if(m)m.innerHTML=`<span style="color:var(--green)">✓ Connected</span> <span style="color:var(--text3)">(${esc(r.model||'Claude')} via /proxy-post)</span>`;blConnStatus();}catch(e){if(m)m.innerHTML=`<span style="color:var(--red)">Failed: ${esc(e.message)}</span>`;}}
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DAILY BRIEF → Teams  (added v13.2)
+// Pulls yesterday + MTD from Google / Meta / LinkedIn / Microsoft using the
+// existing fetchers, pulls B2B paid leads from HubSpot (original source +
+// drill-downs), builds an Adaptive Card, and writes card + snapshot + PNG
+// through main.js (/write-file, /capture). Triggered by main.js timer,
+// File ▸ Daily brief ▸ Write brief now, or `--write-summary`.
+// No UI of its own. window.__runDailyBrief(opts) is the entry point.
+// ═══════════════════════════════════════════════════════════════════════════
+(function(){
+const DB_TZ='America/New_York';
+const DB_PORTAL=()=> (typeof getHubSpotPortalId==='function'?getHubSpotPortalId():'43813644');
+// Lifecycle stages that are NOT business acquisition (training programs, Genusys)
+const DB_EXCLUDE_STAGES=new Set(['1443028135','1416971783','1435442868','1438015518','1419958042']);
+// MQL+ = Marketing Qualified Lead and every stage after it
+const DB_MQL_PLUS=new Set(['marketingqualifiedlead','1381721528','1381725873','1381721516','1381721517','1381721518','1381721519','1381739436','salesqualifiedlead','opportunity','customer']);
+const DB_STAGE_LABEL={subscriber:'Subscriber',lead:'Lead',evangelist:'Evangelist',other:'Other','1381721506':'Marketing – Inbound',marketingqualifiedlead:'MQL','1381721528':'Urgent Follow Up','1381725873':'Attempted Call','1381721516':'Contacted','1381721517':'Connected','1381721518':'Demo Call','1381721519':'RFP','1381739436':'Closed Contract',salesqualifiedlead:'SQL',opportunity:'Opportunity',customer:'Customer'};
+const DB_PLATFORMS=['Google Ads','Meta','LinkedIn','Microsoft'];
+const DB_CTR_FLOOR={'Google Ads':1.0,'Microsoft':0.6,'Meta':0.5,'LinkedIn':0.3}; // %, below this gets flagged
+const DB_SPEND_NO_LEAD=100; // $ MTD with zero attributed leads → flag
+const DB_HISTORY_KEY='ec-brief-history-v1';
+
+// ── date helpers (all in Eastern time) ────────────────────────────────────
+function dbEtDate(d){return new Date(d).toLocaleDateString('en-CA',{timeZone:DB_TZ});} // YYYY-MM-DD
+function dbTodayEt(){return dbEtDate(new Date());}
+function dbAddDays(iso,n){const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function dbMonthStart(iso){return iso.slice(0,8)+'01';}
+function dbNice(iso){const d=new Date(iso+'T12:00:00Z');return d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});}
+function dbShort(iso){const d=new Date(iso+'T12:00:00Z');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'UTC'});}
+function dbNowEt(){return new Date().toLocaleString('en-GB',{timeZone:DB_TZ,day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})+' ET';}
+const $=(n,d=0)=>'$'+(Number(n)||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const K=n=>{n=Number(n)||0;return n>=1000?(n/1000).toFixed(1)+'K':String(Math.round(n));};
+const pct=n=>(Number(n)||0).toFixed(2)+'%';
+
+// ── 1. ad platforms: run the existing fetchers for a preset, snapshot the caches
+async function dbFetchPreset(preset,log){
+  try{localStorage.setItem(PERF_RANGE_KEY,preset);localStorage.setItem('ec-paid-preset',preset);}catch(e){}
+  const sel=document.getElementById('paid-date-range');if(sel)sel.value=preset;
+  const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))]);
+  const jobs=[];const status={};
+  const run=(name,fn,ms)=>jobs.push(withTimeout(fn(),ms).then(()=>{status[name]='ok';}).catch(e=>{status[name]='error: '+(e&&e.message||e);}));
+  if(getGAdsCreds()?.refreshToken||localStorage.getItem('ec-gsc-refresh-token'))run('Google Ads',()=>fetchGoogleAdsLive({silent:true}),30000);else status['Google Ads']='not connected';
+  if(getMetaToken()&&getMetaAdAccount())run('Meta',()=>fetchMetaAds({silent:true}),30000);else status['Meta']='not connected';
+  if(getLinkedInToken()&&getLinkedInAdAccount())run('LinkedIn',()=>fetchLinkedInAds({silent:true}),30000);else status['LinkedIn']='not connected';
+  if(getMsRefreshToken()){if(typeof msTab==='object')msTab.loading=false;run('Microsoft',()=>fetchMsAds({silent:true}),120000);}else status['Microsoft']='not connected';
+  await Promise.allSettled(jobs);
+  const load=k=>{try{return JSON.parse(localStorage.getItem(k)||'null');}catch(e){return null;}};
+  const snap={'Google Ads':load('ec-gads-data'),'Meta':load('ec-meta-live'),'LinkedIn':load('ec-li-live'),'Microsoft':load('ec-msads-data')};
+  // a cache written for a different preset is stale for this run
+  DB_PLATFORMS.forEach(p=>{if(snap[p]&&snap[p].preset&&snap[p].preset!==preset){status[p]=(status[p]||'')+' (stale: cache is for '+snap[p].preset+')';}});
+  log('fetched '+preset+': '+JSON.stringify(status));
+  return {data:snap,status};
+}
+
+// ── 2. HubSpot: paid B2B contacts created since month start (ET) ──────────
+function dbHsPlatform(p){
+  const src=p.hs_analytics_source||'';const d1=(p.hs_analytics_source_data_1||'');const d2=(p.hs_analytics_source_data_2||'');
+  const l1=d1.toLowerCase(),l2=d2.toLowerCase();
+  if(src==='PAID_SOCIAL'){
+    if(l2.includes('organic'))return null; // mis-tagged organic lead
+    if(l1.includes('facebook')||l1.includes('instagram')||l1.includes('meta'))return {platform:'Meta',campaign:d2||'—'};
+    if(l1.includes('linkedin'))return {platform:'LinkedIn',campaign:d2||'—'};
+    return {platform:'Paid social (unmapped)',campaign:(d1+' / '+d2).trim()};
+  }
+  if(src==='PAID_SEARCH'){
+    if(l1.includes('bing')||l1.includes('microsoft')||l1.includes('msn')||l2.includes('bing')||l2.includes('microsoft'))return {platform:'Microsoft',campaign:d1||'—'};
+    return {platform:'Google Ads',campaign:d1||'—'};
+  }
+  return null;
+}
+async function dbFetchHubSpot(monthStart,log){
+  const token=getHubSpotCRMToken();
+  if(!token)return {ok:false,error:'HubSpot token not set',leads:[],allCreated:{}};
+  const props=['firstname','lastname','email','company','createdate','lifecyclestage','hs_lead_status','hs_analytics_source','hs_analytics_source_data_1','hs_analytics_source_data_2'];
+  const sinceMs=new Date(monthStart+'T00:00:00-04:00').getTime()-6*3600*1000; // generous: month start ET minus a few hours
+  const leads=[];const allCreated={};let after=null,pages=0;
+  while(pages<20){
+    const body={filterGroups:[{filters:[{propertyName:'createdate',operator:'GTE',value:String(sinceMs)}]}],sorts:[{propertyName:'createdate',direction:'DESCENDING'}],properties:props,limit:100};
+    if(after)body.after=after;
+    const res=await fetch('http://127.0.0.1:8742/proxy-post',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:'https://api.hubapi.com/crm/v3/objects/contacts/search',contentType:'application/json',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.status==='error')return {ok:false,error:(data.message||('HubSpot HTTP '+res.status)),leads,allCreated};
+    (data.results||[]).forEach(r=>{
+      const p=r.properties||{};const day=p.createdate?dbEtDate(p.createdate):'';
+      if(day){const a=allCreated[day]=allCreated[day]||{total:0,paid:0,other:0};a.total++;}
+      const map=dbHsPlatform(p);
+      if(!map){if(day)allCreated[day].other++;return;}
+      if(DB_EXCLUDE_STAGES.has(String(p.lifecyclestage||'')))return; // training / Genusys
+      if(day)allCreated[day].paid++;
+      const stage=String(p.lifecyclestage||'');
+      leads.push({id:r.id,day,name:((p.firstname||'')+' '+(p.lastname||'')).trim()||(p.email||'').split('@')[0]||'—',company:p.company||'',platform:map.platform,campaign:map.campaign,stage,stageLabel:DB_STAGE_LABEL[stage]||stage||'—',status:p.hs_lead_status||'',mqlPlus:DB_MQL_PLUS.has(stage),url:'https://app.hubspot.com/contacts/'+DB_PORTAL()+'/record/0-1/'+r.id,src:p.hs_analytics_source,d1:p.hs_analytics_source_data_1||'',d2:p.hs_analytics_source_data_2||''});
+    });
+    after=data.paging?.next?.after||null;pages++;
+    if(!after)break;
+  }
+  log('hubspot: '+leads.length+' paid B2B leads since '+monthStart);
+  return {ok:true,leads,allCreated};
+}
+
+// ── 3. assemble numbers ──────────────────────────────────────────────────
+function dbPlatformRow(name,yd,mtd,leads,yday){
+  const y=yd||{},m=mtd||{};
+  const ydLeads=leads.filter(l=>l.platform===name&&l.day===yday).length;
+  const mtdLeads=leads.filter(l=>l.platform===name);
+  const spend=Number(y.spend)||0,imp=Number(y.impressions)||0,clk=Number(y.clicks)||0;
+  const mSpend=Number(m.spend)||0;
+  return {name,spend,impressions:imp,clicks:clk,ctr:imp?clk/imp*100:0,ydLeads,mtdSpend:mSpend,mtdImpr:Number(m.impressions)||0,mtdClicks:Number(m.clicks)||0,mtdLeads:mtdLeads.length,mtdMql:mtdLeads.filter(l=>l.mqlPlus).length,cpl:mtdLeads.length?mSpend/mtdLeads.length:null,cpmql:mtdLeads.filter(l=>l.mqlPlus).length?mSpend/mtdLeads.filter(l=>l.mqlPlus).length:null,campaigns:(y.campaigns||[]),mtdCampaigns:(m.campaigns||[])};
+}
+function dbComputeFlags(rows,ydStatus,mtdStatus,leads){
+  const flags=[];
+  rows.forEach(r=>{
+    if(r.mtdSpend>=DB_SPEND_NO_LEAD&&r.mtdLeads===0)flags.push({level:'danger',tag:r.name,text:$(r.mtdSpend)+' MTD, 0 attributed leads'+(r.impressions?', CTR '+pct(r.ctr)+' yesterday':'')});
+    else if(r.impressions>=200&&r.ctr<DB_CTR_FLOOR[r.name])flags.push({level:'warning',tag:r.name,text:'CTR '+pct(r.ctr)+' yesterday, below '+DB_CTR_FLOOR[r.name]+'% floor'});
+  });
+  const withCpl=rows.filter(r=>r.cpl!=null);
+  if(withCpl.length>=2){const avg=withCpl.reduce((s,r)=>s+r.mtdSpend,0)/withCpl.reduce((s,r)=>s+r.mtdLeads,0);withCpl.forEach(r=>{if(r.cpl>avg*1.5)flags.push({level:'warning',tag:r.name,text:'CPL '+$(r.cpl)+' vs '+$(avg)+' program average'});});}
+  DB_PLATFORMS.forEach(p=>{const s=String(ydStatus[p]||'')+' '+String(mtdStatus[p]||'');if(/error|stale|not connected/i.test(s))flags.push({level:'danger',tag:p,text:'data not refreshed — '+s.trim().replace(/\s+/g,' ')});});
+  const unmapped=leads.filter(l=>/unmapped/.test(l.platform));
+  if(unmapped.length)flags.push({level:'warning',tag:'Attribution',text:unmapped.length+' paid contact(s) with an unrecognised source — see snapshot'});
+  return flags;
+}
+function dbCampaignLines(rows,leads){
+  // campaigns that spent yesterday = "live"; leads matched on campaign name
+  const lines=[];
+  rows.forEach(r=>{
+    (r.campaigns||[]).filter(c=>(Number(c.spend)||0)>0).sort((a,b)=>b.spend-a.spend).slice(0,6).forEach(c=>{
+      const key=String(c.name||'').toLowerCase();
+      const mtd=leads.filter(l=>l.platform===r.name&&key&&(l.campaign||'').toLowerCase().startsWith(key.slice(0,24))).length;
+      lines.push({platform:r.name,name:c.name||'—',spend:Number(c.spend)||0,mtdLeads:mtd});
+    });
+  });
+  return lines;
+}
+function dbTests(rows){
+  const tests=[];
+  rows.forEach(r=>{(r.mtdCampaigns||[]).forEach(c=>{const n=String(c.name||'');const m=n.match(/^\s*\[TEST\]\s*(.+?)(?:\s*[|·-]\s*([AB]|v\d|variant\s*\w+))?\s*$/i);if(m)tests.push({platform:r.name,name:n,spend:Number(c.spend)||0,clicks:Number(c.clicks)||0,impressions:Number(c.impressions)||0});});});
+  return tests;
+}
+function dbRevisions(leads,yday){
+  // compare per-day attributed lead counts for the trailing 7 days to the last run
+  let hist={};try{hist=JSON.parse(localStorage.getItem(DB_HISTORY_KEY)||'{}');}catch(e){}
+  const days=[];for(let i=0;i<7;i++)days.push(dbAddDays(yday,-i));
+  const now={};days.forEach(d=>{now[d]=leads.filter(l=>l.day===d).length;});
+  const rev=[];days.forEach(d=>{if(hist[d]!=null&&hist[d]!==now[d])rev.push(dbShort(d)+' leads '+hist[d]+' → '+now[d]);});
+  Object.assign(hist,now);
+  // keep ~60 days
+  Object.keys(hist).sort().slice(0,-60).forEach(k=>delete hist[k]);
+  try{localStorage.setItem(DB_HISTORY_KEY,JSON.stringify(hist));}catch(e){}
+  return rev;
+}
+
+// ── 4. Adaptive Card ──────────────────────────────────────────────────────
+function dbCard(b){
+  const tb=(text,o={})=>Object.assign({type:'TextBlock',text,wrap:true,size:'Small'},o);
+  const h=(t,sp='Medium')=>({type:'TextBlock',text:t,weight:'Bolder',spacing:sp});
+  const cell=(t,w,bold,right,subtle)=>({type:'Column',width:w,items:[Object.assign({type:'TextBlock',text:String(t),size:'Small',wrap:false},bold?{weight:'Bolder'}:{},right?{horizontalAlignment:'Right'}:{},subtle?{isSubtle:true}:{})]});
+  const row=(vals,W,o={})=>Object.assign({type:'ColumnSet',columns:vals.map((v,i)=>cell(v,W[i],o.bold,i>0,o.subtle))},o.sep?{separator:true}:{},o.spacing?{spacing:o.spacing}:{});
+  const W=[3,2,2,2,2,2,2,2];
+  const body=[];
+  body.push({type:'TextBlock',text:'Eracore – Paid Marketing Daily Brief',size:'Large',weight:'Bolder',wrap:true});
+  body.push({type:'TextBlock',text:'Reporting period: '+dbNice(b.yday)+' (locked)',weight:'Bolder',spacing:'None',wrap:true});
+  body.push({type:'TextBlock',text:'Refreshed '+b.refreshed+' · MTD = '+dbShort(b.monthStart)+'–'+dbShort(b.yday)+' · leads attributed from HubSpot original source · training-program leads excluded',isSubtle:true,size:'Small',spacing:'None',wrap:true});
+  body.push(h('Yesterday'));
+  body.push(row(['Platform','Spend','Impr.','Clicks','CTR','Yday leads','MTD spend','MTD leads'],W,{bold:true,spacing:'Small',subtle:true}));
+  b.rows.forEach((r,i)=>body.push(row([r.name,$(r.spend),K(r.impressions),K(r.clicks),pct(r.ctr),r.ydLeads,$(r.mtdSpend),r.mtdLeads],W,i===0?{sep:true}:{})));
+  const t=b.total;
+  body.push(row(['Total',$(t.spend),K(t.impressions),K(t.clicks),pct(t.ctr),t.ydLeads,$(t.mtdSpend),t.mtdLeads],W,{bold:true,sep:true}));
+  const ac=b.allCreated[b.yday]||{total:0,paid:0,other:0};
+  body.push(tb('Blended CTR '+pct(t.ctr)+' · MTD CPL '+(t.cpl!=null?$(t.cpl):'—')+' · MTD CPMQL '+(t.cpmql!=null?$(t.cpmql):'—')+' · '+ac.total+' contact'+(ac.total===1?'':'s')+' created in HubSpot yesterday, '+ac.paid+' from paid',{isSubtle:true,spacing:'Small'}));
+  body.push(h('Flags'));
+  if(b.flags.length)body.push(tb(b.flags.map(f=>'- **'+f.tag+'** — '+f.text).join('\n')));else body.push(tb('None.',{isSubtle:true}));
+  body.push(h("What's live (spent yesterday)"));
+  if(b.live.length){const W2=[2,5,2,2];body.push(row(['Platform','Campaign','Yday','MTD leads'],W2,{bold:true,spacing:'Small',subtle:true}));b.live.forEach((c,i)=>body.push(row([c.platform.replace(' Ads',''),c.name,$(c.spend),c.mtdLeads],W2,i===0?{sep:true}:{})));}
+  else body.push(tb('No campaign-level spend reported for yesterday.',{isSubtle:true}));
+  body.push(h('Tests'));
+  if(b.tests.length)body.push(tb(b.tests.map(x=>'- '+x.platform+' · '+x.name+' · MTD '+$(x.spend)+' · '+K(x.clicks)+' clicks').join('\n')));
+  else body.push(tb('None running. Prefix a campaign name with [TEST] to register one.',{isSubtle:true}));
+  body.push(h('Share (MTD)'));
+  const W3=[3,2,2,2,2];body.push(row(['Platform','Spend share','Lead share','MQL+','CPL'],W3,{bold:true,spacing:'Small',subtle:true}));
+  b.rows.slice().sort((a,c)=>c.mtdSpend-a.mtdSpend).forEach((r,i)=>body.push(row([r.name,(t.mtdSpend?Math.round(r.mtdSpend/t.mtdSpend*100):0)+'%',(t.mtdLeads?Math.round(r.mtdLeads/t.mtdLeads*100):0)+'%',r.mtdMql,r.cpl!=null?$(r.cpl):'—'],W3,i===0?{sep:true}:{})));
+  body.push(h('Leads – yesterday'));
+  const yl=b.leads.filter(l=>l.day===b.yday);
+  body.push(yl.length?tb(yl.map(dbLeadLine).join('\n')):tb('None from paid channels.',{isSubtle:true}));
+  body.push(h('Leads – MTD ('+b.leads.length+(b.leads.length>b.mtdCap?', latest '+b.mtdCap:'')+')'));
+  body.push(b.leads.length?tb(b.leads.slice(0,b.mtdCap).map(dbLeadLine).join('\n')):tb('None yet this month.',{isSubtle:true}));
+  if(b.revisions.length)body.push(tb('Revisions since last post: '+b.revisions.join(' · '),{isSubtle:true,spacing:'Medium'}));
+  return {type:'AdaptiveCard','$schema':'http://adaptivecards.io/schemas/adaptive-card.json',version:'1.4',body};
+}
+function dbLeadLine(l){return '- '+dbShort(l.day)+' · '+l.name+(l.company?' · '+l.company:'')+' · '+l.platform.replace(' Ads','')+' · '+(l.campaign||'—').slice(0,48)+' · '+l.stageLabel+(l.status==='UNQUALIFIED'?', unqualified':'')+' · ['+'HubSpot]('+l.url+')';}
+
+// ── 5. write via main.js ──────────────────────────────────────────────────
+async function dbWrite(name,content,base64){
+  const r=await fetch('http://127.0.0.1:8742/write-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,content,base64:!!base64})});
+  const d=await r.json().catch(()=>({}));if(!d.ok)throw new Error('write '+name+': '+(d.error||r.status));return d.path;
+}
+async function dbCapture(name){
+  const r=await fetch('http://127.0.0.1:8742/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+  const d=await r.json().catch(()=>({}));if(!d.ok)throw new Error('capture: '+(d.error||r.status));return d.path;
+}
+
+// ── entry point ───────────────────────────────────────────────────────────
+let dbRunning=false;
+window.__runDailyBrief=async function(opts={}){
+  if(dbRunning)return {ok:false,error:'already running'};
+  dbRunning=true;const started=Date.now();const logs=[];const log=m=>{logs.push(m);console.log('[brief]',m);};
+  const prevPreset=(typeof perfGetPreset==='function')?perfGetPreset():'last_7_days';
+  try{
+    const today=dbTodayEt(),yday=dbAddDays(today,-1),monthStart=dbMonthStart(yday);
+    log('period '+yday+' · mtd from '+monthStart+' · prev preset '+prevPreset);
+    if(opts.capture){try{if(typeof navTo==='function')navTo('paiddash');const btn=document.querySelector('#page-paiddash .itab');if(btn&&typeof switchPaidTab==='function')switchPaidTab('overview',btn);}catch(e){log('nav: '+e.message);}}
+    const yd=await dbFetchPreset('yesterday',log);
+    let png=null;
+    if(opts.capture){try{await new Promise(r=>setTimeout(r,1500));png=await dbCapture('daily-brief.png');log('captured '+png);}catch(e){log('capture failed: '+e.message);}}
+    const hs=await dbFetchHubSpot(monthStart,log);
+    const mtd=await dbFetchPreset('this_month',log);
+    const leads=hs.leads.filter(l=>l.day>=monthStart&&l.day<=yday).sort((a,b)=>b.day.localeCompare(a.day));
+    const rows=DB_PLATFORMS.map(p=>dbPlatformRow(p,yd.data[p],mtd.data[p],leads,yday));
+    const sum=k=>rows.reduce((s,r)=>s+(Number(r[k])||0),0);
+    const total={spend:sum('spend'),impressions:sum('impressions'),clicks:sum('clicks'),ydLeads:sum('ydLeads'),mtdSpend:sum('mtdSpend'),mtdLeads:sum('mtdLeads'),mtdMql:sum('mtdMql')};
+    total.ctr=total.impressions?total.clicks/total.impressions*100:0;total.cpl=total.mtdLeads?total.mtdSpend/total.mtdLeads:null;total.cpmql=total.mtdMql?total.mtdSpend/total.mtdMql:null;
+    const flags=dbComputeFlags(rows,yd.status,mtd.status,leads);
+    if(!hs.ok)flags.unshift({level:'danger',tag:'HubSpot',text:'leads not refreshed — '+hs.error});
+    const brief={generatedAt:new Date().toISOString(),refreshed:dbNowEt(),yday,monthStart,rows,total,flags,live:dbCampaignLines(rows,leads),tests:dbTests(rows),leads,allCreated:hs.allCreated,revisions:dbRevisions(leads,yday),mtdCap:15,fetchStatus:{yesterday:yd.status,mtd:mtd.status,hubspot:hs.ok?'ok':hs.error},raw:{yesterday:yd.data,mtd:mtd.data},png};
+    const card=dbCard(brief);
+    const cardPath=await dbWrite('latest-card.json',JSON.stringify(card,null,2));
+    await dbWrite('latest-snapshot.json',JSON.stringify(brief,null,2));
+    await dbWrite('history/card-'+yday+'.json',JSON.stringify(card));
+    await dbWrite('history/snapshot-'+yday+'.json',JSON.stringify(brief));
+    log('wrote '+cardPath);
+    if(!opts.silent&&typeof toast==='function')toast('Daily brief written — '+total.ydLeads+' lead'+(total.ydLeads===1?'':'s')+' yesterday, '+$(total.spend)+' spend');
+    return {ok:true,yday,leadsYesterday:total.ydLeads,spendYesterday:total.spend,mtdLeads:total.mtdLeads,flags:flags.length,png,cardPath,ms:Date.now()-started,log:logs};
+  }catch(e){
+    log('FAILED: '+(e&&e.message||e));
+    if(!opts.silent&&typeof toast==='function')toast('Daily brief failed: '+(e&&e.message||e));
+    return {ok:false,error:String(e&&e.message||e),log:logs};
+  }finally{
+    // put the UI back on the range the user had
+    try{localStorage.setItem(PERF_RANGE_KEY,prevPreset);localStorage.setItem('ec-paid-preset',prevPreset);const sel=document.getElementById('paid-date-range');if(sel)sel.value=prevPreset;if(typeof perfRenderStrips==='function')perfRenderStrips();if(typeof perfActiveSurface==='function'&&perfActiveSurface()==='paid'&&typeof onPaidDateRangeChange==='function')onPaidDateRangeChange();}catch(e){}
+    dbRunning=false;
+  }
+};
+})();
+
 </script>
 </body>
 </html>
